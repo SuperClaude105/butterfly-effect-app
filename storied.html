@@ -370,7 +370,7 @@ header {
       <div class="person-grid">
         <div class="person-card">
           <div class="person-card-title">Person A</div>
-          <div class="field"><label class="field-label">Name *</label><input class="field-input" id="aName" placeholder="Full name" oninput="save()"></div>
+          <div class="field"><label class="field-label">Name *</label><input class="field-input" id="aName" placeholder="Full name" oninput="save();updateNameLabels()"></div>
           <div class="field"><label class="field-label">Age</label><input class="field-input" id="aAge" placeholder="e.g. 36" oninput="save()"></div>
           <div class="field"><label class="field-label">Hometown</label><input class="field-input" id="aHometown" placeholder="e.g. Halifax, NS" oninput="save()"></div>
           <div class="field"><label class="field-label">Occupation</label><input class="field-input" id="aOccupation" placeholder="e.g. Electrician" oninput="save()"></div>
@@ -386,7 +386,7 @@ header {
         </div>
         <div class="person-card">
           <div class="person-card-title">Person B</div>
-          <div class="field"><label class="field-label">Name *</label><input class="field-input" id="bName" placeholder="Full name" oninput="save()"></div>
+          <div class="field"><label class="field-label">Name *</label><input class="field-input" id="bName" placeholder="Full name" oninput="save();updateNameLabels()"></div>
           <div class="field"><label class="field-label">Age</label><input class="field-input" id="bAge" placeholder="e.g. 35" oninput="save()"></div>
           <div class="field"><label class="field-label">Hometown</label><input class="field-input" id="bHometown" placeholder="e.g. Sudbury, ON" oninput="save()"></div>
           <div class="field"><label class="field-label">Occupation</label><input class="field-input" id="bOccupation" placeholder="e.g. Graphic Designer" oninput="save()"></div>
@@ -401,13 +401,16 @@ header {
           <div class="field"><label class="field-label">Appearance (optional)</label><textarea class="field-textarea" id="bAppearance" placeholder="Hair, eyes, build, tattoos..." oninput="save()"></textarea></div>
         </div>
       </div>
-      <div class="field"><label class="field-label">Pet names / nicknames</label><input class="field-input" id="nicknames" placeholder="e.g. Babe, Bug, Bear..." oninput="save()"></div>
-      <div class="field"><label class="field-label">Property / Land (if applicable)</label><input class="field-input" id="property" placeholder="e.g. A cottage they share, land they bought together..." oninput="save()"></div>
       <div class="field" style="margin-top:1.5rem">
         <label class="field-label">Anything else about them as people</label>
-        <div class="field-hint">What makes them who they are? Their dynamic, quirks, how they move through the world — anything the fields above didn't capture.</div>
+        <div class="field-hint">Their dynamic, quirks, how they move through the world — anything the fields above didn't capture.</div>
         <textarea class="field-textarea tall" style="min-height:160px" id="peopleFreeText" placeholder="Write freely — there's no format here..." oninput="save()"></textarea>
       </div>
+      <div class="two-col" style="margin-top:1.5rem">
+        <div class="field"><label class="field-label">What does <span id="aNameLabel">Person A</span> call them?</label><input class="field-input" id="nicknamesA" placeholder="e.g. Babe, Bug..." oninput="save()"></div>
+        <div class="field"><label class="field-label">What does <span id="bNameLabel">Person B</span> call them?</label><input class="field-input" id="nicknamesB" placeholder="e.g. Hun, Bear..." oninput="save()"></div>
+      </div>
+      <div class="field"><label class="field-label">Property / Land (if applicable)</label><input class="field-input" id="property" placeholder="e.g. A cottage they share, land they bought together..." oninput="save()"></div>
     </div>
 
     <!-- ── Step 2: Animals ── -->
@@ -580,6 +583,15 @@ function save() {
   }, 800);
 }
 
+function updateNameLabels() {
+  const a = document.getElementById('aName')?.value.trim() || 'Person A';
+  const b = document.getElementById('bName')?.value.trim() || 'Person B';
+  const aLabel = document.getElementById('aNameLabel');
+  const bLabel = document.getElementById('bNameLabel');
+  if (aLabel) aLabel.textContent = a;
+  if (bLabel) bLabel.textContent = b;
+}
+
 function checkResume() {
   const saved = localStorage.getItem('storied_form_data');
   if (saved) {
@@ -618,8 +630,10 @@ function applyFormData(data) {
   set('bHometown', data.personB?.hometown); set('bOccupation', data.personB?.occupation);
   set('bTrait1', data.personB?.traits?.[0]); set('bTrait2', data.personB?.traits?.[1]);
   set('bTrait3', data.personB?.traits?.[2]); set('bAppearance', data.personB?.appearance);
-  set('nicknames', data.nicknames); set('property', data.property);
+  set('nicknamesA', data.nicknamesA); set('nicknamesB', data.nicknamesB);
+  set('property', data.property);
   set('peopleFreeText', data.peopleFreeText);
+  updateNameLabels();
   set('places', data.texture?.places); set('insideJokes', data.texture?.insideJokes);
   set('songsMovies', data.texture?.songsMoviesBooks); set('funniest', data.texture?.funniest);
   set('freeText', data.freeText);
@@ -807,7 +821,8 @@ function collectFormData() {
       traits: [v('bTrait1'), v('bTrait2'), v('bTrait3')].filter(Boolean),
       appearance: v('bAppearance'),
     },
-    nicknames: v('nicknames'),
+    nicknamesA: v('nicknamesA'),
+    nicknamesB: v('nicknamesB'),
     property: v('property'),
     peopleFreeText: v('peopleFreeText'),
     animals: animals.map(({ id, ...rest }) => rest),
