@@ -6,7 +6,7 @@ const path = require('path');
 const app = express();
 app.use(express.json({ limit: '50mb' }));
 app.use(express.static(path.join(__dirname)));
-app.get('/', (_req, res) => res.redirect('/shelf.html'));
+app.get('/', (_req, res) => res.redirect('/login.html'));
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 

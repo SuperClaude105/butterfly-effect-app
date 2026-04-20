@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Unwritten</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Playfair+Display:ital,wght@0,700;0,900;1,400;1,700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --primary:  #8B0000;
+  --accent:   #c4a264;
+  --bg:       #0a0505;
+  --surface:  #130808;
+  --border:   rgba(255,255,255,0.08);
+  --text:     #e8d5b7;
+  --text-dim: rgba(232,213,183,0.45);
+  --glow:     rgba(139,0,0,0.4);
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  font-family: 'EB Garamond', Georgia, serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* background radial gradients */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 0%, rgba(139,0,0,0.18) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 40% at 80% 80%, rgba(196,162,100,0.06) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+/* SVG grain texture */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.card {
+  position: relative;
+  z-index: 1;
+  width: min(420px, 90vw);
+  text-align: center;
+  padding: 3rem 2.5rem 2.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  box-shadow:
+    0 0 0 1px rgba(139,0,0,0.08),
+    0 8px 32px rgba(0,0,0,0.6),
+    0 0 80px var(--glow);
+  animation: fadeUp 0.8s cubic-bezier(0.16,1,0.3,1) both;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.ornament {
+  font-size: 0.85rem;
+  letter-spacing: 0.3em;
+  color: var(--accent);
+  opacity: 0.6;
+  margin-bottom: 1.25rem;
+}
+
+h1 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(2.4rem, 6vw, 3rem);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--text);
+  margin-bottom: 0.5rem;
+}
+
+.tagline {
+  font-size: 1rem;
+  color: var(--text-dim);
+  font-style: italic;
+  margin-bottom: 2.5rem;
+  line-height: 1.5;
+}
+
+.field {
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+input[type="password"] {
+  width: 100%;
+  padding: 0.85rem 1.1rem;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text);
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 1.05rem;
+  letter-spacing: 0.15em;
+  text-align: center;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+}
+
+input[type="password"]::placeholder {
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+}
+
+input[type="password"]:focus {
+  border-color: rgba(139,0,0,0.5);
+  box-shadow: 0 0 0 3px rgba(139,0,0,0.12);
+}
+
+input[type="password"].shake {
+  animation: shake 0.4s cubic-bezier(0.36,0.07,0.19,0.97);
+  border-color: rgba(200,50,50,0.6);
+}
+
+@keyframes shake {
+  0%,100% { transform: translateX(0); }
+  20%      { transform: translateX(-8px); }
+  40%      { transform: translateX(8px); }
+  60%      { transform: translateX(-5px); }
+  80%      { transform: translateX(5px); }
+}
+
+.error-msg {
+  font-size: 0.85rem;
+  color: rgba(200,80,80,0.85);
+  font-style: italic;
+  min-height: 1.2em;
+  margin-bottom: 0.75rem;
+  transition: opacity 0.2s;
+}
+
+button {
+  width: 100%;
+  padding: 0.9rem 1.5rem;
+  background: var(--primary);
+  border: none;
+  border-radius: 3px;
+  color: var(--text);
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+  box-shadow: 0 4px 16px rgba(139,0,0,0.3);
+}
+
+button:hover {
+  background: #a00000;
+  box-shadow: 0 6px 24px rgba(139,0,0,0.45);
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.divider {
+  margin: 2rem 0 0;
+  border: none;
+  border-top: 1px solid var(--border);
+}
+
+.footer-note {
+  margin-top: 1.25rem;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  font-style: italic;
+}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <p class="ornament">⟡ ⟡ ⟡</p>
+  <h1>Unwritten</h1>
+  <p class="tagline">Your story. Your choices. Your ending.</p>
+
+  <form id="loginForm" autocomplete="off">
+    <div class="field">
+      <input
+        type="password"
+        id="passwordInput"
+        placeholder="Enter password"
+        autofocus
+        autocomplete="current-password"
+      />
+    </div>
+    <p class="error-msg" id="errorMsg"></p>
+    <button type="submit">Enter</button>
+  </form>
+
+  <hr class="divider">
+  <p class="footer-note">Private access only</p>
+</div>
+
+<script>
+  const CORRECT = 'Unwritten105';
+
+  document.getElementById('loginForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const input = document.getElementById('passwordInput');
+    const err   = document.getElementById('errorMsg');
+
+    if (input.value === CORRECT) {
+      sessionStorage.setItem('unwritten_auth', 'true');
+      window.location.href = '/shelf.html';
+    } else {
+      err.textContent = 'Incorrect password. Try again.';
+      input.classList.remove('shake');
+      void input.offsetWidth; // reflow to restart animation
+      input.classList.add('shake');
+      input.value = '';
+      input.focus();
+      setTimeout(() => input.classList.remove('shake'), 400);
+    }
+  });
+</script>
+</body>
+</html>
