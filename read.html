@@ -1245,6 +1245,9 @@ async function showReading(data, animate) {
 
   if (mood) applyTheme(mood);
 
+  // Save immediately so the book appears on the shelf even if user navigates away mid-animation
+  saveProgress();
+
   showHUD();
 
   // Progress (assume ~30 chapter story)
