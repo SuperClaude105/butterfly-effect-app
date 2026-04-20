@@ -1,5 +1,5 @@
 {
-  "name": "butterfly-effect-app",
+  "name": "unwritten",
   "version": "1.0.0",
   "description": "Interactive AI-driven story app with adaptive chapters and decision-based narrative",
   "main": "server.js",

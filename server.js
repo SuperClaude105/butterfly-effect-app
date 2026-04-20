@@ -443,7 +443,7 @@ ${chapterBlocks}
 // ─── Start server ──────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
-  console.log(`\n  Butterfly Effect App`);
+  console.log(`\n  Unwritten`);
   console.log(`  Running at http://localhost:${PORT}`);
   console.log(`  Press Ctrl+C to stop\n`);
 });
