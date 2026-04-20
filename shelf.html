@@ -686,7 +686,16 @@ function render(){
     }
     bc.appendChild(sec);
   });
-  document.querySelectorAll('.book[data-id]').forEach(el=>el.addEventListener('click',()=>openPanel(el.dataset.id)));
+  document.querySelectorAll('.book[data-id]').forEach(el => {
+    el.addEventListener('click', () => {
+      const story = getLibrary()[el.dataset.id];
+      if (story?.storiedInProgress) {
+        location.href = `/storied.html?id=${el.dataset.id}`;
+      } else {
+        openPanel(el.dataset.id);
+      }
+    });
+  });
 }
 
 function bookHTML(story){

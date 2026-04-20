@@ -293,6 +293,8 @@ header {
 .complete-restart { background:none; border:none; cursor:pointer; font-family:'EB Garamond',serif; font-size:0.9rem; color:rgba(232,213,183,0.3); text-decoration:underline; transition:color 0.2s; }
 .complete-restart:hover { color:rgba(232,213,183,0.6); }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>const _SB = supabase.createClient('https://puywhvrgixlhijxzircy.supabase.co','sb_publishable_ob7bw2JF-iSjqyjSXRu4-g_lLuFagj7');</script>
 </head>
 <body>
 <div class="fp-ambient"></div>
@@ -511,6 +513,7 @@ header {
     <!-- Nav buttons -->
     <div class="form-nav">
       <button class="btn-nav ghost" id="prevBtn" onclick="prevStep()"><span>← Back</span></button>
+      <button class="btn-nav ghost" id="saveShelfBtn" onclick="saveToShelf()" style="font-size:0.72rem;padding:0.75rem 1.2rem"><span>Save to Shelf</span></button>
       <button class="btn-nav" id="nextBtn" onclick="nextStep()"><span>Next →</span></button>
     </div>
 
@@ -919,9 +922,81 @@ function startOver() {
 function v(id) { return document.getElementById(id)?.value?.trim() || ''; }
 function esc(str) { return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
+// ── Supabase save to shelf ─────────────────────────────────────────────────
+let _sbSession = null;
+let _shelfStoryId = null; // ID of existing shelf save, if resuming
+
+async function saveToShelf() {
+  const btn = document.getElementById('saveShelfBtn');
+  btn.innerHTML = '<span>Saving...</span>';
+  btn.disabled = true;
+
+  const formData = collectFormData();
+  const aName = formData.personA?.name || 'Your Story';
+  const bName = formData.personB?.name || '';
+  const title = bName ? `${aName} & ${bName}` : aName;
+
+  try {
+    const { data: { session } } = await _SB.auth.getSession();
+    if (!session) {
+      // Save to localStorage and redirect to login, then come back
+      localStorage.setItem('storied_form_data', JSON.stringify(formData));
+      localStorage.setItem('storied_pending_save', 'true');
+      location.replace('/login.html');
+      return;
+    }
+
+    const id = _shelfStoryId || crypto.randomUUID();
+    _shelfStoryId = id;
+
+    await _SB.from('stories').upsert({
+      id,
+      user_id: session.user.id,
+      data: {
+        bookTitle: title,
+        config: { genre: 'Your Story' },
+        storiedFormData: formData,
+        storiedInProgress: true,
+        lastReadAt: Date.now(),
+      },
+      updated_at: new Date().toISOString(),
+    });
+
+    btn.innerHTML = '<span>✓ Saved</span>';
+    setTimeout(() => { btn.innerHTML = '<span>Save to Shelf</span>'; btn.disabled = false; }, 2000);
+  } catch (err) {
+    btn.innerHTML = '<span>Save to Shelf</span>';
+    btn.disabled = false;
+    alert('Could not save: ' + err.message);
+  }
+}
+
 // ── Init ───────────────────────────────────────────────────────────────────
-checkResume();
-updateNavButtons();
+(async () => {
+  // Check auth — redirect to login if not signed in
+  const { data: { session } } = await _SB.auth.getSession();
+  _sbSession = session;
+  if (!session) {
+    localStorage.setItem('storied_pending_redirect', location.href);
+    location.replace('/login.html');
+    return;
+  }
+
+  // Check for shelf resume (?id=xxx in URL)
+  const params = new URLSearchParams(location.search);
+  const resumeId = params.get('id');
+  if (resumeId) {
+    _shelfStoryId = resumeId;
+    const { data: row } = await _SB.from('stories').select('data').eq('id', resumeId).single();
+    if (row?.data?.storiedFormData) {
+      applyFormData(row.data.storiedFormData);
+    }
+  } else {
+    checkResume();
+  }
+
+  updateNavButtons();
+})();
 </script>
 </body>
 </html>
