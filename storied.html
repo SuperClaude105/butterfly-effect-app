@@ -714,7 +714,7 @@ function updateNavButtons() {
 
 // ── Animals ────────────────────────────────────────────────────────────────
 function addAnimal() {
-  animals.push({ id: Date.now(), name: '', type: '', description: '' });
+  animals.push({ id: Date.now(), name: '', type: '', arrived: '', left: '', description: '' });
   renderAnimals();
   save();
 }
@@ -741,6 +741,10 @@ function renderAnimals() {
         <input class="field-input" placeholder="Type / Breed" value="${esc(a.type)}" oninput="updateAnimal(${a.id},'type',this.value)">
         <button class="btn-remove" onclick="removeAnimal(${a.id})" title="Remove">×</button>
       </div>
+      <div class="entry-row cols-2" style="margin-top:0.5rem">
+        <input class="field-input" placeholder="Arrived (e.g. 2014, June 2018)" value="${esc(a.arrived)}" oninput="updateAnimal(${a.id},'arrived',this.value)">
+        <input class="field-input" placeholder="Left / passed (if applicable)" value="${esc(a.left)}" oninput="updateAnimal(${a.id},'left',this.value)">
+      </div>
       <textarea class="field-textarea" placeholder="Description — personality, story, what makes them special..." oninput="updateAnimal(${a.id},'description',this.value)">${esc(a.description)}</textarea>
     </div>
   `).join('');
@@ -750,7 +754,7 @@ function renderAnimals() {
 const TAGS = ['Milestone','Challenge','Funny moment','Romantic moment'];
 
 function addTimelineEvent() {
-  timeline.push({ id: Date.now(), year: '', event: '', tag: 'Milestone' });
+  timeline.push({ id: Date.now(), date: '', event: '', tag: 'Milestone' });
   renderTimeline();
   save();
 }
@@ -781,7 +785,7 @@ function renderTimeline() {
   container.innerHTML = timeline.map((t, i) => `
     <div class="entry-card">
       <div class="entry-row timeline-top">
-        <input class="field-input" placeholder="Year / Timeframe" value="${esc(t.year)}" oninput="updateTimeline(${t.id},'year',this.value)">
+        <input class="field-input" placeholder="Date (e.g. 2015, Aug 2019, Dec 14 2021)" value="${esc(t.date||t.year)}" oninput="updateTimeline(${t.id},'date',this.value)">
         <select class="tag-select" onchange="updateTimeline(${t.id},'tag',this.value)">
           ${TAGS.map(tag => `<option value="${tag}" ${t.tag===tag?'selected':''}>${tag}</option>`).join('')}
         </select>
