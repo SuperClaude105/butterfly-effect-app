@@ -385,6 +385,8 @@ header {
             </div>
           </div>
           <div class="field"><label class="field-label">Appearance (optional)</label><textarea class="field-textarea" id="aAppearance" placeholder="Hair, eyes, build, tattoos..." oninput="save()"></textarea></div>
+          <div class="field"><label class="field-label">What do they call <span id="aNameLabel">Person A</span>?</label><input class="field-input" id="nicknamesA" placeholder="e.g. Babe, Bug..." oninput="save()"></div>
+          <div class="field"><label class="field-label">Anything else about them?</label><textarea class="field-textarea" id="peopleFreeTextA" placeholder="Quirks, how they move through the world, what makes them them..." oninput="save()"></textarea></div>
         </div>
         <div class="person-card">
           <div class="person-card-title">Person B</div>
@@ -401,18 +403,11 @@ header {
             </div>
           </div>
           <div class="field"><label class="field-label">Appearance (optional)</label><textarea class="field-textarea" id="bAppearance" placeholder="Hair, eyes, build, tattoos..." oninput="save()"></textarea></div>
+          <div class="field"><label class="field-label">What do they call <span id="bNameLabel">Person B</span>?</label><input class="field-input" id="nicknamesB" placeholder="e.g. Hun, Bear..." oninput="save()"></div>
+          <div class="field"><label class="field-label">Anything else about them?</label><textarea class="field-textarea" id="peopleFreeTextB" placeholder="Quirks, how they move through the world, what makes them them..." oninput="save()"></textarea></div>
         </div>
       </div>
-      <div class="field" style="margin-top:1.5rem">
-        <label class="field-label">Anything else about them as people</label>
-        <div class="field-hint">Their dynamic, quirks, how they move through the world — anything the fields above didn't capture.</div>
-        <textarea class="field-textarea tall" style="min-height:160px" id="peopleFreeText" placeholder="Write freely — there's no format here..." oninput="save()"></textarea>
-      </div>
-      <div class="two-col" style="margin-top:1.5rem">
-        <div class="field"><label class="field-label">What does <span id="aNameLabel">Person A</span> call them?</label><input class="field-input" id="nicknamesA" placeholder="e.g. Babe, Bug..." oninput="save()"></div>
-        <div class="field"><label class="field-label">What does <span id="bNameLabel">Person B</span> call them?</label><input class="field-input" id="nicknamesB" placeholder="e.g. Hun, Bear..." oninput="save()"></div>
-      </div>
-      <div class="field"><label class="field-label">Property / Land (if applicable)</label><input class="field-input" id="property" placeholder="e.g. A cottage they share, land they bought together..." oninput="save()"></div>
+      <div class="field" style="margin-top:1.5rem"><label class="field-label">Property / Land (if applicable)</label><input class="field-input" id="property" placeholder="e.g. A cottage they share, land they bought together..." oninput="save()"></div>
     </div>
 
     <!-- ── Step 2: Animals ── -->
@@ -596,6 +591,9 @@ function updateNameLabels() {
   const povB = document.getElementById('povPillB');
   if (povA) povA.textContent = `${a} only`;
   if (povB) povB.textContent = `${b} only`;
+  // Nickname label spans inside each card
+  document.querySelectorAll('#aNameLabel').forEach(el => el.textContent = a);
+  document.querySelectorAll('#bNameLabel').forEach(el => el.textContent = b);
 }
 
 function checkResume() {
@@ -638,7 +636,8 @@ function applyFormData(data) {
   set('bTrait3', data.personB?.traits?.[2]); set('bAppearance', data.personB?.appearance);
   set('nicknamesA', data.nicknamesA); set('nicknamesB', data.nicknamesB);
   set('property', data.property);
-  set('peopleFreeText', data.peopleFreeText);
+  set('peopleFreeTextA', data.peopleFreeTextA);
+  set('peopleFreeTextB', data.peopleFreeTextB);
   updateNameLabels();
   set('places', data.texture?.places); set('insideJokes', data.texture?.insideJokes);
   set('songsMovies', data.texture?.songsMoviesBooks); set('funniest', data.texture?.funniest);
@@ -830,7 +829,8 @@ function collectFormData() {
     nicknamesA: v('nicknamesA'),
     nicknamesB: v('nicknamesB'),
     property: v('property'),
-    peopleFreeText: v('peopleFreeText'),
+    peopleFreeTextA: v('peopleFreeTextA'),
+    peopleFreeTextB: v('peopleFreeTextB'),
     animals: animals.map(({ id, ...rest }) => rest),
     timeline: timeline.map(({ id, ...rest }) => rest),
     texture: {
