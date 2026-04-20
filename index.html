@@ -355,7 +355,8 @@ input[type=range]::-webkit-slider-thumb:hover { box-shadow:0 0 18px rgba(196,162
   <p class="gen-sub">This takes about 20 seconds</p>
 </div>
 
-<script>if(sessionStorage.getItem('unwritten_auth')!=='true'){location.replace('/login.html');}</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>const _SB=supabase.createClient('https://puywhvrgixlhijxzircy.supabase.co','sb_publishable_ob7bw2JF-iSjqyjSXRu4-g_lLuFagj7');</script>
 <nav class="top-nav">
   <a href="shelf.html" class="btn-back-lib">&#8592; My Library</a>
 </nav>
@@ -744,19 +745,26 @@ function updateStoryPlaceholder(genre) {
 // ═══════════════════════════════════════════════════════════════
 // LIBRARY
 // ═══════════════════════════════════════════════════════════════
-const _lib = (() => { try { return JSON.parse(localStorage.getItem('bea_library') || '{}'); } catch(_){return{};} })();
-const _stories = Object.values(_lib).sort((a,b)=>(b.lastReadAt||0)-(a.lastReadAt||0));
+let _lib = {}, _stories = [];
+(async () => {
+  const { data: { session } } = await _SB.auth.getSession();
+  if (!session) { location.replace('/login.html'); return; }
 
-if (_stories.length > 0) {
-  document.getElementById('shelf-link').style.display = 'block';
-  const sel = document.getElementById('parent-book-select');
-  _stories.forEach(s => {
-    const title = s.bookTitle || s.config?.bookTitleInput || s.config?.protagonistName || s.config?.genre || 'Untitled';
-    const opt = document.createElement('option');
-    opt.value = s.id; opt.textContent = title;
-    sel.appendChild(opt);
-  });
-}
+  const { data: rows } = await _SB.from('stories').select('id, data');
+  (rows||[]).forEach(r => { _lib[r.id] = r.data; });
+  _stories = Object.values(_lib).sort((a,b)=>(b.lastReadAt||0)-(a.lastReadAt||0));
+
+  if (_stories.length > 0) {
+    document.getElementById('shelf-link').style.display = 'block';
+    const sel = document.getElementById('parent-book-select');
+    _stories.forEach(s => {
+      const title = s.bookTitle || s.config?.bookTitleInput || s.config?.protagonistName || s.config?.genre || 'Untitled';
+      const opt = document.createElement('option');
+      opt.value = s.id; opt.textContent = title;
+      sel.appendChild(opt);
+    });
+  }
+})();
 
 // ═══════════════════════════════════════════════════════════════
 // EMBER PARTICLES

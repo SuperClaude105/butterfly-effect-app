@@ -485,7 +485,8 @@ header::after {
 <body>
 
 <canvas id="cv"></canvas>
-<script>if(sessionStorage.getItem('unwritten_auth')!=='true'){location.replace('/login.html');}</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>const _SB=supabase.createClient('https://puywhvrgixlhijxzircy.supabase.co','sb_publishable_ob7bw2JF-iSjqyjSXRu4-g_lLuFagj7');</script>
 <div class="fp-ambient"></div>
 <div class="lamp-glow"></div>
 
@@ -495,6 +496,7 @@ header::after {
     <a class="logo" href="shelf.html">Unwritten</a>
     <div class="header-right">
       <a class="btn-new" href="index.html"><span>+ New Story</span></a>
+      <button onclick="_SB.auth.signOut().then(()=>location.replace('/login.html'))" style="background:none;border:1px solid rgba(255,255,255,0.12);color:rgba(232,213,183,0.5);font-family:inherit;font-size:0.8rem;padding:0.4rem 0.9rem;border-radius:3px;cursor:pointer;margin-left:0.75rem;transition:color 0.2s,border-color 0.2s;" onmouseover="this.style.color='#e8d5b7';this.style.borderColor='rgba(255,255,255,0.25)'" onmouseout="this.style.color='rgba(232,213,183,0.5)';this.style.borderColor='rgba(255,255,255,0.12)'">Sign out</button>
     </div>
   </header>
 
@@ -613,8 +615,12 @@ window.addEventListener('resize',resize); resize();
 })();
 
 // ── Helpers ─────────────────────────────────────────────────────
-function getLibrary(){try{return JSON.parse(localStorage.getItem('bea_library'))||{};}catch(_){return{};}}
-function deleteStory(id){const lib=getLibrary();delete lib[id];localStorage.setItem('bea_library',JSON.stringify(lib));}
+let _cachedLib = {};
+function getLibrary(){ return _cachedLib; }
+async function deleteStory(id){
+  await _SB.from('stories').delete().eq('id', id);
+  delete _cachedLib[id];
+}
 let selectedId=null,deleteConfirming=false;
 function relativeDate(ts){
   if(!ts)return'never';
@@ -740,10 +746,20 @@ function confirmDelete(){
   if(!deleteConfirming){
     deleteConfirming=true;btn.textContent='Confirm delete?';btn.classList.add('confirming');
     setTimeout(()=>{if(deleteConfirming){deleteConfirming=false;btn.textContent='Delete';btn.classList.remove('confirming');}},3000);
-  }else{deleteStory(selectedId);closePanel();render();}
+  }else{deleteStory(selectedId).then(()=>{closePanel();render();});}
 }
 
-render();
+// ── Init ─────────────────────────────────────────────────────────
+(async()=>{
+  const { data:{ session } } = await _SB.auth.getSession();
+  if(!session){ location.replace('/login.html'); return; }
+
+  const { data: rows } = await _SB.from('stories').select('id, data');
+  _cachedLib = {};
+  (rows||[]).forEach(r=>{ _cachedLib[r.id] = r.data; });
+
+  render();
+})();
 </script>
 </body>
 </html>

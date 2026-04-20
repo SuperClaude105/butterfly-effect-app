@@ -899,6 +899,8 @@ body::after {
   <div class="choices" id="d-choices"></div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>const _SB=supabase.createClient('https://puywhvrgixlhijxzircy.supabase.co','sb_publishable_ob7bw2JF-iSjqyjSXRu4-g_lLuFagj7');</script>
 <script>
 // ═══════════════════════════════════════════════════════════════
 // STATE
@@ -921,7 +923,15 @@ const PREFETCH = (() => {
 })();
 
 // If no story ID, bounce to shelf (user navigated directly)
-if (!STORY_ID) window.location.href = 'shelf.html';
+if (!STORY_ID) { window.location.href = 'shelf.html'; }
+
+// Load existing story data from Supabase into cache
+(async () => {
+  const uid = await _ensureUser();
+  if (!uid) return;
+  const { data } = await _SB.from('stories').select('data').eq('id', STORY_ID).single();
+  if (data) _storyCache = data.data;
+})();
 
 const S = {
   chapter: 0,
@@ -955,17 +965,27 @@ const ORDINALS = ['One','Two','Three','Four','Five','Six','Seven','Eight',
 function ordinal(n) { return ORDINALS[n-1] || String(n); }
 
 // ═══════════════════════════════════════════════════════════════
-// LIBRARY STORAGE (multi-story)
+// LIBRARY STORAGE — backed by Supabase
 // ═══════════════════════════════════════════════════════════════
-function getLibrary() {
-  try { return JSON.parse(localStorage.getItem('bea_library')) || {}; } catch (_) { return {}; }
+let _storyCache = null; // in-memory cache for the current story's DB row
+let _currentUserId = null;
+
+async function _ensureUser() {
+  if (_currentUserId) return _currentUserId;
+  const { data: { session } } = await _SB.auth.getSession();
+  if (!session) { location.replace('/login.html'); return null; }
+  _currentUserId = session.user.id;
+  return _currentUserId;
 }
 
-function saveProgress() {
+function getLibrary() { return _storyCache ? { [STORY_ID]: _storyCache } : {}; }
+
+async function saveProgress() {
   if (!STORY_ID) return;
-  const lib = getLibrary();
-  const existing = lib[STORY_ID] || {};
-  lib[STORY_ID] = {
+  const uid = await _ensureUser();
+  if (!uid) return;
+  const existing = _storyCache || {};
+  const storyData = {
     ...existing,
     id: STORY_ID,
     config: STORY_CONFIG,
@@ -979,18 +999,19 @@ function saveProgress() {
     lastReadAt: Date.now(),
     createdAt: existing.createdAt || Date.now(),
   };
-  localStorage.setItem('bea_library', JSON.stringify(lib));
+  _storyCache = storyData;
+  await _SB.from('stories').upsert({ id: STORY_ID, user_id: uid, data: storyData, updated_at: new Date().toISOString() });
 }
 
 function loadProgress() {
-  if (!STORY_ID) return null;
-  try { return getLibrary()[STORY_ID]?.progress || null; } catch (_) { return null; }
+  return _storyCache?.progress || null;
 }
 
-function clearProgress() {
-  if (!STORY_ID) return;
-  const lib = getLibrary();
-  if (lib[STORY_ID]) { lib[STORY_ID].progress = null; localStorage.setItem('bea_library', JSON.stringify(lib)); }
+async function clearProgress() {
+  if (!STORY_ID || !_storyCache) return;
+  _storyCache.progress = null;
+  const uid = await _ensureUser();
+  if (uid) await _SB.from('stories').upsert({ id: STORY_ID, user_id: uid, data: _storyCache, updated_at: new Date().toISOString() });
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1220,9 +1241,6 @@ async function showReading(data, animate) {
   if (data.bookTitle && !S.bookTitle) {
     S.bookTitle = data.bookTitle;
     document.title = S.bookTitle;
-    // Persist title immediately so shelf can show it
-    const lib = getLibrary();
-    if (lib[STORY_ID]) { lib[STORY_ID].bookTitle = S.bookTitle; localStorage.setItem('bea_library', JSON.stringify(lib)); }
   }
 
   if (mood) applyTheme(mood);
@@ -1410,10 +1428,10 @@ async function generateSpine() {
     const data = await res.json();
     if (!data.success || !data.svg) return;
     // Save SVG into the library entry
-    const lib = getLibrary();
-    if (lib[STORY_ID]) {
-      lib[STORY_ID].spineSvg = data.svg;
-      localStorage.setItem('bea_library', JSON.stringify(lib));
+    if (_storyCache) {
+      _storyCache.spineSvg = data.svg;
+      const uid = await _ensureUser();
+      if (uid) await _SB.from('stories').upsert({ id: STORY_ID, user_id: uid, data: _storyCache, updated_at: new Date().toISOString() });
     }
   } catch (_) { /* spine is optional — fail silently */ }
 }

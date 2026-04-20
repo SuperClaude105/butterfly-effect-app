@@ -16,10 +16,10 @@
   --text:     #e8d5b7;
   --text-dim: rgba(232,213,183,0.45);
   --glow:     rgba(139,0,0,0.4);
+  --error:    rgba(200,80,80,0.9);
+  --success:  rgba(196,162,100,0.9);
 }
-
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
-
 body {
   font-family: 'EB Garamond', Georgia, serif;
   background: var(--bg);
@@ -30,8 +30,6 @@ body {
   justify-content: center;
   overflow: hidden;
 }
-
-/* background radial gradients */
 body::before {
   content: '';
   position: fixed;
@@ -41,8 +39,6 @@ body::before {
     radial-gradient(ellipse 40% 40% at 80% 80%, rgba(196,162,100,0.06) 0%, transparent 60%);
   pointer-events: none;
 }
-
-/* SVG grain texture */
 body::after {
   content: '';
   position: fixed;
@@ -51,7 +47,6 @@ body::after {
   pointer-events: none;
   opacity: 0.6;
 }
-
 .card {
   position: relative;
   z-index: 1;
@@ -61,99 +56,63 @@ body::after {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 4px;
-  box-shadow:
-    0 0 0 1px rgba(139,0,0,0.08),
-    0 8px 32px rgba(0,0,0,0.6),
-    0 0 80px var(--glow);
+  box-shadow: 0 0 0 1px rgba(139,0,0,0.08), 0 8px 32px rgba(0,0,0,0.6), 0 0 80px var(--glow);
   animation: fadeUp 0.8s cubic-bezier(0.16,1,0.3,1) both;
 }
-
 @keyframes fadeUp {
-  from { opacity: 0; transform: translateY(24px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity:0; transform:translateY(24px); }
+  to   { opacity:1; transform:translateY(0); }
 }
-
-.ornament {
-  font-size: 0.85rem;
-  letter-spacing: 0.3em;
-  color: var(--accent);
-  opacity: 0.6;
-  margin-bottom: 1.25rem;
-}
-
+.ornament { font-size:.85rem; letter-spacing:.3em; color:var(--accent); opacity:.6; margin-bottom:1.25rem; }
 h1 {
   font-family: 'Playfair Display', Georgia, serif;
-  font-size: clamp(2.4rem, 6vw, 3rem);
+  font-size: clamp(2.4rem,6vw,3rem);
   font-weight: 900;
   letter-spacing: -0.03em;
   line-height: 1;
-  color: var(--text);
-  margin-bottom: 0.5rem;
+  margin-bottom: .5rem;
 }
-
-.tagline {
-  font-size: 1rem;
+.tagline { font-size:1rem; color:var(--text-dim); font-style:italic; margin-bottom:2rem; line-height:1.5; }
+.tabs { display:flex; gap:.5rem; margin-bottom:1.5rem; }
+.tab {
+  flex:1;
+  padding:.55rem;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius:3px;
   color: var(--text-dim);
-  font-style: italic;
-  margin-bottom: 2.5rem;
-  line-height: 1.5;
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size:.95rem;
+  cursor: pointer;
+  transition: color .2s, border-color .2s, background .2s;
 }
-
-.field {
-  position: relative;
-  margin-bottom: 1rem;
+.tab.active {
+  color: var(--text);
+  border-color: rgba(139,0,0,0.4);
+  background: rgba(139,0,0,0.1);
 }
-
-input[type="password"] {
+.tab:hover:not(.active) { color:var(--text); border-color:rgba(255,255,255,0.15); }
+.tab:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+input[type="email"], input[type="password"] {
   width: 100%;
-  padding: 0.85rem 1.1rem;
+  padding: .85rem 1.1rem;
   background: rgba(255,255,255,0.04);
   border: 1px solid var(--border);
   border-radius: 3px;
   color: var(--text);
   font-family: 'EB Garamond', Georgia, serif;
   font-size: 1.05rem;
-  letter-spacing: 0.15em;
-  text-align: center;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  margin-bottom: .75rem;
+  transition: border-color .2s, box-shadow .2s;
   outline: none;
 }
-
-input[type="password"]::placeholder {
-  letter-spacing: 0.05em;
-  color: var(--text-dim);
-}
-
-input[type="password"]:focus {
-  border-color: rgba(139,0,0,0.5);
-  box-shadow: 0 0 0 3px rgba(139,0,0,0.12);
-}
-
-input[type="password"].shake {
-  animation: shake 0.4s cubic-bezier(0.36,0.07,0.19,0.97);
-  border-color: rgba(200,50,50,0.6);
-}
-
-@keyframes shake {
-  0%,100% { transform: translateX(0); }
-  20%      { transform: translateX(-8px); }
-  40%      { transform: translateX(8px); }
-  60%      { transform: translateX(-5px); }
-  80%      { transform: translateX(5px); }
-}
-
-.error-msg {
-  font-size: 0.85rem;
-  color: rgba(200,80,80,0.85);
-  font-style: italic;
-  min-height: 1.2em;
-  margin-bottom: 0.75rem;
-  transition: opacity 0.2s;
-}
-
-button {
+input:focus { border-color:rgba(139,0,0,0.5); box-shadow:0 0 0 3px rgba(139,0,0,0.12); }
+.msg { font-size:.88rem; font-style:italic; min-height:1.3em; margin-bottom:.75rem; transition:opacity .2s; }
+.msg.error   { color:var(--error); }
+.msg.success { color:var(--success); }
+button[type="submit"] {
   width: 100%;
-  padding: 0.9rem 1.5rem;
+  padding: .9rem 1.5rem;
   background: var(--primary);
   border: none;
   border-radius: 3px;
@@ -161,86 +120,146 @@ button {
   font-family: 'Playfair Display', Georgia, serif;
   font-size: 1rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: .08em;
   cursor: pointer;
-  transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+  transition: background .2s, transform .15s, box-shadow .2s;
   box-shadow: 0 4px 16px rgba(139,0,0,0.3);
 }
-
-button:hover {
-  background: #a00000;
-  box-shadow: 0 6px 24px rgba(139,0,0,0.45);
-}
-
-button:active {
-  transform: scale(0.98);
-}
-
-button:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 3px;
-}
-
-.divider {
-  margin: 2rem 0 0;
-  border: none;
-  border-top: 1px solid var(--border);
-}
-
-.footer-note {
-  margin-top: 1.25rem;
-  font-size: 0.8rem;
-  color: var(--text-dim);
-  font-style: italic;
-}
+button[type="submit"]:hover  { background:#a00000; box-shadow:0 6px 24px rgba(139,0,0,0.45); }
+button[type="submit"]:active { transform:scale(0.98); }
+button[type="submit"]:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+button[type="submit"]:disabled { opacity:.5; cursor:not-allowed; }
+hr { margin:2rem 0 1.25rem; border:none; border-top:1px solid var(--border); }
+.footer-note { font-size:.8rem; color:var(--text-dim); font-style:italic; }
 </style>
 </head>
 <body>
-
 <div class="card">
   <p class="ornament">⟡ ⟡ ⟡</p>
   <h1>Unwritten</h1>
   <p class="tagline">Your story. Your choices. Your ending.</p>
 
-  <form id="loginForm" autocomplete="off">
-    <div class="field">
-      <input
-        type="password"
-        id="passwordInput"
-        placeholder="Enter password"
-        autofocus
-        autocomplete="current-password"
-      />
-    </div>
-    <p class="error-msg" id="errorMsg"></p>
-    <button type="submit">Enter</button>
+  <div class="tabs">
+    <button class="tab active" data-tab="signin">Sign In</button>
+    <button class="tab" data-tab="register">Create Account</button>
+  </div>
+
+  <!-- Sign In -->
+  <form id="signinForm" autocomplete="on">
+    <input type="email" id="si-email" placeholder="Email address" autocomplete="email" required>
+    <input type="password" id="si-pass" placeholder="Password" autocomplete="current-password" required>
+    <p class="msg error" id="si-msg"></p>
+    <button type="submit" id="si-btn">Sign In</button>
   </form>
 
-  <hr class="divider">
-  <p class="footer-note">Private access only</p>
+  <!-- Register -->
+  <form id="registerForm" style="display:none" autocomplete="on">
+    <input type="email" id="reg-email" placeholder="Email address" autocomplete="email" required>
+    <input type="password" id="reg-pass" placeholder="Password (min 6 characters)" autocomplete="new-password" required>
+    <input type="password" id="reg-confirm" placeholder="Confirm password" autocomplete="new-password" required>
+    <p class="msg" id="reg-msg"></p>
+    <button type="submit" id="reg-btn">Create Account</button>
+  </form>
+
+  <hr>
+  <p class="footer-note">Private access · Unwritten</p>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
-  const CORRECT = 'Unwritten105';
+const _SB = supabase.createClient(
+  'https://puywhvrgixlhijxzircy.supabase.co',
+  'sb_publishable_ob7bw2JF-iSjqyjSXRu4-g_lLuFagj7'
+);
 
-  document.getElementById('loginForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    const input = document.getElementById('passwordInput');
-    const err   = document.getElementById('errorMsg');
+// If already signed in, go straight to shelf
+_SB.auth.getSession().then(({ data: { session } }) => {
+  if (session) location.replace('/shelf.html');
+});
 
-    if (input.value === CORRECT) {
-      sessionStorage.setItem('unwritten_auth', 'true');
-      window.location.href = '/shelf.html';
-    } else {
-      err.textContent = 'Incorrect password. Try again.';
-      input.classList.remove('shake');
-      void input.offsetWidth; // reflow to restart animation
-      input.classList.add('shake');
-      input.value = '';
-      input.focus();
-      setTimeout(() => input.classList.remove('shake'), 400);
-    }
+// ── Tabs ──────────────────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const tab = btn.dataset.tab;
+    document.getElementById('signinForm').style.display   = tab === 'signin'   ? '' : 'none';
+    document.getElementById('registerForm').style.display = tab === 'register' ? '' : 'none';
+    document.getElementById('si-msg').textContent  = '';
+    document.getElementById('reg-msg').textContent = '';
   });
+});
+
+// ── Sign in ───────────────────────────────────────────────────────
+document.getElementById('signinForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const msgEl = document.getElementById('si-msg');
+  const btn   = document.getElementById('si-btn');
+  msgEl.textContent = '';
+  btn.disabled = true;
+  btn.textContent = 'Signing in…';
+
+  const { error } = await _SB.auth.signInWithPassword({
+    email:    document.getElementById('si-email').value.trim(),
+    password: document.getElementById('si-pass').value,
+  });
+
+  if (error) {
+    msgEl.textContent = error.message;
+    btn.disabled = false;
+    btn.textContent = 'Sign In';
+    return;
+  }
+  location.replace('/shelf.html');
+});
+
+// ── Register ──────────────────────────────────────────────────────
+document.getElementById('registerForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const msgEl = document.getElementById('reg-msg');
+  const btn   = document.getElementById('reg-btn');
+  msgEl.className = 'msg';
+  msgEl.textContent = '';
+  btn.disabled = true;
+  btn.textContent = 'Creating account…';
+
+  const email    = document.getElementById('reg-email').value.trim();
+  const password = document.getElementById('reg-pass').value;
+  const confirm  = document.getElementById('reg-confirm').value;
+
+  if (password !== confirm) {
+    msgEl.className = 'msg error';
+    msgEl.textContent = 'Passwords do not match.';
+    btn.disabled = false; btn.textContent = 'Create Account';
+    return;
+  }
+  if (password.length < 6) {
+    msgEl.className = 'msg error';
+    msgEl.textContent = 'Password must be at least 6 characters.';
+    btn.disabled = false; btn.textContent = 'Create Account';
+    return;
+  }
+
+  const { data, error } = await _SB.auth.signUp({ email, password });
+
+  if (error) {
+    msgEl.className = 'msg error';
+    msgEl.textContent = error.message;
+    btn.disabled = false; btn.textContent = 'Create Account';
+    return;
+  }
+
+  // If email confirmation is disabled, session is returned immediately
+  if (data.session) {
+    location.replace('/shelf.html');
+    return;
+  }
+
+  // Email confirmation required
+  msgEl.className = 'msg success';
+  msgEl.textContent = 'Account created! Check your email to confirm, then sign in.';
+  btn.disabled = false; btn.textContent = 'Create Account';
+});
 </script>
 </body>
 </html>
