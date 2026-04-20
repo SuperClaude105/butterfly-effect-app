@@ -1,0 +1,1891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Embers of the Ashen Court</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Playfair+Display:ital,wght@0,700;0,900;1,400;1,700&display=swap" rel="stylesheet">
+<style>
+/* ── Dynamic theme tokens ── */
+:root {
+  --primary:    #8B0000;
+  --secondary:  #1a0505;
+  --accent:     #c4a264;
+  --bg:         #0d0505;
+  --text:       #e8d5b7;
+  --text-dim:   rgba(232,213,183,0.55);
+  --glow:       rgba(139,0,0,0.35);
+  --speed:      2.4s;
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'EB Garamond', Georgia, serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+  transition: background var(--speed) ease, color var(--speed) ease;
+}
+
+/* SVG grain overlay */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.6;
+}
+
+/* Ambient gradient — updated via JS */
+#ambient {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  transition: background var(--speed) ease;
+  background:
+    radial-gradient(ellipse 60% 50% at 25% 35%, var(--glow) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 60% at 75% 75%, rgba(0,0,0,0.7) 0%, transparent 60%),
+    var(--bg);
+}
+
+/* Particles canvas */
+#canvas {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ── App shell ── */
+.app {
+  position: relative;
+  z-index: 10;
+  min-height: 100vh;
+}
+
+/* Progress bar */
+#progress {
+  position: fixed;
+  top: 0; left: 0;
+  height: 2px;
+  width: 0%;
+  background: linear-gradient(to right, var(--primary), var(--accent));
+  box-shadow: 0 0 8px var(--glow);
+  transition: width 1s ease, background var(--speed) ease;
+  z-index: 500;
+}
+
+/* HUD buttons */
+.hud {
+  position: fixed;
+  top: 1.25rem;
+  z-index: 400;
+  display: none;
+}
+#hud-left  { left: 1.5rem; }
+#hud-right { right: 1.5rem; }
+
+.hud-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  opacity: 0.35;
+  color: var(--text);
+  transition: opacity 0.3s;
+}
+
+.hud-label:hover { opacity: 0.7; }
+
+.btn-ghost {
+  font-family: 'EB Garamond', serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  padding: 0.5rem 1.1rem;
+  border: 1px solid rgba(255,255,255,0.13);
+  background: rgba(0,0,0,0.45);
+  color: var(--text);
+  cursor: pointer;
+  opacity: 0.45;
+  transition: opacity 0.3s, border-color 0.3s, box-shadow 0.3s, background 0.3s;
+  backdrop-filter: blur(6px);
+}
+.btn-ghost:hover {
+  opacity: 1;
+  border-color: var(--accent);
+  box-shadow: 0 0 16px var(--glow);
+}
+.btn-ghost:disabled { opacity: 0.2; cursor: not-allowed; }
+
+/* Narrate button active state */
+#narrate-btn.speaking {
+  opacity: 1;
+  border-color: var(--accent);
+  color: var(--accent);
+  animation: narrate-pulse 2.2s ease infinite;
+}
+@keyframes narrate-pulse {
+  0%,100% { box-shadow: 0 0 10px var(--glow); }
+  50%      { box-shadow: 0 0 28px var(--glow), 0 0 55px var(--glow); }
+}
+
+/* Sound wave bars (shown inside button when speaking) */
+.wave-bars {
+  display: none;
+  align-items: center;
+  gap: 2px;
+  height: 12px;
+  margin-right: 6px;
+}
+.speaking .wave-bars { display: inline-flex; }
+.wave-bars span {
+  display: block;
+  width: 2px;
+  background: var(--accent);
+  border-radius: 1px;
+  animation: bar-bounce 1s ease infinite;
+}
+.wave-bars span:nth-child(1) { height: 4px;  animation-delay: 0s;    }
+.wave-bars span:nth-child(2) { height: 10px; animation-delay: 0.15s; }
+.wave-bars span:nth-child(3) { height: 7px;  animation-delay: 0.3s;  }
+.wave-bars span:nth-child(4) { height: 12px; animation-delay: 0.1s;  }
+.wave-bars span:nth-child(5) { height: 5px;  animation-delay: 0.25s; }
+@keyframes bar-bounce {
+  0%,100% { transform: scaleY(0.4); }
+  50%      { transform: scaleY(1); }
+}
+
+/* ── Screens ── */
+.screen { display: none; min-height: 100vh; }
+.screen.active { display: flex; }
+
+/* ── Welcome ── */
+#s-welcome {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 3rem 2rem;
+  gap: 0;
+}
+
+.ornament {
+  font-size: 1.1rem;
+  letter-spacing: 0.9em;
+  opacity: 0.25;
+  margin-bottom: 2rem;
+}
+
+.book-title {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(2.8rem, 7vw, 5rem);
+  font-style: italic;
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+  color: var(--accent);
+  text-shadow: 0 0 60px var(--glow), 0 0 120px var(--glow);
+  margin-bottom: 1rem;
+}
+
+.book-genre {
+  font-size: 0.8rem;
+  letter-spacing: 0.38em;
+  text-transform: uppercase;
+  opacity: 0.35;
+  margin-bottom: 2.5rem;
+}
+
+.book-blurb {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  max-width: 440px;
+  color: var(--text-dim);
+  font-style: italic;
+  margin-bottom: 3rem;
+}
+
+.btn-primary {
+  font-family: 'EB Garamond', serif;
+  font-size: 0.9rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  padding: 1rem 3.2rem;
+  border: 1px solid var(--accent);
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: color 0.35s, box-shadow 0.35s;
+  margin: 0.4rem;
+}
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.35s cubic-bezier(0.22,1,0.36,1);
+}
+.btn-primary:hover::before { transform: scaleX(1); }
+.btn-primary:hover { color: var(--bg); box-shadow: 0 0 30px var(--glow); }
+.btn-primary span { position: relative; z-index: 1; }
+
+.btn-secondary {
+  font-family: 'EB Garamond', serif;
+  font-size: 0.85rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  padding: 0.85rem 2.4rem;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: color 0.3s, border-color 0.3s;
+  margin: 0.4rem;
+}
+.btn-secondary:hover { color: var(--text); border-color: rgba(255,255,255,0.35); }
+
+.welcome-btns { display: flex; flex-direction: column; align-items: center; }
+
+/* ── Loading ── */
+#s-loading {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+}
+
+.spinner {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  border: 1.5px solid transparent;
+  border-top-color: var(--accent);
+  border-right-color: var(--primary);
+  animation: spin 1.6s cubic-bezier(0.5,-0.3,0.5,1.3) infinite;
+  transition: border-top-color var(--speed), border-right-color var(--speed);
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading-msg {
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  font-size: 1.1rem;
+  opacity: 0.5;
+  letter-spacing: 0.06em;
+  transition: opacity 0.4s;
+}
+
+/* ── Reading ── */
+#s-reading {
+  flex-direction: column;
+  align-items: center;
+  padding: 5rem 2rem 22rem;
+}
+
+.ch-header {
+  text-align: center;
+  margin-bottom: 3.5rem;
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.9s ease, transform 0.9s ease;
+}
+.ch-header.in { opacity: 1; transform: translateY(0); }
+
+.ch-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  opacity: 0.3;
+  margin-bottom: 0.6rem;
+}
+
+.ch-title {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(1.6rem, 3.5vw, 2.4rem);
+  font-style: italic;
+  color: var(--accent);
+  text-shadow: 0 0 28px var(--glow);
+  transition: color var(--speed), text-shadow var(--speed);
+}
+
+.story {
+  max-width: 660px;
+  width: 100%;
+  font-size: var(--story-font-size, clamp(1.08rem, 1.6vw, 1.2rem));
+  line-height: 1.9;
+  color: var(--text);
+  opacity: 0;
+  transition: opacity 0.6s;
+  min-height: 200px;
+}
+.story.in { opacity: 1; }
+.story p { margin-bottom: 1.4em; text-indent: 2.2em; }
+.story p:first-child { text-indent: 0; }
+
+.cursor {
+  display: inline-block;
+  width: 1.5px;
+  height: 1em;
+  background: var(--accent);
+  vertical-align: text-bottom;
+  margin-left: 1px;
+  animation: blink 0.9s ease infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+/* ── Decision panel ── */
+#decision-panel {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  padding: 5rem 2rem 3rem;
+  background: linear-gradient(to top, rgba(10,3,3,0.98) 70%, transparent);
+  backdrop-filter: blur(6px);
+  transform: translateY(100%);
+  transition: transform 0.65s cubic-bezier(0.33,1,0.68,1);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.4rem;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+#decision-panel.open { transform: translateY(0); }
+
+.decision-prompt {
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  font-size: 1.05rem;
+  text-align: center;
+  color: rgba(232,213,183,0.75);
+  max-width: 480px;
+  line-height: 1.6;
+}
+
+.choices {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.choice {
+  font-family: 'EB Garamond', serif;
+  font-size: 0.88rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 0.9rem 2.2rem;
+  border: 1px solid rgba(255,255,255,0.22);
+  background: rgba(20,8,8,0.75);
+  color: #e8d5b7;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.3s, box-shadow 0.3s, transform 0.2s cubic-bezier(0.22,1,0.36,1), background 0.3s;
+}
+.choice::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--primary);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.choice:hover::before { opacity: 0.25; }
+.choice:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 22px var(--glow);
+  transform: translateY(-3px);
+}
+.choice:active { transform: translateY(0); }
+.choice span { position: relative; z-index: 1; }
+
+/* ── Custom decision input ── */
+.custom-option {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 480px;
+}
+
+.btn-custom-toggle {
+  font-family: 'EB Garamond', serif;
+  font-size: 0.8rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  background: none;
+  border: none;
+  color: rgba(232,213,183,0.55);
+  cursor: pointer;
+  transition: color 0.3s;
+  padding: 0.3rem 0;
+}
+.btn-custom-toggle:hover { color: rgba(232,213,183,0.9); }
+
+.custom-input-row {
+  display: none;
+  width: 100%;
+  gap: 0.6rem;
+  animation: fadein 0.3s ease;
+}
+.custom-input-row.open { display: flex; }
+@keyframes fadein { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+
+.custom-input {
+  flex: 1;
+  font-family: 'EB Garamond', serif;
+  font-size: 1rem;
+  padding: 0.75rem 1.1rem;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.18);
+  color: #e8d5b7;
+  outline: none;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+.custom-input::placeholder { color: rgba(232,213,183,0.4); font-style: italic; }
+.custom-input:focus { border-color: var(--accent); box-shadow: 0 0 14px var(--glow); }
+
+.btn-custom-submit {
+  font-family: 'EB Garamond', serif;
+  font-size: 0.82rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 0.75rem 1.4rem;
+  border: 1px solid var(--accent);
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  transition: background 0.3s, color 0.3s, box-shadow 0.3s;
+  white-space: nowrap;
+}
+.btn-custom-submit:hover { background: var(--accent); color: var(--bg); box-shadow: 0 0 18px var(--glow); }
+
+/* ── Mood label ── */
+#mood-label {
+  position: fixed;
+  bottom: 1.2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.65rem;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  opacity: 0.18;
+  z-index: 300;
+  pointer-events: none;
+  transition: opacity 0.5s;
+}
+
+/* ── Voice picker panel ── */
+#vp-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  z-index: 600;
+  backdrop-filter: blur(2px);
+}
+#vp-overlay.open { display: block; }
+
+#voice-picker {
+  display: none;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -48%) scale(0.96);
+  width: min(480px, 92vw);
+  max-height: 70vh;
+  background: #100808;
+  border: 1px solid rgba(196,162,100,0.25);
+  box-shadow: 0 24px 80px rgba(0,0,0,0.85), 0 0 40px rgba(139,0,0,0.12);
+  z-index: 700;
+  flex-direction: column;
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.22,1,0.36,1);
+}
+#voice-picker.open {
+  display: flex;
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.vp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.4rem 1.6rem 1rem;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  flex-shrink: 0;
+}
+.vp-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.05rem;
+  font-style: italic;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+}
+.vp-close {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 1.4rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 0.2rem;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+.vp-close:hover { opacity: 1; }
+
+#vp-list {
+  overflow-y: auto;
+  padding: 0.75rem 0 1rem;
+  flex: 1;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(196,162,100,0.25) transparent;
+}
+
+.vp-group-label {
+  font-size: 0.62rem;
+  letter-spacing: 0.36em;
+  text-transform: uppercase;
+  color: var(--accent);
+  opacity: 0.5;
+  padding: 0.9rem 1.6rem 0.4rem;
+}
+
+.vp-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 1.6rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.vp-row:hover { background: rgba(255,255,255,0.04); }
+.vp-row.current { background: rgba(196,162,100,0.07); }
+
+.vp-name {
+  flex: 1;
+  font-family: 'EB Garamond', serif;
+  font-size: 0.95rem;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vp-badge {
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent);
+  border: 1px solid rgba(196,162,100,0.4);
+  padding: 0.15rem 0.5rem;
+  flex-shrink: 0;
+}
+
+.vp-preview {
+  font-family: 'EB Garamond', serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  background: none;
+  border: 1px solid rgba(255,255,255,0.13);
+  color: var(--text-dim);
+  padding: 0.3rem 0.75rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color 0.2s, color 0.2s;
+}
+.vp-preview:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── Tools panel ── */
+#tools-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  z-index: 590;
+}
+#tools-overlay.open { display: block; }
+
+#tools-panel {
+  display: none;
+  position: fixed;
+  top: 4rem; right: 1.5rem;
+  width: 230px;
+  background: #100808;
+  border: 1px solid rgba(196,162,100,0.22);
+  box-shadow: 0 16px 60px rgba(0,0,0,0.9);
+  z-index: 600;
+  flex-direction: column;
+  padding: 0.4rem 0 0.6rem;
+}
+#tools-panel.open { display: flex; }
+
+.ti {
+  font-family: 'EB Garamond', serif;
+  font-size: 0.88rem;
+  letter-spacing: 0.1em;
+  padding: 0.65rem 1.3rem;
+  background: none; border: none;
+  color: rgba(232,213,183,0.6);
+  cursor: pointer; text-align: left;
+  display: flex; align-items: center; gap: 0.55rem;
+  width: 100%;
+  transition: background 0.2s, color 0.2s;
+}
+.ti:hover { background: rgba(255,255,255,0.05); color: #e8d5b7; }
+
+.t-sep {
+  height: 1px;
+  background: rgba(232,213,183,0.08);
+  margin: 0.35rem 0;
+}
+
+.t-font-row {
+  padding: 0.5rem 1.3rem;
+  display: flex; align-items: center; gap: 0.7rem;
+}
+.t-font-label {
+  font-size: 0.65rem; letter-spacing: 0.22em; text-transform: uppercase;
+  color: rgba(232,213,183,0.45); white-space: nowrap;
+}
+.t-font-slider {
+  flex: 1; -webkit-appearance: none;
+  height: 1px; background: rgba(196,162,100,0.35);
+  outline: none; cursor: pointer;
+}
+.t-font-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 11px; height: 11px;
+  border-radius: 50%; background: #c4a264;
+}
+
+/* ── Shared modal ── */
+.m-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.62); z-index: 800;
+  backdrop-filter: blur(3px);
+}
+.m-overlay.open { display: block; }
+
+.m-panel {
+  display: none;
+  position: fixed; top: 50%; left: 50%;
+  transform: translate(-50%, -48%) scale(0.97);
+  width: min(560px, 94vw); max-height: 78vh;
+  background: #0f0707;
+  border: 1px solid rgba(196,162,100,0.2);
+  box-shadow: 0 28px 90px rgba(0,0,0,0.9);
+  z-index: 900;
+  flex-direction: column;
+  opacity: 0;
+  transition: transform 0.3s cubic-bezier(0.22,1,0.36,1), opacity 0.3s;
+}
+.m-panel.open {
+  display: flex; opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.m-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1.2rem 1.5rem 0.9rem;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  flex-shrink: 0;
+}
+.m-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.05rem; font-style: italic; color: var(--accent);
+}
+.m-close {
+  background: none; border: none; color: var(--text-dim);
+  font-size: 1.2rem; cursor: pointer; opacity: 0.5; transition: opacity 0.2s;
+  line-height: 1; padding: 0.2rem;
+}
+.m-close:hover { opacity: 1; }
+
+.m-body {
+  overflow-y: auto; padding: 1.3rem 1.5rem; flex: 1;
+  scrollbar-width: thin; scrollbar-color: rgba(196,162,100,0.2) transparent;
+}
+
+/* ── Journey timeline ── */
+.j-chapter {
+  margin-bottom: 1.5rem; padding-left: 1.1rem;
+  border-left: 1px solid rgba(196,162,100,0.2);
+  position: relative;
+}
+.j-chapter::before {
+  content: ''; position: absolute;
+  left: -4px; top: 5px; width: 7px; height: 7px;
+  border-radius: 50%; background: var(--accent); opacity: 0.65;
+}
+.j-ch-label { font-size: 0.63rem; letter-spacing: 0.34em; text-transform: uppercase; opacity: 0.38; margin-bottom: 0.15rem; }
+.j-ch-title { font-family: 'Playfair Display', serif; font-style: italic; font-size: 0.92rem; color: var(--accent); margin-bottom: 0.45rem; }
+.j-prompt { font-size: 0.84rem; color: var(--text-dim); font-style: italic; line-height: 1.5; margin-bottom: 0.25rem; }
+.j-chosen { font-size: 0.86rem; color: var(--text); padding: 0.35rem 0.75rem; border-left: 2px solid var(--primary); background: rgba(139,0,0,0.08); margin-top: 0.3rem; }
+
+/* ── Character sheet ── */
+.char-card {
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+  padding: 1.1rem 1.3rem; margin-bottom: 0.9rem;
+}
+.char-role { font-size: 0.63rem; letter-spacing: 0.34em; text-transform: uppercase; color: var(--accent); opacity: 0.55; margin-bottom: 0.35rem; }
+.char-name { font-family: 'Playfair Display', serif; font-size: 1.3rem; font-style: italic; color: var(--text); margin-bottom: 0.45rem; }
+.char-detail { font-size: 0.87rem; color: var(--text-dim); line-height: 1.65; }
+
+/* ── Recap ── */
+.recap-text { font-size: 0.95rem; line-height: 1.85; color: var(--text); }
+.recap-text p { margin-bottom: 1em; }
+
+/* ── Quote card ── */
+#q-canvas-wrap { display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+#q-canvas { width: 100%; max-width: 420px; border: 1px solid rgba(196,162,100,0.15); }
+.btn-dl-quote {
+  font-family: 'EB Garamond', serif; font-size: 0.78rem; letter-spacing: 0.22em;
+  text-transform: uppercase; padding: 0.6rem 1.6rem;
+  border: 1px solid var(--accent); background: transparent; color: var(--accent);
+  cursor: pointer; transition: background 0.3s, color 0.3s;
+}
+.btn-dl-quote:hover { background: var(--accent); color: var(--bg); }
+</style>
+</head>
+<body>
+
+<div id="ambient"></div>
+<canvas id="canvas"></canvas>
+
+<div class="app">
+
+  <div id="progress"></div>
+
+  <!-- HUD left: chapter label -->
+  <div class="hud" id="hud-left">
+    <span class="hud-label">Chapter <span id="hud-ch">1</span></span>
+  </div>
+
+  <!-- HUD right -->
+  <div class="hud" id="hud-right" style="display:flex;gap:0.6rem;align-items:center;">
+    <button class="btn-ghost" id="narrate-btn" onclick="narrator.toggle()">
+      <span class="wave-bars"><span></span><span></span><span></span><span></span><span></span></span>
+      <span id="narrate-label">Listen</span>
+    </button>
+    <button class="btn-ghost" id="voice-btn" onclick="openVoicePicker()" title="Choose narrator voice">Voice</button>
+    <button class="btn-ghost" onclick="toggleTools()" title="Tools &amp; Settings">Tools</button>
+    <button class="btn-ghost" onclick="window.location.href='shelf.html'" title="My Shelf">&#8592; Shelf</button>
+  </div>
+
+  <!-- Mood atmosphere label -->
+  <div id="mood-label"></div>
+
+  <!-- ── Screen: Welcome ── -->
+  <div class="screen active" id="s-welcome">
+    <p class="ornament">⟡ ⟡ ⟡</p>
+    <h1 class="book-title" id="welcome-title">Your Story</h1>
+    <p class="book-genre" id="welcome-genre">An Interactive Story</p>
+    <p class="book-blurb">
+      Every decision you make rewrites what comes next.
+      This is not just a story — it is yours.
+    </p>
+    <div class="welcome-btns">
+      <button class="btn-primary" id="begin-btn" onclick="startStory()"><span>Begin</span></button>
+      <button class="btn-secondary" id="resume-btn" onclick="resumeStory()" style="display:none">Continue where I left off</button>
+      <button class="btn-secondary" onclick="window.location.href='shelf.html'" style="margin-top:0.5rem;opacity:0.5">Back to My Shelf</button>
+    </div>
+  </div>
+
+  <!-- ── Screen: Loading ── -->
+  <div class="screen" id="s-loading">
+    <div class="spinner"></div>
+    <p class="loading-msg" id="loading-msg">The shadows are gathering…</p>
+  </div>
+
+  <!-- ── Screen: Reading ── -->
+  <div class="screen" id="s-reading">
+    <div class="ch-header" id="ch-header">
+      <div class="ch-label">Chapter <span id="ch-num-label">One</span></div>
+      <h2 class="ch-title" id="ch-title">The Cartographer's Thread</h2>
+    </div>
+    <div class="story" id="story"></div>
+  </div>
+
+</div>
+
+<!-- Tools overlay + panel -->
+<div id="tools-overlay" onclick="closeTools()"></div>
+<div id="tools-panel">
+  <button class="ti" onclick="openJourney()">📖 Decision Journey</button>
+  <button class="ti" onclick="openCharSheet()">👤 Characters</button>
+  <button class="ti" onclick="openRecap()">📜 Story So Far</button>
+  <button class="ti" onclick="openQuoteCard()">✨ Share a Quote</button>
+  <div class="t-sep"></div>
+  <div class="t-font-row">
+    <span class="t-font-label">Text Size</span>
+    <input type="range" class="t-font-slider" id="font-slider" min="85" max="145" value="100" oninput="setFontSize(this.value)">
+  </div>
+  <button class="ti" id="export-btn" onclick="exportPDF();closeTools()">↓ Download PDF</button>
+</div>
+
+<!-- Journey modal -->
+<div id="j-overlay" class="m-overlay" onclick="closeJourney()"></div>
+<div id="j-modal" class="m-panel">
+  <div class="m-header">
+    <span class="m-title">Your Journey</span>
+    <button class="m-close" onclick="closeJourney()">&#10005;</button>
+  </div>
+  <div class="m-body" id="j-content"></div>
+</div>
+
+<!-- Character sheet modal -->
+<div id="cs-overlay" class="m-overlay" onclick="closeCharSheet()"></div>
+<div id="cs-modal" class="m-panel">
+  <div class="m-header">
+    <span class="m-title">Characters</span>
+    <button class="m-close" onclick="closeCharSheet()">&#10005;</button>
+  </div>
+  <div class="m-body" id="cs-content"></div>
+</div>
+
+<!-- Story recap modal -->
+<div id="re-overlay" class="m-overlay" onclick="closeRecap()"></div>
+<div id="re-modal" class="m-panel">
+  <div class="m-header">
+    <span class="m-title">Story So Far</span>
+    <button class="m-close" onclick="closeRecap()">&#10005;</button>
+  </div>
+  <div class="m-body" id="re-content"></div>
+</div>
+
+<!-- Quote card modal -->
+<div id="qc-overlay" class="m-overlay" onclick="closeQuoteCard()"></div>
+<div id="qc-modal" class="m-panel">
+  <div class="m-header">
+    <span class="m-title">Share a Quote</span>
+    <button class="m-close" onclick="closeQuoteCard()">&#10005;</button>
+  </div>
+  <div class="m-body">
+    <div id="q-canvas-wrap">
+      <canvas id="q-canvas" width="420" height="260"></canvas>
+      <button class="btn-dl-quote" onclick="downloadQuote()">&#8595; Download Image</button>
+    </div>
+  </div>
+</div>
+
+<!-- Voice picker overlay + panel -->
+<div id="vp-overlay" onclick="closeVoicePicker()"></div>
+<div id="voice-picker">
+  <div class="vp-header">
+    <span class="vp-title">Choose a Narrator Voice</span>
+    <button class="vp-close" onclick="closeVoicePicker()">&#10005;</button>
+  </div>
+  <div id="vp-list"></div>
+</div>
+
+<!-- Decision panel (fixed, overlays reading screen) -->
+<div id="decision-panel">
+  <p class="decision-prompt" id="d-prompt"></p>
+  <div class="choices" id="d-choices"></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════
+// STORY IDENTITY — pick up ID + config from sessionStorage
+// ═══════════════════════════════════════════════════════════════
+const STORY_ID = sessionStorage.getItem('bea_story_id') || null;
+const STORY_CONFIG = (() => {
+  try { return JSON.parse(sessionStorage.getItem('bea_config')) || null; }
+  catch (_) { return null; }
+})();
+
+// Pre-fetched chapter 1 data (generated on the creation page)
+const PREFETCH = (() => {
+  try {
+    const d = JSON.parse(sessionStorage.getItem('bea_prefetch'));
+    sessionStorage.removeItem('bea_prefetch');
+    return d || null;
+  } catch (_) { return null; }
+})();
+
+// If no story ID, bounce to shelf (user navigated directly)
+if (!STORY_ID) window.location.href = 'shelf.html';
+
+const S = {
+  chapter: 0,
+  bible: '',
+  chapters: [],
+  titles: [],
+  decisions: [],
+  decisionHistory: [],
+  pendingDecisions: null,
+  mood: null,
+  typing: false,
+  bookTitle: STORY_CONFIG?.bookTitleInput || null,
+};
+
+const LOAD_MSGS = [
+  'The story is taking shape…',
+  'Your world is coming into focus…',
+  'A new chapter unfolds…',
+  'The threads of fate are weaving…',
+  'Something stirs in the dark…',
+  'The next moment arrives…',
+  'Your choice ripples forward…',
+  'The ink is still wet…',
+];
+
+const ORDINALS = ['One','Two','Three','Four','Five','Six','Seven','Eight',
+  'Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen',
+  'Seventeen','Eighteen','Nineteen','Twenty','Twenty-One','Twenty-Two',
+  'Twenty-Three','Twenty-Four','Twenty-Five'];
+
+function ordinal(n) { return ORDINALS[n-1] || String(n); }
+
+// ═══════════════════════════════════════════════════════════════
+// LIBRARY STORAGE (multi-story)
+// ═══════════════════════════════════════════════════════════════
+function getLibrary() {
+  try { return JSON.parse(localStorage.getItem('bea_library')) || {}; } catch (_) { return {}; }
+}
+
+function saveProgress() {
+  if (!STORY_ID) return;
+  const lib = getLibrary();
+  const existing = lib[STORY_ID] || {};
+  lib[STORY_ID] = {
+    ...existing,
+    id: STORY_ID,
+    config: STORY_CONFIG,
+    bookTitle: S.bookTitle,
+    progress: {
+      chapter: S.chapter, bible: S.bible, chapters: S.chapters,
+      titles: S.titles, decisions: S.decisions, decisionHistory: S.decisionHistory,
+      mood: S.mood, bookTitle: S.bookTitle,
+      pendingDecisions: S.pendingDecisions,
+    },
+    lastReadAt: Date.now(),
+    createdAt: existing.createdAt || Date.now(),
+  };
+  localStorage.setItem('bea_library', JSON.stringify(lib));
+}
+
+function loadProgress() {
+  if (!STORY_ID) return null;
+  try { return getLibrary()[STORY_ID]?.progress || null; } catch (_) { return null; }
+}
+
+function clearProgress() {
+  if (!STORY_ID) return;
+  const lib = getLibrary();
+  if (lib[STORY_ID]) { lib[STORY_ID].progress = null; localStorage.setItem('bea_library', JSON.stringify(lib)); }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// THEME
+// ═══════════════════════════════════════════════════════════════
+
+// Perceived luminance of a hex color (0 = black, 1 = white)
+function luminance(hex) {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!m) return 0;
+  const [rv, gv, bv] = [m[1],m[2],m[3]].map(x => {
+    const c = parseInt(x,16)/255;
+    return c <= 0.03928 ? c/12.92 : Math.pow((c+0.055)/1.055, 2.4);
+  });
+  return 0.2126*rv + 0.7152*gv + 0.0722*bv;
+}
+
+function applyTheme(mood) {
+  S.mood = mood;
+  const r = document.documentElement;
+
+  r.style.setProperty('--primary',   mood.primaryColor);
+  r.style.setProperty('--secondary', mood.secondaryColor);
+  r.style.setProperty('--bg',        mood.secondaryColor);
+  r.style.setProperty('--glow',      hex2rgba(mood.primaryColor, 0.38));
+
+  // ── Adaptive contrast: dark text on light backgrounds ──────────
+  const bgLum   = luminance(mood.secondaryColor);
+  const isLight = bgLum > 0.25;
+
+  if (isLight) {
+    r.style.setProperty('--text',     '#1a0d05');
+    r.style.setProperty('--text-dim', 'rgba(26,13,5,0.5)');
+    // Darken accent so it reads on a light bg
+    r.style.setProperty('--accent', darkenColor(mood.accentColor, 80));
+    r.style.setProperty('--glow',   hex2rgba(mood.primaryColor, 0.15));
+  } else {
+    r.style.setProperty('--text',     '#e8d5b7');
+    r.style.setProperty('--text-dim', 'rgba(232,213,183,0.55)');
+    r.style.setProperty('--accent',   mood.accentColor);
+  }
+
+  document.getElementById('ambient').style.background = `
+    radial-gradient(ellipse 65% 55% at 28% 38%, ${hex2rgba(mood.primaryColor, isLight ? 0.12 : 0.28)} 0%, transparent 70%),
+    radial-gradient(ellipse 45% 65% at 72% 72%, rgba(0,0,0,${isLight ? 0.1 : 0.75}) 0%, transparent 60%),
+    ${mood.secondaryColor}`;
+
+  document.getElementById('mood-label').textContent = mood.atmosphere || '';
+  particles.setType(mood.particles || 'none');
+}
+
+function darkenColor(hex, amount) {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!m) return hex;
+  const clamp = v => Math.max(0, Math.min(255, v));
+  const [r,g,b] = [m[1],m[2],m[3]].map(x => clamp(parseInt(x,16) - amount));
+  return `#${[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('')}`;
+}
+
+function hex2rgba(hex, a) {
+  const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return r ? `rgba(${+('0x'+r[1])},${+('0x'+r[2])},${+('0x'+r[3])},${a})` : `rgba(139,0,0,${a})`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PARTICLE SYSTEM
+// ═══════════════════════════════════════════════════════════════
+const particles = (() => {
+  const cv = document.getElementById('canvas');
+  const cx = cv.getContext('2d');
+  let pool = [];
+  let kind = 'embers';
+  const MAX = 140;
+
+  const resize = () => { cv.width = innerWidth; cv.height = innerHeight; };
+  window.addEventListener('resize', resize);
+  resize();
+
+  function spawn() {
+    const W = cv.width, H = cv.height;
+    switch (kind) {
+      case 'embers':  return { x: Math.random()*W, y: H+8, vx:(Math.random()-.5)*.9, vy:-(Math.random()*1.6+.5), r:Math.random()*2.5+1, a:Math.random()*.8+.2, col:`hsl(${Math.random()*28+8},100%,${Math.random()*28+52}%)`, life:1, dec:Math.random()*.007+.003, glow:true };
+      case 'petals':  return { x: Math.random()*W, y:-8, vx:(Math.random()-.5)*1.4, vy:Math.random()*.7+.25, r:Math.random()*5+3, a:Math.random()*.45+.18, col:`hsl(${Math.random()*28+305},55%,${Math.random()*18+68}%)`, life:1, dec:Math.random()*.0025+.001, ang:Math.random()*Math.PI*2, dAng:(Math.random()-.5)*.04 };
+      case 'ash':     return { x: Math.random()*W, y:-8, vx:(Math.random()-.5)*.35, vy:Math.random()*.38+.1, r:Math.random()*3.5+1, a:Math.random()*.28+.05, col:`hsl(0,0%,${Math.random()*28+48}%)`, life:1, dec:Math.random()*.0018+.0008 };
+      case 'sparks':  return { x: Math.random()*W, y:Math.random()*H, vx:(Math.random()-.5)*4.5, vy:(Math.random()-.5)*4.5, r:Math.random()*1.8+.5, a:1, col:`hsl(${Math.random()*55+25},100%,78%)`, life:1, dec:Math.random()*.04+.02 };
+      case 'snow':    return { x: Math.random()*W, y:-8, vx:(Math.random()-.5)*.45, vy:Math.random()*.55+.18, r:Math.random()*2.8+.8, a:Math.random()*.38+.1, col:'rgba(200,220,255,0.85)', life:1, dec:Math.random()*.0018+.0008 };
+      case 'dust':    return { x: Math.random()*W, y:Math.random()*H, vx:(Math.random()-.5)*.28, vy:(Math.random()-.5)*.28, r:Math.random()*1.8+.4, a:Math.random()*.18+.04, col:'rgba(200,180,140,.5)', life:1, dec:Math.random()*.001+.0004 };
+      default: return null;
+    }
+  }
+
+  function tick() {
+    cx.clearRect(0, 0, cv.width, cv.height);
+    if (kind !== 'none') {
+      const rate = { embers:2, petals:1, ash:1, sparks:3, snow:1, dust:1 }[kind] || 1;
+      for (let i=0; i<rate && pool.length<MAX; i++) { const p=spawn(); if(p) pool.push(p); }
+      pool = pool.filter(p => p.life > 0);
+      for (const p of pool) {
+        p.x += p.vx; p.y += p.vy; p.life -= p.dec;
+        if (p.ang !== undefined) p.ang += p.dAng;
+        if (kind === 'embers') { p.vx += (Math.random()-.5)*.08; p.vx = Math.max(-1, Math.min(1, p.vx)); }
+        cx.save();
+        cx.globalAlpha = p.a * p.life;
+        if (p.glow) { cx.shadowBlur=7; cx.shadowColor=p.col; }
+        if (p.ang !== undefined) {
+          cx.translate(p.x, p.y); cx.rotate(p.ang);
+          cx.fillStyle = p.col;
+          cx.beginPath(); cx.ellipse(0, 0, p.r, p.r*.38, 0, 0, Math.PI*2); cx.fill();
+        } else {
+          cx.fillStyle = p.col;
+          cx.beginPath(); cx.arc(p.x, p.y, p.r, 0, Math.PI*2); cx.fill();
+        }
+        cx.restore();
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+  tick();
+
+  return { setType(t) { kind = t||'none'; pool = []; } };
+})();
+
+// ═══════════════════════════════════════════════════════════════
+// TYPEWRITER
+// ═══════════════════════════════════════════════════════════════
+async function typewrite(el, text, speed = 16) {
+  el.innerHTML = '';
+  const paras = text.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
+  for (let pi = 0; pi < paras.length; pi++) {
+    const p = document.createElement('p');
+    el.appendChild(p);
+    const isLast = pi === paras.length - 1;
+    let cur;
+    if (isLast) { cur = document.createElement('span'); cur.className='cursor'; p.appendChild(cur); }
+    for (const ch of paras[pi]) {
+      p.insertBefore(document.createTextNode(ch), cur || null);
+      let d = speed;
+      if (ch === '.') d = speed * 6;
+      else if (ch === ',') d = speed * 2.5;
+      else if ('!?'.includes(ch)) d = speed * 5;
+      await delay(d);
+    }
+    if (!isLast) await delay(speed * 10);
+  }
+  const cur = el.querySelector('.cursor');
+  if (cur) await delay(600), cur.remove();
+}
+
+const delay = ms => new Promise(r => setTimeout(r, ms));
+
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STORY FLOW
+// ═══════════════════════════════════════════════════════════════
+async function startStory() {
+  clearProgress();
+  S.chapter=0; S.bible=''; S.chapters=[]; S.titles=[]; S.decisions=[]; S.decisionHistory=[];
+  S.bookTitle = STORY_CONFIG?.bookTitleInput || null;
+  if (PREFETCH && PREFETCH.success) {
+    // Chapter 1 was already generated on the creation page — use it directly
+    await showReading(PREFETCH, true);
+  } else {
+    await loadChapter(null, 1, true);
+  }
+}
+
+async function resumeStory() {
+  const saved = loadProgress();
+  if (!saved) return startStory();
+  Object.assign(S, saved);
+  if (!S.decisionHistory) S.decisionHistory = [];
+  if (S.mood) applyTheme(S.mood);
+  showHUD();
+  showReading({
+    chapterText: S.chapters[S.chapters.length - 1],
+    title: S.titles[S.titles.length - 1],
+    chapterNumber: S.chapter,
+    decisions: S.pendingDecisions || [],
+    bible: S.bible,
+  }, false);
+}
+
+async function loadChapter(decision, chapterNum, isFirst = false) {
+  // Switch to loading
+  show('s-loading');
+  const msgIdx = Math.min(chapterNum - 1, LOAD_MSGS.length - 1);
+  document.getElementById('loading-msg').textContent = LOAD_MSGS[msgIdx];
+
+  // Stop any narration between chapters
+  narrator.stop();
+
+  // Hide decision panel
+  document.getElementById('decision-panel').classList.remove('open');
+
+  // Reset reading area
+  const storyEl = document.getElementById('story');
+  storyEl.classList.remove('in');
+  storyEl.innerHTML = '';
+  document.getElementById('ch-header').classList.remove('in');
+
+  try {
+    const endpoint = isFirst ? '/api/start' : '/api/chapter';
+    const body = isFirst
+      ? { storyConfig: STORY_CONFIG }
+      : { storyBible: S.bible, decision, chapterNumber: chapterNum, storyConfig: STORY_CONFIG };
+    const res  = await fetch(endpoint, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Unknown error');
+    showReading(data, true);
+  } catch (err) {
+    show('s-welcome');
+    alert('Error: ' + err.message + '\n\nIs the server running? (node server.js)');
+  }
+}
+
+async function showReading(data, animate) {
+  const { chapterText, title, mood, decisions, bible, chapterNumber } = data;
+
+  S.chapter = chapterNumber;
+  if (chapterText) S.chapters.push(chapterText);
+  if (title) S.titles.push(title);
+  if (bible) S.bible = bible;
+  if (data.bookTitle && !S.bookTitle) {
+    S.bookTitle = data.bookTitle;
+    document.title = S.bookTitle;
+    // Persist title immediately so shelf can show it
+    const lib = getLibrary();
+    if (lib[STORY_ID]) { lib[STORY_ID].bookTitle = S.bookTitle; localStorage.setItem('bea_library', JSON.stringify(lib)); }
+  }
+
+  if (mood) applyTheme(mood);
+
+  showHUD();
+
+  // Progress (assume ~30 chapter story)
+  document.getElementById('progress').style.width = Math.min((chapterNumber / 30) * 100, 95) + '%';
+
+  document.getElementById('hud-ch').textContent = chapterNumber;
+  document.getElementById('ch-num-label').textContent = ordinal(chapterNumber);
+  document.getElementById('ch-title').textContent = title || '';
+
+  show('s-reading');
+
+  await delay(animate ? 350 : 50);
+  document.getElementById('ch-header').classList.add('in');
+  await delay(animate ? 700 : 50);
+
+  const storyEl = document.getElementById('story');
+  storyEl.classList.add('in');
+
+  if (animate && !narrator.active) {
+    await typewrite(storyEl, chapterText || '');
+  } else {
+    // Show text instantly (narration active, or resuming)
+    storyEl.innerHTML = (chapterText || '').split(/\n\n+/).filter(Boolean).map(p => `<p>${p.trim()}</p>`).join('');
+  }
+
+  saveProgress();
+
+  // Auto-read the chapter if narration is on
+  narrator.autoRead(chapterText || '');
+
+  // Generate spine SVG after chapter 1 (fire-and-forget, no await)
+  if (chapterNumber === 1 && STORY_ID && STORY_CONFIG) generateSpine();
+
+  if (decisions && decisions.length > 0) {
+    S.pendingDecisions = decisions;
+    saveProgress();
+    await delay(narrator.active ? 1200 : 900);
+    // Scroll so last story line is visible above the panel
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    openDecisions(decisions);
+  }
+}
+
+function showHUD() {
+  document.getElementById('hud-left').style.display  = 'block';
+  document.getElementById('hud-right').style.display = 'block';
+}
+
+function openDecisions(decisions) {
+  const d = decisions[0];
+  document.getElementById('d-prompt').textContent = d.prompt;
+  const choicesEl = document.getElementById('d-choices');
+  choicesEl.innerHTML = '';
+
+  // Generated options
+  d.options.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'choice';
+    btn.innerHTML = `<span>${opt}</span>`;
+    btn.onclick = () => choose(opt);
+    choicesEl.appendChild(btn);
+  });
+
+  // Custom "write your own" option
+  const pName = STORY_CONFIG?.protagonistName || 'your character';
+  const customWrap = document.createElement('div');
+  customWrap.className = 'custom-option';
+  customWrap.innerHTML = `
+    <button class="btn-custom-toggle" onclick="toggleCustomInput(this)">or write your own path…</button>
+    <div class="custom-input-row" id="custom-input-row">
+      <input class="custom-input" id="custom-input" type="text" placeholder="Describe what ${pName} does…" maxlength="200" />
+      <button class="btn-custom-submit" onclick="submitCustom()">Choose</button>
+    </div>`;
+  choicesEl.appendChild(customWrap);
+
+  // Allow Enter key to submit
+  setTimeout(() => {
+    const inp = document.getElementById('custom-input');
+    if (inp) inp.addEventListener('keydown', e => { if (e.key === 'Enter') submitCustom(); });
+  }, 100);
+
+  document.getElementById('decision-panel').classList.add('open');
+}
+
+function toggleCustomInput(btn) {
+  const row = document.getElementById('custom-input-row');
+  const isOpen = row.classList.toggle('open');
+  btn.textContent = isOpen ? 'nevermind, show me the options' : 'or write your own path…';
+  if (isOpen) setTimeout(() => document.getElementById('custom-input')?.focus(), 50);
+}
+
+function submitCustom() {
+  const inp = document.getElementById('custom-input');
+  const val = inp ? inp.value.trim() : '';
+  if (!val) { inp?.focus(); return; }
+  choose(val);
+}
+
+async function choose(option) {
+  const prompt = document.getElementById('d-prompt')?.textContent || '';
+  S.decisionHistory.push({ chapter: S.chapter, prompt, chosen: option });
+  S.decisions.push(option);
+  S.pendingDecisions = null;
+  await loadChapter(option, S.chapter + 1);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EXPORT PDF
+// ═══════════════════════════════════════════════════════════════
+function exportPDF() {
+  if (!S.chapters.length) { alert('Nothing to export yet — read at least one chapter first.'); return; }
+  const title   = S.bookTitle || STORY_CONFIG?.bookTitleInput || 'My Story';
+  const genre   = STORY_CONFIG?.genre || '';
+  const protagonist = STORY_CONFIG?.protagonistName || '';
+
+  const chapterBlocks = S.chapters.map((text, i) => {
+    const chTitle = S.titles[i] || '';
+    const paras   = text.split(/\n\n+/).filter(Boolean).map(p => `<p>${p.trim()}</p>`).join('');
+    const dec     = S.decisions[i] ? `<div class="decision">Your choice: ${S.decisions[i]}</div>` : '';
+    return `<div class="chapter">
+      <div class="ch-number">Chapter ${i + 1}</div>
+      ${chTitle ? `<h2>${chTitle}</h2>` : ''}
+      <div class="prose">${paras}</div>
+      ${dec}
+    </div>`;
+  }).join('');
+
+  const w = window.open('', '_blank');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>${title}</title>
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;1,400&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'EB Garamond',Georgia,serif; font-size:12pt; line-height:1.85; color:#1a0a05; background:#fff; }
+    .page { max-width:480pt; margin:0 auto; padding:2.5cm 3cm; }
+    .cover { text-align:center; padding:4cm 0 3cm; border-bottom:1pt solid #c4a264; margin-bottom:3cm; }
+    .book-title { font-family:'Playfair Display',serif; font-size:28pt; font-style:italic; color:#1a0a05; line-height:1.15; margin-bottom:0.6cm; }
+    .book-genre { font-size:9pt; letter-spacing:0.3em; text-transform:uppercase; color:#8B4513; opacity:0.7; margin-bottom:0.4cm; }
+    .book-author { font-size:11pt; font-style:italic; color:#5a3010; opacity:0.6; }
+    .chapter { page-break-before:always; padding-top:2cm; }
+    .chapter:first-child { page-break-before:avoid; }
+    .ch-number { font-size:8pt; letter-spacing:0.4em; text-transform:uppercase; color:#8B4513; opacity:0.6; margin-bottom:0.3cm; }
+    h2 { font-family:'Playfair Display',serif; font-size:18pt; font-style:italic; color:#1a0a05; margin-bottom:1cm; line-height:1.25; }
+    .prose p { margin-bottom:1.1em; text-indent:2.2em; }
+    .prose p:first-child { text-indent:0; }
+    .decision { margin:1.5cm 0 0; padding:0.5cm 0 0.5cm 1cm; border-left:2pt solid #c4a264; font-style:italic; font-size:10pt; color:#5a3010; opacity:0.8; }
+    .footer { text-align:center; margin-top:3cm; padding-top:1cm; border-top:1pt solid #e8d5b7; font-size:8pt; color:#8B4513; opacity:0.5; letter-spacing:0.2em; text-transform:uppercase; }
+    @media print { @page { margin:2cm; } }
+  </style></head>
+  <body><div class="page">
+    <div class="cover">
+      <div class="book-title">${title}</div>
+      ${genre ? `<div class="book-genre">${genre}</div>` : ''}
+      ${protagonist ? `<div class="book-author">A story by ${protagonist}</div>` : ''}
+    </div>
+    ${chapterBlocks}
+    <div class="footer">Created with Butterfly Effect &nbsp;·&nbsp; butterflystory.app</div>
+  </div></body></html>`);
+  w.document.close();
+  w.focus();
+  setTimeout(() => w.print(), 600);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SPINE GENERATION
+// ═══════════════════════════════════════════════════════════════
+async function generateSpine() {
+  try {
+    const res = await fetch('/api/generate-spine', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title:             S.bookTitle || STORY_CONFIG.bookTitleInput || '',
+        genre:             STORY_CONFIG.genre || 'Dark Romance',
+        themes:            STORY_CONFIG.themes || [],
+        protagonistName:   STORY_CONFIG.protagonistName || '',
+        loveInterestName:  STORY_CONFIG.loveInterestName || '',
+        storyIdea:         STORY_CONFIG.storyIdea || '',
+      }),
+    });
+    const data = await res.json();
+    if (!data.success || !data.svg) return;
+    // Save SVG into the library entry
+    const lib = getLibrary();
+    if (lib[STORY_ID]) {
+      lib[STORY_ID].spineSvg = data.svg;
+      localStorage.setItem('bea_library', JSON.stringify(lib));
+    }
+  } catch (_) { /* spine is optional — fail silently */ }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// NARRATOR (Web Speech API — neural voice priority)
+// ═══════════════════════════════════════════════════════════════
+const narrator = (() => {
+  let on = false;
+  let allVoices = [];
+  let chosenVoiceName = localStorage.getItem('bea_voice') || null;
+
+  const loadVoices = () => {
+    allVoices = speechSynthesis.getVoices();
+    if (!chosenVoiceName) chosenVoiceName = pickBestVoice()?.name || null;
+  };
+  speechSynthesis.addEventListener('voiceschanged', loadVoices);
+  loadVoices();
+
+  // Tier 1: Microsoft Natural/Neural (Windows 11 — very human)
+  // Tier 2: Google neural, Mac natural voices
+  // Tier 3: Older quality voices
+  // Avoid: old Zira, David, Hazel (robotic)
+  const AVOID = ['Zira','David','Hazel','Helena','Sabina','Hedda'];
+
+  function pickBestVoice() {
+    const eng = allVoices.filter(v => v.lang.startsWith('en'));
+    // Neural / Natural voices first
+    const neural = eng.filter(v =>
+      v.name.includes('Natural') || v.name.includes('Neural') ||
+      v.name.includes('Online')  || v.localService === false
+    ).filter(v => !AVOID.some(bad => v.name.includes(bad)));
+    if (neural.length) return neural[0];
+
+    // Named quality voices
+    const want = [
+      'Aria','Ava','Emma','Jenny','Michelle','Elizabeth','Sonia',
+      'Samantha','Karen','Moira','Fiona','Tessa',
+      'Guy','Andrew','Brian','Ryan','Eric',
+      'Google UK English Female','Google UK English Male',
+    ];
+    for (const name of want) {
+      const v = eng.find(v => v.name.includes(name) && !AVOID.some(b => v.name.includes(b)));
+      if (v) return v;
+    }
+    return eng.filter(v => !AVOID.some(b => v.name.includes(b)))[0] || eng[0] || allVoices[0];
+  }
+
+  function getVoice() {
+    if (!allVoices.length) allVoices = speechSynthesis.getVoices();
+    if (chosenVoiceName) {
+      const v = allVoices.find(v => v.name === chosenVoiceName);
+      if (v) return v;
+    }
+    return pickBestVoice();
+  }
+
+  function cleanText(t) {
+    return t.replace(/\*([^*]+)\*/g,'$1').replace(/_([^_]+)_/g,'$1')
+             .replace(/⟡/g,'').replace(/—/g,', ').trim();
+  }
+
+  function speak(text) {
+    speechSynthesis.cancel();
+    const utt    = new SpeechSynthesisUtterance(cleanText(text));
+    utt.voice    = getVoice();
+    utt.rate     = 0.9;
+    utt.pitch    = 1.0;
+    utt.volume   = 1;
+    utt.onend    = () => { if (on) setBtn(false); };
+    utt.onerror  = () => { if (on) setBtn(false); };
+    speechSynthesis.speak(utt);
+    setBtn(true);
+  }
+
+  function stop() { speechSynthesis.cancel(); setBtn(false); }
+
+  function setBtn(speaking) {
+    const btn   = document.getElementById('narrate-btn');
+    const label = document.getElementById('narrate-label');
+    if (!btn) return;
+    btn.classList.toggle('speaking', speaking);
+    label.textContent = speaking ? 'Stop' : 'Listen';
+  }
+
+  return {
+    toggle() {
+      on = !on;
+      if (on) { const t = document.getElementById('story').innerText; if (t.trim()) speak(t); else setBtn(false); }
+      else stop();
+    },
+    autoRead(text) { if (on) speak(text); },
+    stop() { stop(); },
+    get active() { return on; },
+    // Voice picker support
+    getVoices() { return allVoices.filter(v => v.lang.startsWith('en')); },
+    getCurrentVoiceName() { return getVoice()?.name || ''; },
+    setVoice(name) {
+      chosenVoiceName = name;
+      localStorage.setItem('bea_voice', name);
+    },
+    preview(name) {
+      const v = allVoices.find(v => v.name === name);
+      if (!v) return;
+      speechSynthesis.cancel();
+      const utt = new SpeechSynthesisUtterance('The shadows gathered at the edge of the room, patient and ancient.');
+      utt.voice = v; utt.rate = 0.9; utt.pitch = 1.0;
+      speechSynthesis.speak(utt);
+    },
+  };
+})();
+
+// ── Voice picker panel ────────────────────────────────────────
+function openVoicePicker() {
+  const voices = narrator.getVoices();
+  const current = narrator.getCurrentVoiceName();
+
+  // Group: Natural/Neural vs Standard
+  const isNeural = v => v.name.includes('Natural') || v.name.includes('Neural') || v.name.includes('Online') || !v.localService;
+  const neural   = voices.filter(isNeural);
+  const standard = voices.filter(v => !isNeural(v));
+
+  const renderGroup = (label, list) => {
+    if (!list.length) return '';
+    return `<div class="vp-group-label">${label}</div>` +
+      list.map(v => `
+        <div class="vp-row ${v.name === current ? 'current' : ''}" data-name="${v.name.replace(/"/g,'&quot;')}">
+          <span class="vp-name">${v.name.replace(/Microsoft |Google |Apple /,'')}</span>
+          ${v.name === current ? '<span class="vp-badge">Active</span>' : ''}
+          <button class="vp-preview" onclick="narrator.preview('${v.name.replace(/'/g,"\\'")}')">Preview</button>
+        </div>`).join('');
+  };
+
+  document.getElementById('vp-list').innerHTML =
+    renderGroup('Neural / Natural (Recommended)', neural) +
+    renderGroup('Standard', standard);
+
+  document.getElementById('vp-list').querySelectorAll('.vp-row').forEach(row => {
+    row.addEventListener('click', e => {
+      if (e.target.classList.contains('vp-preview')) return;
+      narrator.setVoice(row.dataset.name);
+      document.querySelectorAll('.vp-row').forEach(r => { r.classList.remove('current'); r.querySelector('.vp-badge')?.remove(); });
+      row.classList.add('current');
+      const badge = document.createElement('span');
+      badge.className = 'vp-badge'; badge.textContent = 'Active';
+      row.querySelector('.vp-name').after(badge);
+    });
+  });
+
+  document.getElementById('voice-picker').classList.add('open');
+  document.getElementById('vp-overlay').classList.add('open');
+}
+
+function closeVoicePicker() {
+  document.getElementById('voice-picker').classList.remove('open');
+  document.getElementById('vp-overlay').classList.remove('open');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TOOLS PANEL
+// ═══════════════════════════════════════════════════════════════
+function toggleTools() {
+  const panel = document.getElementById('tools-panel');
+  const ov = document.getElementById('tools-overlay');
+  const open = panel.classList.toggle('open');
+  ov.classList.toggle('open', open);
+}
+function closeTools() {
+  document.getElementById('tools-panel').classList.remove('open');
+  document.getElementById('tools-overlay').classList.remove('open');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FONT SIZE
+// ═══════════════════════════════════════════════════════════════
+function setFontSize(pct) {
+  const size = (parseFloat(pct) / 100 * 1.14).toFixed(3);
+  document.documentElement.style.setProperty('--story-font-size', size + 'rem');
+  localStorage.setItem('bea_font_size', pct);
+}
+(function initFontSize() {
+  const saved = localStorage.getItem('bea_font_size');
+  if (saved) {
+    const sl = document.getElementById('font-slider');
+    if (sl) sl.value = saved;
+    setFontSize(saved);
+  }
+})();
+
+// ═══════════════════════════════════════════════════════════════
+// JOURNEY MAP
+// ═══════════════════════════════════════════════════════════════
+function openJourney() {
+  closeTools();
+  const content = document.getElementById('j-content');
+  if (!S.chapters.length) {
+    content.innerHTML = '<p style="color:var(--text-dim);font-style:italic;text-align:center;padding:2rem 0">Start reading to build your journey.</p>';
+  } else {
+    content.innerHTML = S.chapters.map((_, i) => {
+      const ch = i + 1;
+      const title = S.titles[i] || '';
+      const dec = S.decisionHistory.find(d => d.chapter === ch);
+      const isCurr = ch === S.chapter;
+      return `<div class="j-chapter">
+        <div class="j-ch-label">Chapter ${ch}</div>
+        ${title ? `<div class="j-ch-title">${title}</div>` : ''}
+        ${dec ? `<div class="j-prompt">${dec.prompt}</div><div class="j-chosen">→ ${dec.chosen}</div>`
+              : isCurr ? `<div class="j-prompt" style="opacity:0.45">Currently reading…</div>` : ''}
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('j-overlay').classList.add('open');
+  document.getElementById('j-modal').classList.add('open');
+}
+function closeJourney() {
+  document.getElementById('j-overlay').classList.remove('open');
+  document.getElementById('j-modal').classList.remove('open');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CHARACTER SHEET
+// ═══════════════════════════════════════════════════════════════
+
+// Extract the most-used proper noun from decision prompts/choices — that's the protagonist
+function guessNameFromDecisions() {
+  const texts = [
+    ...S.decisionHistory.map(d => d.prompt + ' ' + d.chosen),
+    ...(S.pendingDecisions || []).flatMap(d => [d.prompt, ...(d.options || [])]),
+  ].join(' ');
+
+  if (!texts.trim()) return null;
+
+  const SKIP = new Set([
+    'The','She','He','They','Her','His','You','Your','This','That','What',
+    'When','Where','How','Who','But','And','Or','Not','All','Its','Their',
+    'Our','My','No','Yes','So','As','If','Is','Are','Was','Were','Has',
+    'Have','Had','Will','Would','Could','Should','May','Might','Can','Do',
+    'Does','Did','Be','Been','Being','With','From','Into','Onto','Upon',
+    'Over','Under','After','Before','Between','Chapter','Part','Dark',
+    'Her','His','Now','Then','Once','Still','Just','Even','Only','Every',
+  ]);
+
+  const counts = {};
+  (texts.match(/\b[A-Z][a-z]{2,}\b/g) || []).forEach(w => {
+    if (!SKIP.has(w)) counts[w] = (counts[w] || 0) + 1;
+  });
+
+  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  return sorted[0]?.[0] || null;
+}
+
+function openCharSheet() {
+  closeTools();
+  const cfg = STORY_CONFIG || {};
+  const rawP = cfg.protagonistName || '';
+  const isGeneric = !rawP || rawP === 'the protagonist' || rawP === 'your character';
+  const pName = isGeneric ? (guessNameFromDecisions() || null) : rawP;
+
+  const rawLI = cfg.loveInterestName || '';
+  const isGenericLI = !rawLI || rawLI === 'the love interest';
+  const liName = isGenericLI ? null : rawLI;
+  const liLabel = cfg.isRomance === false ? 'Key Character' : 'Love Interest';
+  const age    = cfg.ageRange || '';
+  const themes = (cfg.themes || []).join(', ');
+  const total  = cfg.chapterCount || 15;
+  const pct    = Math.round((S.chapter / total) * 100);
+  const rel    = pct < 25 ? 'First encounter' : pct < 50 ? 'Growing tension' : pct < 75 ? 'Deepening bond' : 'Critical turning point';
+
+  document.getElementById('cs-content').innerHTML = `
+    <div class="char-card">
+      <div class="char-role">Protagonist</div>
+      <div class="char-name">${pName || '<em style="opacity:0.35;font-size:0.95rem">Named in the story — make a decision first</em>'}</div>
+      <div class="char-detail">${age ? 'Age range: ' + age : ''}${cfg.genre ? (age ? '<br>' : '') + cfg.genre : ''}</div>
+    </div>
+    ${liName ? `<div class="char-card">
+      <div class="char-role">${liLabel}</div>
+      <div class="char-name">${liName}</div>
+      <div class="char-detail">${age ? 'Age range: ' + age : ''}<br>Relationship status: <em>${rel}</em></div>
+    </div>` : ''}
+    ${themes ? `<div style="margin-top:0.8rem">
+      <div style="font-size:0.63rem;letter-spacing:0.3em;text-transform:uppercase;color:var(--accent);opacity:0.5;margin-bottom:0.4rem">Story Themes</div>
+      <div style="font-size:0.88rem;color:var(--text-dim);line-height:1.75">${themes}</div>
+    </div>` : ''}
+    <div style="margin-top:0.8rem">
+      <div style="font-size:0.63rem;letter-spacing:0.3em;text-transform:uppercase;color:var(--accent);opacity:0.5;margin-bottom:0.4rem">Progress</div>
+      <div style="font-size:0.85rem;color:var(--text-dim)">Chapter ${S.chapter} of ~${total} · ${Math.min(pct,99)}% complete</div>
+    </div>`;
+  document.getElementById('cs-overlay').classList.add('open');
+  document.getElementById('cs-modal').classList.add('open');
+}
+function closeCharSheet() {
+  document.getElementById('cs-overlay').classList.remove('open');
+  document.getElementById('cs-modal').classList.remove('open');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STORY RECAP
+// ═══════════════════════════════════════════════════════════════
+function openRecap() {
+  closeTools();
+  const el = document.getElementById('re-content');
+  if (!S.bible) {
+    el.innerHTML = '<p style="color:var(--text-dim);font-style:italic;text-align:center;padding:2rem 0">Complete at least one chapter to see your story so far.</p>';
+  } else {
+    const html = S.bible.split(/\n+/).filter(Boolean).map(p => `<p>${p.trim()}</p>`).join('');
+    el.innerHTML = `<div class="recap-text">${html}</div>`;
+  }
+  document.getElementById('re-overlay').classList.add('open');
+  document.getElementById('re-modal').classList.add('open');
+}
+function closeRecap() {
+  document.getElementById('re-overlay').classList.remove('open');
+  document.getElementById('re-modal').classList.remove('open');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// QUOTE CARD (Canvas API)
+// ═══════════════════════════════════════════════════════════════
+function extractBestQuote(text) {
+  if (!text) return '';
+  const sents = text.match(/[^.!?]+[.!?]+/g) || [];
+  if (!sents.length) return text.substring(0, 180);
+  const WORDS = ['never','always','only','cannot','dark','shadow','heart','breath',
+    'blood','fire','forbidden','silence','touch','fate','impossible','afraid','lost','found','wanted','need'];
+  let best = sents[0], score = 0;
+  sents.forEach(s => {
+    const t = s.trim();
+    if (t.length < 40 || t.length > 190) return;
+    let sc = t.length * 0.1;
+    WORDS.forEach(w => { if (t.toLowerCase().includes(w)) sc += 7; });
+    if (sc > score) { score = sc; best = t; }
+  });
+  return best.trim();
+}
+
+function openQuoteCard() {
+  closeTools();
+  const quote = extractBestQuote(S.chapters[S.chapters.length - 1] || '');
+  if (!quote) {
+    document.getElementById('qc-content')?.insertAdjacentHTML('afterbegin',
+      '<p style="color:var(--text-dim);text-align:center;padding:1rem">Read at least one chapter first.</p>');
+  } else {
+    renderQuoteCanvas(quote);
+  }
+  document.getElementById('qc-overlay').classList.add('open');
+  document.getElementById('qc-modal').classList.add('open');
+}
+
+function renderQuoteCanvas(quote) {
+  const canvas = document.getElementById('q-canvas');
+  const W = 420, H = 260;
+  canvas.width = W; canvas.height = H;
+  const c = canvas.getContext('2d');
+  const mood = S.mood || {};
+  const bg      = mood.secondaryColor || '#0d0505';
+  const primary = mood.primaryColor   || '#8B0000';
+  const accent  = mood.accentColor    || '#c4a264';
+
+  // Background
+  const grad = c.createLinearGradient(0, 0, W, H);
+  grad.addColorStop(0, bg);
+  grad.addColorStop(1, shiftColor(bg, 18));
+  c.fillStyle = grad;
+  c.fillRect(0, 0, W, H);
+
+  // Glow
+  const glow = c.createRadialGradient(W/2, H/2, 0, W/2, H/2, W * 0.55);
+  glow.addColorStop(0, hex2rgba(primary, 0.2));
+  glow.addColorStop(1, 'transparent');
+  c.fillStyle = glow;
+  c.fillRect(0, 0, W, H);
+
+  // Border
+  c.strokeStyle = hex2rgba(accent, 0.35);
+  c.lineWidth = 0.5;
+  c.strokeRect(10, 10, W - 20, H - 20);
+
+  // Ornament
+  c.fillStyle = hex2rgba(accent, 0.45);
+  c.font = '12px Georgia';
+  c.textAlign = 'center';
+  c.fillText('⟡  ⟡  ⟡', W / 2, 34);
+
+  // Quote text — word wrap
+  const maxW = W - 80;
+  c.font = 'italic 15px Georgia, serif';
+  c.fillStyle = '#e8d5b7';
+  const words = quote.split(' ');
+  const lines = [];
+  let line = '';
+  words.forEach(w => {
+    const test = line ? line + ' ' + w : w;
+    if (c.measureText(test).width > maxW && line) { lines.push(line); line = w; }
+    else line = test;
+  });
+  if (line) lines.push(line);
+
+  const lineH = 22;
+  const textH = lines.length * lineH;
+  let y = H / 2 - textH / 2 + 8;
+
+  // Open quote mark
+  c.font = 'italic 26px Georgia';
+  c.fillStyle = hex2rgba(accent, 0.45);
+  c.fillText('\u201C', W / 2 - maxW / 2 - 8, y - 4);
+
+  // Lines
+  c.font = 'italic 15px Georgia, serif';
+  c.fillStyle = '#e8d5b7';
+  lines.forEach((l, i) => c.fillText(l, W / 2, y + i * lineH));
+
+  // Book title & watermark
+  const title = S.bookTitle || STORY_CONFIG?.bookTitleInput || 'Butterfly Effect';
+  c.font = '10px Georgia';
+  c.fillStyle = hex2rgba(accent, 0.5);
+  c.fillText('— ' + title, W / 2, H - 26);
+  c.font = '8px Georgia';
+  c.fillStyle = hex2rgba(accent, 0.22);
+  c.fillText('Butterfly Effect', W / 2, H - 12);
+}
+
+function shiftColor(hex, amount) {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!m) return hex;
+  const clamp = v => Math.max(0, Math.min(255, v));
+  const [r, g, b] = [m[1], m[2], m[3]].map(x => clamp(parseInt(x, 16) + amount));
+  return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
+}
+
+function downloadQuote() {
+  const canvas = document.getElementById('q-canvas');
+  const a = document.createElement('a');
+  a.download = 'butterfly-effect-quote.png';
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+}
+
+function closeQuoteCard() {
+  document.getElementById('qc-overlay').classList.remove('open');
+  document.getElementById('qc-modal').classList.remove('open');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════
+(function init() {
+  // Populate welcome screen from config
+  if (STORY_CONFIG) {
+    const titleEl = document.getElementById('welcome-title');
+    const genreEl = document.getElementById('welcome-genre');
+
+    // Priority: prefetch title → library saved title → user-entered title → name fallback
+    const libEntry = STORY_ID ? (getLibrary()[STORY_ID] || {}) : {};
+    const displayTitle = PREFETCH?.bookTitle || libEntry.bookTitle || STORY_CONFIG.bookTitleInput || null;
+
+    if (displayTitle) {
+      titleEl.textContent = displayTitle;
+    } else {
+      const p = STORY_CONFIG.protagonistName || '';
+      titleEl.textContent = p ? `${p}'s Story` : 'Your Story';
+    }
+    const themes = (STORY_CONFIG.themes || []).slice(0,2).join(' · ');
+    genreEl.textContent = [STORY_CONFIG.genre, themes].filter(Boolean).join(' — ');
+  }
+
+  const saved = loadProgress();
+  if (saved && saved.chapters && saved.chapters.length > 0) {
+    document.getElementById('resume-btn').style.display = 'inline-block';
+  }
+
+  particles.setType('embers');
+})();
+</script>
+</body>
+</html>

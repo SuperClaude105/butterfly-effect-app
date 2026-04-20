@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Butterfly Effect — Create Your Story</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Playfair+Display:ital,wght@0,700;0,900;1,400;1,700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --primary:  #8B0000;
+  --accent:   #c4a264;
+  --bg:       #0a0505;
+  --surface:  #130808;
+  --border:   rgba(255,255,255,0.1);
+  --text:     #e8d5b7;
+  --text-dim: rgba(232,213,183,0.5);
+  --glow:     rgba(139,0,0,0.35);
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  font-family: 'EB Garamond', Georgia, serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+body::after {
+  content:''; position:fixed; inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.032'/%3E%3C/svg%3E");
+  pointer-events:none; z-index:9999; opacity:0.55;
+}
+body::before {
+  content:''; position:fixed; inset:0;
+  background:
+    radial-gradient(ellipse 55% 45% at 20% 30%, rgba(139,0,0,0.2) 0%, transparent 65%),
+    radial-gradient(ellipse 40% 55% at 80% 80%, rgba(80,0,0,0.15) 0%, transparent 60%);
+  pointer-events:none; z-index:0;
+}
+
+canvas#bg-canvas { position:fixed; inset:0; pointer-events:none; z-index:1; }
+
+.page {
+  position:relative; z-index:10;
+  max-width:760px;
+  margin:0 auto;
+  padding:4rem 2rem 6rem;
+}
+
+/* ── Header ── */
+.site-header { text-align:center; margin-bottom:3.5rem; }
+.site-ornament { font-size:1rem; letter-spacing:1em; opacity:0.2; margin-bottom:1.5rem; }
+.site-title {
+  font-family:'Playfair Display', serif;
+  font-size:clamp(2rem,5vw,3.2rem);
+  font-style:italic; font-weight:700; letter-spacing:-0.02em;
+  color:var(--accent);
+  text-shadow:0 0 50px var(--glow), 0 0 100px var(--glow);
+  margin-bottom:0.6rem;
+}
+.site-sub { font-size:0.78rem; letter-spacing:0.35em; text-transform:uppercase; opacity:0.3; }
+
+/* ── Section cards ── */
+.section {
+  background:var(--surface);
+  border:1px solid var(--border);
+  padding:2rem;
+  margin-bottom:1.25rem;
+  position:relative;
+}
+.section-label {
+  font-size:0.7rem; letter-spacing:0.38em; text-transform:uppercase;
+  color:var(--accent); opacity:0.7;
+  margin-bottom:1.25rem;
+  display:flex; align-items:center; gap:0.75rem;
+}
+.section-label::after {
+  content:''; flex:1; height:1px;
+  background:linear-gradient(to right, rgba(196,162,100,0.3), transparent);
+}
+
+/* ── Genre category grouping ── */
+.genre-category { margin-bottom:1.25rem; }
+.genre-cat-label {
+  font-size:0.62rem; letter-spacing:0.36em; text-transform:uppercase;
+  color:var(--accent); opacity:0.45;
+  margin-bottom:0.6rem; padding-left:0.1rem;
+}
+
+.genre-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(140px,1fr));
+  gap:0.55rem;
+}
+
+.genre-card {
+  border:1px solid var(--border);
+  padding:0.75rem 0.85rem;
+  cursor:pointer;
+  transition:border-color 0.25s, background 0.25s, box-shadow 0.25s;
+  text-align:center; user-select:none;
+}
+.genre-card:hover { border-color:rgba(196,162,100,0.4); background:rgba(255,255,255,0.03); }
+.genre-card.selected {
+  border-color:var(--accent);
+  background:rgba(196,162,100,0.08);
+  box-shadow:0 0 18px rgba(196,162,100,0.15);
+}
+.genre-icon { font-size:1.3rem; margin-bottom:0.25rem; display:block; }
+.genre-name { font-size:0.78rem; letter-spacing:0.08em; line-height:1.3; }
+
+/* ── Text inputs ── */
+.field-row { display:flex; gap:1rem; flex-wrap:wrap; }
+.field { flex:1; min-width:180px; display:flex; flex-direction:column; gap:0.4rem; }
+.field-label { font-size:0.7rem; letter-spacing:0.28em; text-transform:uppercase; opacity:0.45; }
+
+.field input, .field textarea {
+  font-family:'EB Garamond', serif; font-size:1rem;
+  padding:0.7rem 1rem;
+  background:rgba(255,255,255,0.03); border:1px solid var(--border);
+  color:var(--text); outline:none; resize:vertical;
+  transition:border-color 0.25s, box-shadow 0.25s;
+}
+.field input::placeholder, .field textarea::placeholder { color:var(--text-dim); font-style:italic; }
+.field input:focus, .field textarea:focus {
+  border-color:var(--accent); box-shadow:0 0 14px rgba(196,162,100,0.15);
+}
+
+/* ── Pill toggles ── */
+.pill-row { display:flex; gap:0.5rem; flex-wrap:wrap; }
+.pill {
+  font-family:'EB Garamond', serif; font-size:0.82rem; letter-spacing:0.15em;
+  padding:0.5rem 1.2rem; border:1px solid var(--border);
+  background:transparent; color:var(--text-dim); cursor:pointer;
+  transition:border-color 0.25s, color 0.25s, background 0.25s, box-shadow 0.25s;
+  user-select:none;
+}
+.pill:hover { border-color:rgba(196,162,100,0.35); color:var(--text); }
+.pill.selected {
+  border-color:var(--accent); color:var(--accent);
+  background:rgba(196,162,100,0.08); box-shadow:0 0 12px rgba(196,162,100,0.12);
+}
+
+/* ── Theme chips ── */
+.chips { display:flex; flex-wrap:wrap; gap:0.5rem; }
+.chip {
+  font-family:'EB Garamond', serif; font-size:0.82rem; letter-spacing:0.08em;
+  padding:0.38rem 0.9rem; border:1px solid var(--border);
+  background:transparent; color:var(--text-dim); cursor:pointer; border-radius:2px;
+  transition:border-color 0.22s, color 0.22s, background 0.22s; user-select:none;
+}
+.chip:hover { border-color:rgba(196,162,100,0.35); color:var(--text); }
+.chip.selected { border-color:var(--accent); color:var(--accent); background:rgba(196,162,100,0.07); }
+
+.chip-custom { display:flex; gap:0.5rem; margin-top:0.75rem; }
+.chip-custom input {
+  font-family:'EB Garamond', serif; font-size:0.9rem;
+  flex:1; padding:0.45rem 0.85rem;
+  background:rgba(255,255,255,0.03); border:1px solid var(--border);
+  color:var(--text); outline:none; transition:border-color 0.25s;
+}
+.chip-custom input:focus { border-color:var(--accent); }
+.chip-custom input::placeholder { color:var(--text-dim); font-style:italic; }
+.chip-custom button {
+  font-family:'EB Garamond', serif; font-size:0.78rem; letter-spacing:0.15em;
+  text-transform:uppercase; padding:0.45rem 1rem;
+  border:1px solid var(--border); background:transparent; color:var(--text-dim);
+  cursor:pointer; transition:border-color 0.25s, color 0.25s;
+}
+.chip-custom button:hover { border-color:var(--accent); color:var(--accent); }
+
+/* ── Chapter slider ── */
+.slider-row { display:flex; align-items:center; gap:1.25rem; }
+.slider-wrap { flex:1; position:relative; }
+
+input[type=range] {
+  width:100%; -webkit-appearance:none; height:2px;
+  background:linear-gradient(to right, var(--accent) 0%, var(--accent) var(--pct,33%), rgba(255,255,255,0.12) var(--pct,33%));
+  outline:none; cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance:none; width:16px; height:16px; border-radius:50%;
+  background:var(--accent); box-shadow:0 0 10px rgba(196,162,100,0.5);
+  transition:box-shadow 0.2s;
+}
+input[type=range]::-webkit-slider-thumb:hover { box-shadow:0 0 18px rgba(196,162,100,0.7); }
+
+.slider-value {
+  font-family:'Playfair Display', serif; font-size:1.6rem;
+  font-style:italic; color:var(--accent); min-width:3rem; text-align:right;
+}
+.slider-labels {
+  display:flex; justify-content:space-between;
+  font-size:0.65rem; letter-spacing:0.2em; text-transform:uppercase; opacity:0.3; margin-top:0.4rem;
+}
+
+/* ── Trigger chips ── */
+.trigger-chip {
+  font-family:'EB Garamond', serif; font-size:0.8rem; letter-spacing:0.08em;
+  padding:0.38rem 0.9rem; border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.02); color:rgba(232,213,183,0.4);
+  cursor:pointer; border-radius:2px;
+  transition:border-color 0.22s, color 0.22s, background 0.22s; user-select:none;
+}
+.trigger-chip:hover { border-color:rgba(255,255,255,0.2); color:var(--text-dim); }
+.trigger-chip.selected {
+  border-color:rgba(180,60,60,0.6); color:rgba(220,140,140,0.9); background:rgba(139,0,0,0.1);
+}
+.trigger-note {
+  font-size:0.78rem; font-style:italic; color:var(--text-dim);
+  opacity:0.6; margin-bottom:0.85rem; line-height:1.6;
+}
+
+/* ── Story arc toggles ── */
+.arc-toggle { display:flex; align-items:flex-start; gap:0.85rem; cursor:pointer; user-select:none; }
+.arc-toggle input[type=checkbox] { display:none; }
+.arc-check {
+  width:16px; height:16px; flex-shrink:0; margin-top:3px;
+  border:1px solid var(--border); background:rgba(255,255,255,0.03); position:relative;
+  transition:border-color 0.25s, background 0.25s;
+}
+.arc-toggle input:checked + .arc-check { border-color:var(--accent); background:rgba(196,162,100,0.15); }
+.arc-toggle input:checked + .arc-check::after {
+  content:''; position:absolute; top:3px; left:3px; right:3px; bottom:3px; background:var(--accent);
+}
+.arc-title { font-size:0.95rem; color:var(--text); line-height:1.4; }
+.arc-hint { font-size:0.78rem; font-style:italic; color:var(--text-dim); margin-top:0.25rem; line-height:1.5; }
+
+.parent-select {
+  width:100%; font-family:'EB Garamond', serif; font-size:0.95rem;
+  padding:0.65rem 1rem; background:rgba(255,255,255,0.03);
+  border:1px solid var(--border); color:var(--text); outline:none; cursor:pointer;
+  transition:border-color 0.25s; appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='rgba(232,213,183,0.4)' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 1rem center; padding-right:2.5rem;
+}
+.parent-select:focus { border-color:var(--accent); }
+.parent-select option { background:#1a0a05; }
+
+/* ── Begin button ── */
+.begin-wrap { text-align:center; margin-top:2.5rem; }
+.btn-begin {
+  font-family:'EB Garamond', serif; font-size:1rem; letter-spacing:0.3em;
+  text-transform:uppercase; padding:1.1rem 4rem;
+  border:1px solid var(--accent); background:transparent; color:var(--accent);
+  cursor:pointer; position:relative; overflow:hidden; transition:color 0.35s, box-shadow 0.35s;
+}
+.btn-begin::before {
+  content:''; position:absolute; inset:0; background:var(--accent);
+  transform:scaleX(0); transform-origin:left;
+  transition:transform 0.35s cubic-bezier(0.22,1,0.36,1);
+}
+.btn-begin:hover::before { transform:scaleX(1); }
+.btn-begin:hover { color:var(--bg); box-shadow:0 0 40px var(--glow); }
+.btn-begin span { position:relative; z-index:1; }
+.btn-begin:disabled { opacity:0.3; cursor:not-allowed; }
+.btn-begin:disabled::before { display:none; }
+
+.begin-hint { font-size:0.78rem; font-style:italic; color:var(--text-dim); opacity:0.45; margin-top:1rem; }
+
+/* ── Story generation loading overlay ── */
+#gen-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(10,5,5,0.97);
+  z-index: 2000;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  text-align: center;
+  padding: 2rem;
+}
+#gen-overlay.active { display: flex; }
+.gen-spinner {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  border: 1.5px solid transparent;
+  border-top-color: #c4a264;
+  border-right-color: #8B0000;
+  animation: gen-spin 1.6s cubic-bezier(0.5,-0.3,0.5,1.3) infinite;
+}
+@keyframes gen-spin { to { transform: rotate(360deg); } }
+.gen-title {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(1.6rem, 4vw, 2.4rem);
+  font-style: italic;
+  color: #c4a264;
+  opacity: 0;
+  transition: opacity 0.8s ease;
+  text-shadow: 0 0 40px rgba(139,0,0,0.5);
+}
+.gen-title.show { opacity: 1; }
+.gen-msg {
+  font-family: 'EB Garamond', serif;
+  font-size: 1rem;
+  font-style: italic;
+  color: rgba(232,213,183,0.45);
+  letter-spacing: 0.04em;
+  min-height: 1.5rem;
+  transition: opacity 0.5s;
+}
+.gen-sub {
+  font-size: 0.72rem;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: rgba(232,213,183,0.2);
+}
+
+.divider { text-align:center; margin:3rem 0 1rem; font-size:0.7rem; letter-spacing:0.4em; text-transform:uppercase; opacity:0.2; }
+.embers-link {
+  display:block; text-align:center; font-style:italic; color:var(--text-dim);
+  font-size:0.88rem; opacity:0.45; text-decoration:none; transition:opacity 0.3s;
+}
+.embers-link:hover { opacity:0.9; }
+
+/* ── Top nav ── */
+.top-nav {
+  position:fixed; top:0; left:0; right:0;
+  padding:1rem 2rem;
+  z-index:100;
+  background:linear-gradient(to bottom, rgba(10,5,5,0.95) 60%, transparent);
+  backdrop-filter:blur(4px);
+}
+.btn-back-lib {
+  font-family:'EB Garamond', serif;
+  font-size:0.8rem; letter-spacing:0.24em; text-transform:uppercase;
+  color:var(--accent);
+  border:1px solid rgba(196,162,100,0.4);
+  padding:0.55rem 1.5rem;
+  text-decoration:none;
+  display:inline-block;
+  background:rgba(10,5,5,0.7);
+  transition:border-color 0.3s, box-shadow 0.3s, background 0.3s;
+}
+.btn-back-lib:hover {
+  border-color:var(--accent);
+  box-shadow:0 0 20px rgba(196,162,100,0.18);
+  background:rgba(196,162,100,0.06);
+}
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+
+<!-- Generation loading overlay -->
+<div id="gen-overlay">
+  <div class="gen-spinner"></div>
+  <div class="gen-title" id="gen-book-title"></div>
+  <p class="gen-msg" id="gen-msg">The story is taking shape…</p>
+  <p class="gen-sub">This takes about 20 seconds</p>
+</div>
+
+<nav class="top-nav">
+  <a href="shelf.html" class="btn-back-lib">&#8592; My Library</a>
+</nav>
+
+<div class="page" style="padding-top:5.5rem">
+
+  <header class="site-header">
+    <p class="site-ornament">⟡ ⟡ ⟡</p>
+    <h1 class="site-title">Butterfly Effect</h1>
+    <p class="site-sub">Your story. Your choices. Your ending.</p>
+  </header>
+
+  <!-- ── Genre ── -->
+  <div class="section">
+    <div class="section-label">Genre</div>
+    <div id="genre-container"></div>
+  </div>
+
+  <!-- ── Story Idea ── -->
+  <div class="section">
+    <div class="section-label">Story Idea</div>
+    <div class="field">
+      <label class="field-label">Your premise (optional — leave blank and we'll invent one)</label>
+      <textarea id="story-idea" rows="3" placeholder="e.g. A disgraced hockey player returns to his hometown and falls for the one person who never forgave him…"></textarea>
+    </div>
+    <div class="field" style="margin-top:1rem">
+      <label class="field-label">Book title (optional)</label>
+      <input type="text" id="book-title-input" placeholder="Leave blank to have one generated for you" />
+    </div>
+  </div>
+
+  <!-- ── Characters ── -->
+  <div class="section">
+    <div class="section-label">Main Characters</div>
+    <div class="field-row">
+      <div class="field">
+        <label class="field-label" id="protagonist-label">Protagonist name</label>
+        <input type="text" id="protagonist-name" placeholder="e.g. Sera" />
+      </div>
+      <div class="field" id="second-char-field">
+        <label class="field-label" id="second-char-label">Love interest name</label>
+        <input type="text" id="love-interest-name" placeholder="e.g. Dorian" />
+      </div>
+    </div>
+    <div id="victim-field" style="display:none;margin-top:1rem">
+      <div class="field" style="margin-bottom:0.75rem">
+        <label class="field-label">Victim / Missing person name <span style="opacity:0.5">(optional)</span></label>
+        <input type="text" id="victim-name" placeholder="e.g. Sarah Chen" />
+      </div>
+      <div class="field">
+        <label class="field-label">Describe them <span style="opacity:0.5">(optional — base them on yourself, someone you know, or leave blank)</span></label>
+        <textarea id="victim-description" rows="3" placeholder="e.g. 28-year-old kindergarten teacher, married with a young daughter. Known for her bright laugh and volunteering on weekends. Friends say she'd never just leave…"></textarea>
+      </div>
+    </div>
+    <div style="margin-top:1.25rem">
+      <div class="field-label" style="margin-bottom:0.6rem">Character age range</div>
+      <div class="pill-row" id="age-pills">
+        <button class="pill" data-age="early 20s">20s</button>
+        <button class="pill selected" data-age="30s">30s</button>
+        <button class="pill" data-age="40s">40s</button>
+        <button class="pill" data-age="50s">50s</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Themes ── -->
+  <div class="section">
+    <div class="section-label">Themes &amp; Setting</div>
+    <div class="chips" id="theme-chips"></div>
+    <div class="chip-custom">
+      <input type="text" id="custom-theme-input" placeholder="Add your own theme…" />
+      <button onclick="addCustomTheme()">Add</button>
+    </div>
+  </div>
+
+  <!-- ── Story Arc ── -->
+  <div class="section">
+    <div class="section-label">Story Arc</div>
+    <div style="display:flex;flex-direction:column;gap:1.1rem;">
+      <label class="arc-toggle">
+        <input type="checkbox" id="is-series" onchange="toggleSeriesHint(this)">
+        <span class="arc-check"></span>
+        <div>
+          <div class="arc-title">This is the start of a series</div>
+          <div class="arc-hint" id="series-hint" style="display:none">The story will end satisfyingly but leave meaningful threads open — seeds planted for the next book.</div>
+        </div>
+      </label>
+      <label class="arc-toggle">
+        <input type="checkbox" id="is-sequel" onchange="toggleSequel(this)">
+        <span class="arc-check"></span>
+        <div>
+          <div class="arc-title">This is a sequel to an existing book</div>
+          <div class="arc-hint">The new story will be set in the same world, aware of the characters and events from your previous book.</div>
+        </div>
+      </label>
+      <div id="sequel-picker" style="display:none;padding-left:2rem">
+        <div class="field-label" style="margin-bottom:0.5rem">Select the book this continues from</div>
+        <select id="parent-book-select" class="parent-select">
+          <option value="">— choose a book —</option>
+        </select>
+        <p class="arc-hint" id="parent-book-note" style="margin-top:0.5rem;display:none"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Chapters ── -->
+  <div class="section">
+    <div class="section-label">Number of Chapters</div>
+    <div class="slider-row">
+      <div class="slider-wrap">
+        <input type="range" id="chapter-slider" min="5" max="50" value="15" step="5" oninput="updateSlider(this)" />
+        <div class="slider-labels"><span>5</span><span>50</span></div>
+      </div>
+      <div class="slider-value" id="slider-display">15</div>
+    </div>
+  </div>
+
+  <!-- ── Triggers ── -->
+  <div class="section">
+    <div class="section-label">Content to Avoid</div>
+    <p class="trigger-note">Select anything you'd like kept out of your story entirely. The AI will strictly honour these.</p>
+    <div class="chips" id="trigger-chips">
+      <button class="trigger-chip" data-trigger="animal harm or abuse">Animal harm / abuse</button>
+      <button class="trigger-chip" data-trigger="non-consent or sexual violence">Non-consent / Sexual violence</button>
+      <button class="trigger-chip" data-trigger="child harm of any kind">Child harm</button>
+      <button class="trigger-chip" data-trigger="graphic torture or gore">Graphic torture / Gore</button>
+      <button class="trigger-chip" data-trigger="suicide or self-harm">Suicide / Self-harm</button>
+      <button class="trigger-chip" data-trigger="infidelity or cheating">Infidelity / Cheating</button>
+      <button class="trigger-chip" data-trigger="pregnancy loss or miscarriage">Pregnancy loss</button>
+      <button class="trigger-chip" data-trigger="addiction and substance abuse">Addiction / Substance abuse</button>
+      <button class="trigger-chip" data-trigger="racism or discrimination">Racism / Discrimination</button>
+      <button class="trigger-chip" data-trigger="detailed descriptions of eating disorders">Eating disorders</button>
+    </div>
+    <div class="chip-custom" style="margin-top:0.85rem">
+      <input type="text" id="custom-trigger-input" placeholder="Anything else to avoid…" />
+      <button onclick="addCustomTrigger()">Add</button>
+    </div>
+  </div>
+
+  <!-- ── Begin ── -->
+  <div class="begin-wrap">
+    <button class="btn-begin" id="begin-btn" onclick="beginStory()">
+      <span>Write My Story</span>
+    </button>
+    <p class="begin-hint">This will open your personalized story in a new page</p>
+  </div>
+
+  <div class="divider">⟡</div>
+  <a class="embers-link" href="shelf.html" id="shelf-link" style="display:none">← Back to my library</a>
+  <a class="embers-link" href="embers.html" style="margin-top:0.5rem;display:block">or read Embers of the Ashen Court — our original story</a>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// GENRE DATA — themes and character config per genre
+// ═══════════════════════════════════════════════════════════════
+const GENRE_DATA = {
+  // ── Romance ──────────────────────────────────────────────────
+  'Dark Romance': {
+    icon: '🥀', category: 'Romance', isRomance: true,
+    placeholder: 'e.g. A mafia heir claims her as payment for her father\'s debt — and she hates that she can\'t stop thinking about him…',
+    themes: ['Enemies to Lovers','Forbidden Love','Forced Proximity','Possessive Hero','Slow Burn','Morally Grey Villain','Age Gap','Mafia / Crime','Dark Secrets','Obsession','Power Imbalance','Gothic Setting','Revenge','Redemption Arc'],
+  },
+  'Fantasy Romance': {
+    icon: '✨', category: 'Romance', isRomance: true,
+    placeholder: 'e.g. Bound to serve a fae lord for a year, she slowly discovers his cruelty is a mask for something far older and more wounded…',
+    themes: ['Fae & Fairies','Dragons','Witches & Magic','Vampires','Royal Court','Enemies to Lovers','Chosen One','Slow Burn','Forbidden Love','Ancient Prophecy','Soul Bond','Dark Magic','Arranged Marriage'],
+  },
+  'Contemporary Romance': {
+    icon: '🏙️', category: 'Romance', isRomance: true,
+    placeholder: 'e.g. A disgraced hockey player returns to his hometown and falls for the one person who never forgave him…',
+    themes: ['Office Romance','Second Chance','Sports Romance','Small Town','Best Friend\'s Brother','Fake Dating','Single Parent','Grumpy & Sunshine','Hockey Romance','Friends to Lovers','Age Gap','Billionaire','Enemies to Lovers'],
+  },
+  'Paranormal Romance': {
+    icon: '🌙', category: 'Romance', isRomance: true,
+    placeholder: 'e.g. The vampire who keeps saving her life refuses to explain why — and she\'s starting to suspect she was never meant to know…',
+    themes: ['Vampires','Werewolves','Ghosts','Witches & Magic','Shifters','Demons','Angels','Psychic Powers','Forbidden Love','Chosen One','Fated Mates','Dark Secrets'],
+  },
+  'Romantic Thriller': {
+    icon: '🗡️', category: 'Romance', isRomance: true,
+    placeholder: 'e.g. She witnesses a murder and the only man who can protect her is the one she\'s been running from for three years…',
+    themes: ['Forbidden Love','Conspiracy','Double Identity','Spy Romance','Witness Protection','Dark Secrets','Revenge','Enemies to Lovers','Psychological Manipulation','Heist','Bodyguard Romance'],
+  },
+  'Historical Romance': {
+    icon: '🏰', category: 'Romance', isRomance: true,
+    placeholder: 'e.g. A duke\'s ward agrees to help him find a wife — never imagining he\'ll decide she\'s the only candidate worth considering…',
+    themes: ['Regency Era','Medieval','Victorian','Pirates','Vikings','Royal Court','Forbidden Love','Arranged Marriage','War Era','Class Divide','Fake Engagement','Renaissance'],
+  },
+  // ── Thriller & Mystery ────────────────────────────────────────
+  'Psychological Thriller': {
+    icon: '🧠', category: 'Thriller & Mystery', isRomance: false,
+    secondCharLabel: 'Antagonist name (optional)',
+    secondCharPlaceholder: 'e.g. Detective Kane',
+    placeholder: 'e.g. A therapist realizes her new patient knows things about her past that no one should know…',
+    themes: ['Unreliable Narrator','Dark Secrets','Mind Games','Double Identity','Gaslighting','Obsession','Memory Loss','Serial Killer','Paranoia','Conspiracy','Revenge','Psychological Manipulation'],
+  },
+  'Crime Thriller': {
+    icon: '🔍', category: 'Thriller & Mystery', isRomance: false,
+    secondCharLabel: 'Partner / Antagonist name (optional)',
+    secondCharPlaceholder: 'e.g. Detective Reyes',
+    placeholder: 'e.g. A retired detective is pulled back into a cold case when the killer starts sending him messages…',
+    themes: ['Serial Killer','Cold Case','Heist','Corrupt Officials','Organized Crime','Undercover','Double Cross','Missing Person','Mafia','Political Conspiracy','Witness Protection'],
+  },
+  'Mystery': {
+    icon: '🕵️', category: 'Thriller & Mystery', isRomance: false,
+    secondCharLabel: 'Key character name (optional)',
+    secondCharPlaceholder: 'e.g. Inspector Holt',
+    placeholder: 'e.g. A mystery writer invited to a remote island finds herself the only suspect when the host is murdered…',
+    themes: ['Whodunit','Locked Room Mystery','Small Town Secrets','Amateur Sleuth','Cold Case','Secret Society','Unreliable Narrator','Family Secrets','Missing Person','Double Cross','Hidden Identity'],
+  },
+  'True Crime': {
+    icon: '🔎', category: 'Thriller & Mystery', isRomance: false,
+    hasVictim: true,
+    secondCharLabel: 'Detective / Investigator name (optional)',
+    secondCharPlaceholder: 'e.g. Detective Marsh',
+    placeholder: 'e.g. A true crime podcaster reopening a cold case discovers the victim\'s family has been lying for 20 years — and someone will do anything to keep it buried…',
+    themes: ['Cold Case','Missing Person','Serial Killer','Cover-Up','Wrongful Conviction','Family Secrets','Small Town','Media Frenzy','Double Life','Corrupt Officials','Witness Testimony','Obsession','Survivor'],
+  },
+  // ── Fantasy ───────────────────────────────────────────────────
+  'Dark Fantasy': {
+    icon: '⚔️', category: 'Fantasy', isRomance: false,
+    secondCharLabel: 'Ally / Rival name (optional)',
+    secondCharPlaceholder: 'e.g. Commander Vael',
+    placeholder: 'e.g. A sellsword discovers she carries the blood of a god long thought dead — and there are those who will kill to claim that power…',
+    themes: ['Blood Magic','Ancient Evil','Fallen Gods','Cursed Bloodlines','Shadow Realm','Necromancy','Morally Grey Hero','Demonic Pacts','Political Intrigue','War','Betrayal','Dark Prophecy'],
+  },
+  'Epic Fantasy': {
+    icon: '🐉', category: 'Fantasy', isRomance: false,
+    secondCharLabel: 'Companion / Rival name (optional)',
+    secondCharPlaceholder: 'e.g. Prince Aldric',
+    placeholder: 'e.g. A map-maker\'s apprentice discovers an uncharted kingdom that every empire has been secretly at war over for centuries…',
+    themes: ['Chosen One','Ancient Prophecy','Dragon Riders','Kingdom Politics','Magic Academy','Quest','War of Nations','Lost Artifacts','Reluctant Hero','Found Family','Betrayal'],
+  },
+  'Urban Fantasy': {
+    icon: '🌆', category: 'Fantasy', isRomance: false,
+    secondCharLabel: 'Partner / Rival name (optional)',
+    secondCharPlaceholder: 'e.g. Agent Sorrel',
+    placeholder: 'e.g. A police detective discovers the city\'s crime rate has spiked because the fae have opened a court beneath the subway tunnels…',
+    themes: ['Hidden World','Fae & Fairies','Vampires','Werewolves','Witches & Magic','Modern Magic','Secret Society','Chosen One','Supernatural Crime','Ancient Beings','Hunters'],
+  },
+  // ── Science Fiction ───────────────────────────────────────────
+  'Science Fiction': {
+    icon: '🚀', category: 'Science Fiction', isRomance: false,
+    secondCharLabel: 'Crew member / Antagonist name (optional)',
+    secondCharPlaceholder: 'e.g. Commander Yuen',
+    placeholder: 'e.g. The last human colony ship receives a signal from Earth — 300 years after Earth was supposed to be destroyed…',
+    themes: ['Space Exploration','AI Consciousness','Alien Contact','Time Travel','Generation Ship','Genetic Engineering','First Contact','Rogue AI','Space War','Colonization','Parallel Universes'],
+  },
+  'Cyberpunk': {
+    icon: '💻', category: 'Science Fiction', isRomance: false,
+    secondCharLabel: 'Handler / Antagonist name (optional)',
+    secondCharPlaceholder: 'e.g. Mx. Nox',
+    placeholder: 'e.g. A data thief hired to steal corporate secrets discovers the file she\'s smuggling is a digital human consciousness…',
+    themes: ['Corporate Dystopia','Hacking','Neural Implants','Underground Resistance','AI Rights','Mega-Corporation','Black Market','Surveillance State','Body Modification','Rogue AI','Identity'],
+  },
+  'Dystopian': {
+    icon: '🏚️', category: 'Science Fiction', isRomance: false,
+    secondCharLabel: 'Ally / Antagonist name (optional)',
+    secondCharPlaceholder: 'e.g. Director Crane',
+    placeholder: 'e.g. In a world where memories can be extracted and sold, a memory thief steals the wrong recollection and becomes hunted…',
+    themes: ['Totalitarian Regime','Underground Resistance','Chosen One','Survival','Class Divide','Propaganda','Rebellion','False Utopia','Mind Control','Lost History','Found Family'],
+  },
+  // ── Horror ────────────────────────────────────────────────────
+  'Supernatural Horror': {
+    icon: '👁️', category: 'Horror', isRomance: false,
+    secondCharLabel: 'Companion / Adversary name (optional)',
+    secondCharPlaceholder: 'e.g. Father Maren',
+    placeholder: 'e.g. A family moves into a house where every previous owner has vanished on the same night of the year — and that night is approaching…',
+    themes: ['Haunting','Ancient Curse','Demonic Possession','Cults','Folk Horror','Gothic','Sacrifice','Cosmic Horror','Isolation','Forbidden Knowledge','Monsters'],
+  },
+  'Psychological Horror': {
+    icon: '🌀', category: 'Horror', isRomance: false,
+    secondCharLabel: 'Key character name (optional)',
+    secondCharPlaceholder: 'e.g. Dr. Voss',
+    placeholder: 'e.g. After surviving a car crash, a woman can\'t shake the feeling that the people around her are not who they say they are…',
+    themes: ['Unreliable Reality','Paranoia','Memory Loss','Gaslighting','Dark Secrets','Isolation','Identity Crisis','Obsession','Survivor Guilt','Mind Games','Hidden Truth'],
+  },
+  // ── Historical & Adventure ────────────────────────────────────
+  'Historical Fiction': {
+    icon: '📜', category: 'Historical & Adventure', isRomance: false,
+    secondCharLabel: 'Key historical figure / rival (optional)',
+    secondCharPlaceholder: 'e.g. General Ashford',
+    placeholder: 'e.g. A female cartographer in 16th-century Portugal disguises herself as a man to join an expedition to the New World…',
+    themes: ['War','Political Intrigue','Class Divide','Exploration','Victorian Era','Ancient Rome','Medieval','WWII','Renaissance','Wild West','Revolution','Espionage'],
+  },
+  'Adventure': {
+    icon: '🧭', category: 'Historical & Adventure', isRomance: false,
+    secondCharLabel: 'Companion / Rival name (optional)',
+    secondCharPlaceholder: 'e.g. Captain Rowe',
+    placeholder: 'e.g. A cartographer discovers a map hidden inside an ancient compass — leading to a city every empire has tried to erase from history…',
+    themes: ['Lost Civilization','Treasure Hunt','Survival','Exploration','Ancient Mystery','Unlikely Crew','Race Against Time','Betrayal','Secret Society','Wilderness','Heist'],
+  },
+};
+
+const CATEGORY_ORDER = ['Romance','Thriller & Mystery','Fantasy','Science Fiction','Horror','Historical & Adventure'];
+
+// ═══════════════════════════════════════════════════════════════
+// GENRE RENDERING
+// ═══════════════════════════════════════════════════════════════
+let selectedGenre = 'Dark Romance';
+
+function buildGenreGrid() {
+  const container = document.getElementById('genre-container');
+  const byCategory = {};
+  Object.entries(GENRE_DATA).forEach(([name, data]) => {
+    (byCategory[data.category] = byCategory[data.category] || []).push(name);
+  });
+
+  CATEGORY_ORDER.forEach(cat => {
+    if (!byCategory[cat]) return;
+    const wrap = document.createElement('div');
+    wrap.className = 'genre-category';
+    wrap.innerHTML = `<div class="genre-cat-label">${cat}</div><div class="genre-grid" id="grid-${cat.replace(/\s+/g,'_')}"></div>`;
+    container.appendChild(wrap);
+
+    const grid = wrap.querySelector('.genre-grid');
+    byCategory[cat].forEach(name => {
+      const d = GENRE_DATA[name];
+      const card = document.createElement('div');
+      card.className = 'genre-card' + (name === selectedGenre ? ' selected' : '');
+      card.dataset.genre = name;
+      card.innerHTML = `<span class="genre-icon">${d.icon}</span><span class="genre-name">${name}</span>`;
+      card.addEventListener('click', () => selectGenre(name));
+      grid.appendChild(card);
+    });
+  });
+}
+
+function selectGenre(name) {
+  if (!GENRE_DATA[name]) return;
+  selectedGenre = name;
+  document.querySelectorAll('.genre-card').forEach(c => c.classList.toggle('selected', c.dataset.genre === name));
+  updateThemeChips(name);
+  updateCharacterFields(name);
+  updateStoryPlaceholder(name);
+}
+
+function updateThemeChips(genre) {
+  const themes = GENRE_DATA[genre]?.themes || [];
+  const container = document.getElementById('theme-chips');
+  // Preserve any user-added custom chips
+  const custom = [...container.querySelectorAll('.chip[data-custom]')];
+  container.innerHTML = '';
+  themes.forEach(t => {
+    const btn = document.createElement('button');
+    btn.className = 'chip';
+    btn.dataset.theme = t;
+    btn.textContent = t;
+    btn.addEventListener('click', () => btn.classList.toggle('selected'));
+    container.appendChild(btn);
+  });
+  custom.forEach(c => container.appendChild(c));
+}
+
+function updateCharacterFields(genre) {
+  const data = GENRE_DATA[genre];
+  const field = document.getElementById('second-char-field');
+  const label = document.getElementById('second-char-label');
+  const input = document.getElementById('love-interest-name');
+  const victimField = document.getElementById('victim-field');
+
+  if (data.isRomance) {
+    field.style.display = '';
+    label.textContent = 'Love interest name';
+    input.placeholder = 'e.g. Dorian';
+  } else {
+    field.style.display = '';
+    label.textContent = data.secondCharLabel || 'Key character name (optional)';
+    input.placeholder = data.secondCharPlaceholder || 'e.g. Detective Kane';
+  }
+
+  // Victim field only for True Crime
+  victimField.style.display = data.hasVictim ? '' : 'none';
+  if (!data.hasVictim) {
+    document.getElementById('victim-name').value = '';
+    document.getElementById('victim-description').value = '';
+  }
+}
+
+function updateStoryPlaceholder(genre) {
+  const ph = GENRE_DATA[genre]?.placeholder;
+  if (ph) document.getElementById('story-idea').placeholder = ph;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LIBRARY
+// ═══════════════════════════════════════════════════════════════
+const _lib = (() => { try { return JSON.parse(localStorage.getItem('bea_library') || '{}'); } catch(_){return{};} })();
+const _stories = Object.values(_lib).sort((a,b)=>(b.lastReadAt||0)-(a.lastReadAt||0));
+
+if (_stories.length > 0) {
+  document.getElementById('shelf-link').style.display = 'block';
+  const sel = document.getElementById('parent-book-select');
+  _stories.forEach(s => {
+    const title = s.bookTitle || s.config?.bookTitleInput || s.config?.protagonistName || s.config?.genre || 'Untitled';
+    const opt = document.createElement('option');
+    opt.value = s.id; opt.textContent = title;
+    sel.appendChild(opt);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EMBER PARTICLES
+// ═══════════════════════════════════════════════════════════════
+const cv = document.getElementById('bg-canvas');
+const cx = cv.getContext('2d');
+let pool = [];
+const resize = () => { cv.width=innerWidth; cv.height=innerHeight; };
+window.addEventListener('resize', resize); resize();
+function spawnEmber() {
+  return { x:Math.random()*cv.width, y:cv.height+8,
+    vx:(Math.random()-.5)*.6, vy:-(Math.random()*1.2+.3),
+    r:Math.random()*2+.5, a:Math.random()*.5+.1,
+    col:`hsl(${Math.random()*25+8},100%,${Math.random()*25+48}%)`,
+    life:1, dec:Math.random()*.006+.002 };
+}
+(function tick() {
+  cx.clearRect(0,0,cv.width,cv.height);
+  if (pool.length < 80) pool.push(spawnEmber());
+  pool = pool.filter(p=>p.life>0);
+  for (const p of pool) {
+    p.x+=p.vx; p.y+=p.vy; p.life-=p.dec;
+    p.vx+=(Math.random()-.5)*.06; p.vx=Math.max(-1,Math.min(1,p.vx));
+    cx.save(); cx.globalAlpha=p.a*p.life; cx.shadowBlur=5; cx.shadowColor=p.col;
+    cx.fillStyle=p.col; cx.beginPath(); cx.arc(p.x,p.y,p.r,0,Math.PI*2); cx.fill(); cx.restore();
+  }
+  requestAnimationFrame(tick);
+})();
+
+// ═══════════════════════════════════════════════════════════════
+// AGE PILLS
+// ═══════════════════════════════════════════════════════════════
+document.getElementById('age-pills').addEventListener('click', e => {
+  const pill = e.target.closest('.pill');
+  if (!pill) return;
+  document.querySelectorAll('.pill').forEach(p => p.classList.remove('selected'));
+  pill.classList.add('selected');
+});
+
+// ═══════════════════════════════════════════════════════════════
+// CUSTOM THEME / TRIGGER
+// ═══════════════════════════════════════════════════════════════
+function addCustomTheme() {
+  const inp = document.getElementById('custom-theme-input');
+  const val = inp.value.trim();
+  if (!val) return;
+  const chip = document.createElement('button');
+  chip.className = 'chip selected';
+  chip.dataset.theme = val;
+  chip.dataset.custom = '1';
+  chip.textContent = val;
+  chip.addEventListener('click', () => chip.classList.toggle('selected'));
+  document.getElementById('theme-chips').appendChild(chip);
+  inp.value = '';
+}
+document.getElementById('custom-theme-input').addEventListener('keydown', e => { if (e.key==='Enter') addCustomTheme(); });
+
+function addCustomTrigger() {
+  const inp = document.getElementById('custom-trigger-input');
+  const val = inp.value.trim();
+  if (!val) return;
+  const chip = document.createElement('button');
+  chip.className = 'trigger-chip selected';
+  chip.dataset.trigger = val;
+  chip.textContent = val;
+  chip.addEventListener('click', () => chip.classList.toggle('selected'));
+  document.getElementById('trigger-chips').appendChild(chip);
+  inp.value = '';
+}
+document.getElementById('custom-trigger-input').addEventListener('keydown', e => { if (e.key==='Enter') addCustomTrigger(); });
+
+// ═══════════════════════════════════════════════════════════════
+// STORY ARC
+// ═══════════════════════════════════════════════════════════════
+function toggleSeriesHint(cb) {
+  document.getElementById('series-hint').style.display = cb.checked ? 'block' : 'none';
+}
+function toggleSequel(cb) {
+  document.getElementById('sequel-picker').style.display = cb.checked ? 'block' : 'none';
+}
+document.getElementById('parent-book-select').addEventListener('change', function() {
+  const note = document.getElementById('parent-book-note');
+  if (!this.value) { note.style.display='none'; return; }
+  const story = _lib[this.value];
+  if (!story) return;
+  const title = story.bookTitle || story.config?.bookTitleInput || 'the previous book';
+  note.textContent = `Claude will be given the world bible from "${title}" to maintain continuity.`;
+  note.style.display = 'block';
+});
+
+// ═══════════════════════════════════════════════════════════════
+// CHAPTER SLIDER
+// ═══════════════════════════════════════════════════════════════
+function updateSlider(el) {
+  document.getElementById('slider-display').textContent = el.value;
+  const pct = ((el.value - el.min) / (el.max - el.min)) * 100;
+  el.style.setProperty('--pct', pct + '%');
+}
+updateSlider(document.getElementById('chapter-slider'));
+
+// ═══════════════════════════════════════════════════════════════
+// LAUNCH
+// ═══════════════════════════════════════════════════════════════
+const GEN_MSGS = [
+  'The story is taking shape…',
+  'Characters are coming to life…',
+  'Setting the scene…',
+  'The first chapter is being written…',
+  'Weaving the threads of fate…',
+  'The ink is still wet…',
+  'Almost there…',
+];
+
+async function beginStory() {
+  const genre            = selectedGenre;
+  const storyIdea        = document.getElementById('story-idea').value.trim();
+  const bookTitleInput   = document.getElementById('book-title-input').value.trim();
+  const protagonistName  = document.getElementById('protagonist-name').value.trim();
+  const loveInterestName = document.getElementById('love-interest-name').value.trim() || '';
+  const victimName        = document.getElementById('victim-name').value.trim() || '';
+  const victimDescription = document.getElementById('victim-description').value.trim() || '';
+  const ageRange         = document.querySelector('.pill.selected')?.dataset.age || '30s';
+  const themes           = [...document.querySelectorAll('.chip.selected')].map(c => c.dataset.theme);
+  const targetChapters   = parseInt(document.getElementById('chapter-slider').value);
+  const triggerAvoid     = [...document.querySelectorAll('.trigger-chip.selected')].map(c => c.dataset.trigger);
+  const isSeries         = document.getElementById('is-series').checked;
+  const isSequel         = document.getElementById('is-sequel').checked;
+  const isRomance        = GENRE_DATA[genre]?.isRomance ?? true;
+
+  const usedNames = [];
+  _stories.forEach(s => {
+    if (s.config?.isSequel) return;
+    if (s.config?.protagonistName)  usedNames.push(s.config.protagonistName);
+    if (s.config?.loveInterestName) usedNames.push(s.config.loveInterestName);
+  });
+
+  const parentId = document.getElementById('parent-book-select').value;
+  let parentBookTitle = null, parentBookBible = null;
+  if (isSequel && parentId && _lib[parentId]) {
+    const parent = _lib[parentId];
+    parentBookTitle = parent.bookTitle || parent.config?.bookTitleInput || 'the previous book';
+    parentBookBible = parent.progress?.bible || '';
+  }
+
+  const config = {
+    genre, storyIdea, bookTitleInput, protagonistName, loveInterestName, victimName, victimDescription,
+    ageRange, themes, targetChapters, triggerAvoid,
+    isSeries, isSequel, isRomance,
+    parentBookId: parentId || null, parentBookTitle, parentBookBible,
+    usedNames: [...new Set(usedNames)],
+  };
+
+  const storyId = (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
+  sessionStorage.setItem('bea_story_id', storyId);
+  sessionStorage.setItem('bea_config', JSON.stringify(config));
+
+  // Show loading overlay
+  const overlay  = document.getElementById('gen-overlay');
+  const msgEl    = document.getElementById('gen-msg');
+  const titleEl  = document.getElementById('gen-book-title');
+  const beginBtn = document.getElementById('begin-btn');
+  overlay.classList.add('active');
+  beginBtn.disabled = true;
+
+  // Rotate loading messages
+  let msgIdx = 0;
+  const msgTimer = setInterval(() => {
+    msgIdx = (msgIdx + 1) % GEN_MSGS.length;
+    msgEl.style.opacity = '0';
+    setTimeout(() => { msgEl.textContent = GEN_MSGS[msgIdx]; msgEl.style.opacity = '1'; }, 400);
+  }, 4000);
+
+  try {
+    const res  = await fetch('/api/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ storyConfig: config }),
+    });
+    const data = await res.json();
+    clearInterval(msgTimer);
+    if (!data.success) throw new Error(data.error || 'Unknown error');
+
+    // Reveal the book title with a dramatic pause
+    if (data.bookTitle) {
+      msgEl.style.opacity = '0';
+      titleEl.textContent = data.bookTitle;
+      titleEl.classList.add('show');
+      await new Promise(r => setTimeout(r, 1800));
+    }
+
+    sessionStorage.setItem('bea_prefetch', JSON.stringify(data));
+    window.location.href = 'read.html';
+  } catch (err) {
+    clearInterval(msgTimer);
+    overlay.classList.remove('active');
+    beginBtn.disabled = false;
+    alert('Error generating your story: ' + err.message + '\n\nIs the server running?');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════
+buildGenreGrid();
+updateThemeChips(selectedGenre);
+updateCharacterFields(selectedGenre);
+updateStoryPlaceholder(selectedGenre);
+</script>
+</body>
+</html>
