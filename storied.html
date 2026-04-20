@@ -77,7 +77,9 @@ header {
 /* ── Progress ── */
 .progress-wrap { width:100%; max-width:680px; margin-bottom:2.5rem; }
 .progress-steps { display:flex; align-items:center; justify-content:center; gap:0; }
-.ps-item { display:flex; flex-direction:column; align-items:center; gap:0.4rem; position:relative; }
+.ps-item { display:flex; flex-direction:column; align-items:center; gap:0.4rem; position:relative; cursor:pointer; }
+.ps-item:hover .ps-dot { border-color:var(--accent); color:var(--accent); }
+.ps-item:hover .ps-label { color:rgba(232,213,183,0.6); }
 .ps-dot {
   width:28px; height:28px; border-radius:50%;
   border:1px solid var(--border);
@@ -328,32 +330,32 @@ header {
     <!-- Progress -->
     <div class="progress-wrap">
       <div class="progress-steps" id="progressSteps">
-        <div class="ps-item">
+        <div class="ps-item" onclick="goToStep(1)">
           <div class="ps-dot active" id="dot-1">1</div>
           <div class="ps-label active" id="lbl-1">People</div>
         </div>
         <div class="ps-line"></div>
-        <div class="ps-item">
+        <div class="ps-item" onclick="goToStep(2)">
           <div class="ps-dot" id="dot-2">2</div>
           <div class="ps-label" id="lbl-2">Animals</div>
         </div>
         <div class="ps-line"></div>
-        <div class="ps-item">
+        <div class="ps-item" onclick="goToStep(3)">
           <div class="ps-dot" id="dot-3">3</div>
           <div class="ps-label" id="lbl-3">Timeline</div>
         </div>
         <div class="ps-line"></div>
-        <div class="ps-item">
+        <div class="ps-item" onclick="goToStep(4)">
           <div class="ps-dot" id="dot-4">4</div>
           <div class="ps-label" id="lbl-4">Texture</div>
         </div>
         <div class="ps-line"></div>
-        <div class="ps-item">
+        <div class="ps-item" onclick="goToStep(5)">
           <div class="ps-dot" id="dot-5">5</div>
           <div class="ps-label" id="lbl-5">Details</div>
         </div>
         <div class="ps-line"></div>
-        <div class="ps-item">
+        <div class="ps-item" onclick="goToStep(6)">
           <div class="ps-dot" id="dot-6">6</div>
           <div class="ps-label" id="lbl-6">Style</div>
         </div>
