@@ -925,13 +925,6 @@ const PREFETCH = (() => {
 // If no story ID, bounce to shelf (user navigated directly)
 if (!STORY_ID) { window.location.href = 'shelf.html'; }
 
-// Load existing story data from Supabase into cache
-(async () => {
-  const uid = await _ensureUser();
-  if (!uid) return;
-  const { data } = await _SB.from('stories').select('data').eq('id', STORY_ID).single();
-  if (data) _storyCache = data.data;
-})();
 
 const S = {
   chapter: 0,
@@ -1880,7 +1873,14 @@ function closeQuoteCard() {
 // ═══════════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════════
-(function init() {
+(async function init() {
+  // Load story data from Supabase before anything else
+  const uid = await _ensureUser();
+  if (uid && STORY_ID) {
+    const { data } = await _SB.from('stories').select('data').eq('id', STORY_ID).single();
+    if (data) _storyCache = data.data;
+  }
+
   // Populate welcome screen from config
   if (STORY_CONFIG) {
     const titleEl = document.getElementById('welcome-title');
