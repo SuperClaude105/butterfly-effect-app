@@ -403,6 +403,11 @@ header {
       </div>
       <div class="field"><label class="field-label">Pet names / nicknames</label><input class="field-input" id="nicknames" placeholder="e.g. Babe, Bug, Bear..." oninput="save()"></div>
       <div class="field"><label class="field-label">Property / Land (if applicable)</label><input class="field-input" id="property" placeholder="e.g. A cottage they share, land they bought together..." oninput="save()"></div>
+      <div class="field" style="margin-top:1.5rem">
+        <label class="field-label">Anything else about them as people</label>
+        <div class="field-hint">What makes them who they are? Their dynamic, quirks, how they move through the world — anything the fields above didn't capture.</div>
+        <textarea class="field-textarea tall" style="min-height:160px" id="peopleFreeText" placeholder="Write freely — there's no format here..." oninput="save()"></textarea>
+      </div>
     </div>
 
     <!-- ── Step 2: Animals ── -->
@@ -614,6 +619,7 @@ function applyFormData(data) {
   set('bTrait1', data.personB?.traits?.[0]); set('bTrait2', data.personB?.traits?.[1]);
   set('bTrait3', data.personB?.traits?.[2]); set('bAppearance', data.personB?.appearance);
   set('nicknames', data.nicknames); set('property', data.property);
+  set('peopleFreeText', data.peopleFreeText);
   set('places', data.texture?.places); set('insideJokes', data.texture?.insideJokes);
   set('songsMovies', data.texture?.songsMoviesBooks); set('funniest', data.texture?.funniest);
   set('freeText', data.freeText);
@@ -803,6 +809,7 @@ function collectFormData() {
     },
     nicknames: v('nicknames'),
     property: v('property'),
+    peopleFreeText: v('peopleFreeText'),
     animals: animals.map(({ id, ...rest }) => rest),
     timeline: timeline.map(({ id, ...rest }) => rest),
     texture: {
