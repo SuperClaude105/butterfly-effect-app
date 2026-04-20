@@ -62,8 +62,8 @@ header {
   flex-shrink:0;
 }
 .logo { font-family:'Playfair Display',serif; font-style:italic; font-size:1.35rem; color:var(--accent); text-shadow:0 0 30px var(--glow); text-decoration:none; }
-.back-link { font-family:'EB Garamond',serif; font-style:normal; font-size:0.8rem; letter-spacing:0.15em; text-transform:uppercase; color:rgba(232,213,183,0.35); text-shadow:none; transition:color 0.2s; }
-.back-link:hover { color:rgba(232,213,183,0.65); }
+.back-link { font-family:'EB Garamond',serif; font-style:normal; font-size:0.85rem; letter-spacing:0.12em; text-transform:uppercase; color:rgba(232,213,183,0.6); text-shadow:none; text-decoration:none; border:1px solid rgba(196,162,100,0.25); padding:0.45rem 1rem; border-radius:3px; transition:color 0.2s, border-color 0.2s; }
+.back-link:hover { color:var(--accent); border-color:rgba(196,162,100,0.55); }
 .storied-header { display:flex; flex-direction:column; align-items:center; gap:0.25rem; }
 .storied-title { font-family:'Playfair Display',serif; font-size:2.4rem; font-style:italic; color:var(--accent); text-shadow:0 0 40px var(--glow); line-height:1; letter-spacing:-0.01em; }
 .storied-tagline { font-family:'EB Garamond',serif; font-style:italic; font-size:0.95rem; color:rgba(232,213,183,0.5); letter-spacing:0.06em; }
@@ -75,7 +75,7 @@ header {
 .main { flex:1; display:flex; flex-direction:column; align-items:center; padding:2rem 1rem 4rem; }
 
 /* ── Progress ── */
-.progress-wrap { width:100%; max-width:680px; margin-bottom:2.5rem; }
+.progress-wrap { width:100%; max-width:860px; margin-bottom:2.5rem; }
 .progress-steps { display:flex; align-items:center; justify-content:center; gap:0; }
 .ps-item { display:flex; flex-direction:column; align-items:center; gap:0.4rem; position:relative; cursor:pointer; }
 .ps-item:hover .ps-dot { border-color:var(--accent); color:var(--accent); }
@@ -95,7 +95,7 @@ header {
 .ps-line { flex:1; min-width:28px; max-width:60px; height:1px; background:var(--border); margin:0 4px; margin-bottom:20px; }
 
 /* ── Step card ── */
-.step { display:none; width:100%; max-width:680px; animation:stepIn 0.35s ease; }
+.step { display:none; width:100%; max-width:860px; animation:stepIn 0.35s ease; }
 .step.active { display:block; }
 @keyframes stepIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
 
@@ -186,7 +186,7 @@ header {
 .romance-level { margin-top:1.25rem; animation:stepIn 0.25s ease; }
 
 /* ── Nav buttons ── */
-.form-nav { display:flex; justify-content:space-between; align-items:center; width:100%; max-width:680px; margin-top:2rem; }
+.form-nav { display:flex; justify-content:space-between; align-items:center; width:100%; max-width:860px; margin-top:2rem; }
 .btn-nav {
   font-family:'EB Garamond',serif; font-size:0.82rem; letter-spacing:0.22em;
   text-transform:uppercase; padding:0.75rem 1.8rem;
@@ -209,7 +209,7 @@ header {
 
 /* Resume banner */
 .resume-banner {
-  width:100%; max-width:680px; margin-bottom:1.5rem;
+  width:100%; max-width:860px; margin-bottom:1.5rem;
   background:rgba(196,162,100,0.08); border:1px solid rgba(196,162,100,0.25);
   border-radius:6px; padding:1rem 1.25rem;
   display:flex; align-items:center; justify-content:space-between; gap:1rem;
@@ -371,7 +371,7 @@ header {
       </div>
       <div class="person-grid">
         <div class="person-card">
-          <div class="person-card-title">Person A</div>
+          <div class="person-card-title" id="cardTitleA">Person A</div>
           <div class="field"><label class="field-label">Name *</label><input class="field-input" id="aName" placeholder="Full name" oninput="save();updateNameLabels()"></div>
           <div class="field"><label class="field-label">Age</label><input class="field-input" id="aAge" placeholder="e.g. 36" oninput="save()"></div>
           <div class="field"><label class="field-label">Hometown</label><input class="field-input" id="aHometown" placeholder="e.g. Halifax, NS" oninput="save()"></div>
@@ -389,7 +389,7 @@ header {
           <div class="field"><label class="field-label">Anything else about them?</label><textarea class="field-textarea" id="peopleFreeTextA" placeholder="Quirks, how they move through the world, what makes them them..." oninput="save()"></textarea></div>
         </div>
         <div class="person-card">
-          <div class="person-card-title">Person B</div>
+          <div class="person-card-title" id="cardTitleB">Person B</div>
           <div class="field"><label class="field-label">Name *</label><input class="field-input" id="bName" placeholder="Full name" oninput="save();updateNameLabels()"></div>
           <div class="field"><label class="field-label">Age</label><input class="field-input" id="bAge" placeholder="e.g. 35" oninput="save()"></div>
           <div class="field"><label class="field-label">Hometown</label><input class="field-input" id="bHometown" placeholder="e.g. Sudbury, ON" oninput="save()"></div>
@@ -519,7 +519,7 @@ header {
     <!-- Nav buttons -->
     <div class="form-nav">
       <button class="btn-nav ghost" id="prevBtn" onclick="prevStep()"><span>← Back</span></button>
-      <button class="btn-nav ghost" id="saveShelfBtn" onclick="saveToShelf()" style="font-size:0.72rem;padding:0.75rem 1.2rem"><span>Save to Shelf</span></button>
+      <button class="btn-nav ghost" id="saveShelfBtn" onclick="saveToShelf()" style="font-size:0.72rem;padding:0.75rem 1.2rem;border-color:rgba(196,162,100,0.4);color:var(--accent);"><span>✦ Save</span></button>
       <button class="btn-nav" id="nextBtn" onclick="nextStep()"><span>Next →</span></button>
     </div>
 
@@ -594,6 +594,8 @@ function updateNameLabels() {
   // Nickname label spans inside each card
   document.querySelectorAll('#aNameLabel').forEach(el => el.textContent = a);
   document.querySelectorAll('#bNameLabel').forEach(el => el.textContent = b);
+  const ca = document.getElementById('cardTitleA'); if (ca) ca.textContent = a;
+  const cb = document.getElementById('cardTitleB'); if (cb) cb.textContent = b;
 }
 
 function checkResume() {
@@ -1021,9 +1023,9 @@ async function saveToShelf() {
     });
 
     btn.innerHTML = '<span>✓ Saved</span>';
-    setTimeout(() => { btn.innerHTML = '<span>Save to Shelf</span>'; btn.disabled = false; }, 2000);
+    setTimeout(() => { btn.innerHTML = '<span>✦ Save</span>'; btn.disabled = false; }, 2000);
   } catch (err) {
-    btn.innerHTML = '<span>Save to Shelf</span>';
+    btn.innerHTML = '<span>✦ Save</span>';
     btn.disabled = false;
     alert('Could not save: ' + err.message);
   }
