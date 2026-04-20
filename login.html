@@ -139,27 +139,39 @@ hr { margin:2rem 0 1.25rem; border:none; border-top:1px solid var(--border); }
   <h1>Unwritten</h1>
   <p class="tagline">Your story. Your choices. Your ending.</p>
 
-  <div class="tabs">
-    <button class="tab active" data-tab="signin">Sign In</button>
-    <button class="tab" data-tab="register">Create Account</button>
+  <!-- Gate (access password) -->
+  <div id="gateSection">
+    <form id="gateForm" autocomplete="off">
+      <input type="password" id="gate-pass" placeholder="Enter access password" autofocus>
+      <p class="msg error" id="gate-msg"></p>
+      <button type="submit" id="gate-btn">Continue</button>
+    </form>
   </div>
 
-  <!-- Sign In -->
-  <form id="signinForm" autocomplete="on">
-    <input type="email" id="si-email" placeholder="Email address" autocomplete="email" required>
-    <input type="password" id="si-pass" placeholder="Password" autocomplete="current-password" required>
-    <p class="msg error" id="si-msg"></p>
-    <button type="submit" id="si-btn">Sign In</button>
-  </form>
+  <!-- Auth forms (hidden until gate is passed) -->
+  <div id="authSection" style="display:none">
+    <div class="tabs">
+      <button class="tab active" data-tab="signin">Sign In</button>
+      <button class="tab" data-tab="register">Create Account</button>
+    </div>
 
-  <!-- Register -->
-  <form id="registerForm" style="display:none" autocomplete="on">
-    <input type="email" id="reg-email" placeholder="Email address" autocomplete="email" required>
-    <input type="password" id="reg-pass" placeholder="Password (min 6 characters)" autocomplete="new-password" required>
-    <input type="password" id="reg-confirm" placeholder="Confirm password" autocomplete="new-password" required>
-    <p class="msg" id="reg-msg"></p>
-    <button type="submit" id="reg-btn">Create Account</button>
-  </form>
+    <!-- Sign In -->
+    <form id="signinForm" autocomplete="on">
+      <input type="email" id="si-email" placeholder="Email address" autocomplete="email" required>
+      <input type="password" id="si-pass" placeholder="Password" autocomplete="current-password" required>
+      <p class="msg error" id="si-msg"></p>
+      <button type="submit" id="si-btn">Sign In</button>
+    </form>
+
+    <!-- Register -->
+    <form id="registerForm" style="display:none" autocomplete="on">
+      <input type="email" id="reg-email" placeholder="Email address" autocomplete="email" required>
+      <input type="password" id="reg-pass" placeholder="Password (min 6 characters)" autocomplete="new-password" required>
+      <input type="password" id="reg-confirm" placeholder="Confirm password" autocomplete="new-password" required>
+      <p class="msg" id="reg-msg"></p>
+      <button type="submit" id="reg-btn">Create Account</button>
+    </form>
+  </div>
 
   <hr>
   <p class="footer-note">Private access · Unwritten</p>
@@ -175,6 +187,29 @@ const _SB = supabase.createClient(
 // If already signed in, go straight to shelf
 _SB.auth.getSession().then(({ data: { session } }) => {
   if (session) location.replace('/shelf.html');
+});
+
+// ── Gate ──────────────────────────────────────────────────────────
+function showAuth() {
+  document.getElementById('gateSection').style.display = 'none';
+  document.getElementById('authSection').style.display = '';
+  document.getElementById('si-email').focus();
+}
+
+if (sessionStorage.getItem('gate_passed') === 'true') showAuth();
+
+document.getElementById('gateForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const val = document.getElementById('gate-pass').value;
+  const msg = document.getElementById('gate-msg');
+  if (val === 'Unwritten105') {
+    sessionStorage.setItem('gate_passed', 'true');
+    showAuth();
+  } else {
+    msg.textContent = 'Incorrect password.';
+    document.getElementById('gate-pass').value = '';
+    document.getElementById('gate-pass').focus();
+  }
 });
 
 // ── Tabs ──────────────────────────────────────────────────────────
