@@ -2,6 +2,9 @@ require('dotenv').config();
 const express = require('express');
 const Anthropic = require('@anthropic-ai/sdk');
 const path = require('path');
+const crypto = require('crypto');
+const fs = require('fs');
+const { createRequire } = require('module');
 
 const app = express();
 app.use(express.json({ limit: '50mb' }));
@@ -439,6 +442,265 @@ ${chapterBlocks}
 </body>
 </html>`;
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// STORIED — Personalized story generation
+// ═══════════════════════════════════════════════════════════════════════════
+
+const storiedJobs = new Map();
+const STORIED_OUTPUT = path.join(__dirname, 'storied-output');
+if (!fs.existsSync(STORIED_OUTPUT)) fs.mkdirSync(STORIED_OUTPUT);
+
+const STORIED_SYSTEM = `You are a skilled literary author writing a personalized memoir. Your task is to write deeply personal, emotionally resonant chapters about real people using the specific details, timeline, animals, places, and texture provided.
+
+Guidelines:
+- Write in the narrative style specified (memoir, novel, or fairy tale)
+- Alternate POV as instructed — odd chapters from Person A's perspective, even from Person B's
+- Weave in real details naturally — never list them, let them breathe into the narrative
+- The animals are not background — they are characters with personalities
+- Inside jokes should appear as organic moments, not explained to the reader
+- Do not summarize. Do not tell the reader how to feel. Show the moments.
+- These are real people who will read this. Honor their story.
+- Chapter length: 650–900 words`;
+
+// Plan chapters based on story data
+async function planChapters(storyData) {
+  const aName = storyData.personA?.name || 'Person A';
+  const bName = storyData.personB?.name || 'Person B';
+  const relType = storyData.preferences?.relationshipType || 'spouses';
+  const pov = storyData.preferences?.pov || 'alternating';
+  const style = storyData.preferences?.narrativeStyle || 'memoir';
+
+  const povInstruction = pov === 'alternating'
+    ? `Alternate POV: odd chapters from ${aName}'s perspective, even chapters from ${bName}'s.`
+    : pov === 'personA' ? `All chapters from ${aName}'s perspective.`
+    : `All chapters from ${bName}'s perspective.`;
+
+  const response = await anthropic.messages.create({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 2000,
+    messages: [{
+      role: 'user',
+      content: `Plan 12-14 chapters for a personalized ${style} about ${aName} and ${bName} (${relType}).
+
+${povInstruction}
+
+Use the timeline and story data below to plan chapters in chronological order. Each chapter should cover a meaningful period or event. Make sure every significant animal, milestone, and inside joke gets its chapter.
+
+Return ONLY a valid JSON array — no markdown, no explanation:
+[{"num":1,"title":"Chapter Title","brief":"2-3 sentences describing what this chapter covers and why it matters","pov":"${aName}"}]
+
+Story data:
+${JSON.stringify(storyData, null, 2)}`
+    }]
+  });
+
+  let text = response.content[0].text.trim();
+  text = text.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim();
+  return JSON.parse(text);
+}
+
+// Generate a single chapter
+async function generateChapter(storyData, chapterPlan) {
+  const response = await anthropic.messages.create({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 1500,
+    system: STORIED_SYSTEM,
+    messages: [{
+      role: 'user',
+      content: `Story data:\n${JSON.stringify(storyData, null, 2)}\n\n---\n\nWrite Chapter ${chapterPlan.num}: "${chapterPlan.title}"\n\nPOV: ${chapterPlan.pov}\nBrief: ${chapterPlan.brief}\n\nStyle: ${storyData.preferences?.narrativeStyle || 'memoir'}. ${chapterPlan.num % 2 !== 0 ? storyData.personA?.name : storyData.personB?.name}'s perspective. 650–900 words.`
+    }]
+  });
+  return response.content[0].text;
+}
+
+// Generate the book title
+async function generateBookTitle(storyData) {
+  const aName = storyData.personA?.name || 'Person A';
+  const bName = storyData.personB?.name || 'Person B';
+  const response = await anthropic.messages.create({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 100,
+    messages: [{
+      role: 'user',
+      content: `Create a beautiful, evocative memoir title for the story of ${aName} and ${bName}. Their story involves: ${(storyData.timeline || []).slice(0,5).map(t => t.event).join('; ')}. Return ONLY the title, nothing else. No quotes, no explanation.`
+    }]
+  });
+  return response.content[0].text.trim().replace(/^["']|["']$/g, '');
+}
+
+// Build PDF from chapters
+async function buildStoriedPDF(bookTitle, chapters, storyData) {
+  const aName = storyData.personA?.name || '';
+  const bName = storyData.personB?.name || '';
+
+  const divider = '═'.repeat(60);
+  const chaptersHtml = chapters.map((ch, i) => {
+    const lines = ch.text.split('\n');
+    let html = '';
+    for (const line of lines) {
+      const t = line.trim();
+      if (!t) { html += '<div style="height:6px"></div>'; continue; }
+      if (t.startsWith('# ')) { html += `<h2>${t.replace(/^# /,'')}</h2>`; continue; }
+      if (t === '---') { html += '<hr>'; continue; }
+      html += `<p>${t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p>`;
+    }
+    return `<div class="chapter ${i > 0 ? 'page-break' : ''}">${html}</div>`;
+  }).join('\n');
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:Georgia,serif;font-size:11pt;line-height:1.85;color:#1a1a1a}
+    .title-page{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:60px 50px}
+    .title-page h1{font-size:42pt;font-weight:normal;letter-spacing:.05em;margin-bottom:18px}
+    .title-page .sub{font-style:italic;font-size:13pt;color:#555;margin-bottom:50px}
+    .title-page .names{font-size:10pt;letter-spacing:.25em;text-transform:uppercase;color:#888}
+    .dedication{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:80px 60px}
+    .dedication p{font-style:italic;font-size:12pt;line-height:2.2;color:#444}
+    .chapter{padding:60px 65px}
+    .page-break{page-break-before:always}
+    h2{font-size:19pt;font-weight:normal;margin-bottom:30px;padding-bottom:16px;border-bottom:1px solid #ddd}
+    p{margin-bottom:0;text-indent:1.5em}
+    h2+p,hr+p{text-indent:0}
+    hr{border:none;text-align:center;margin:22px 0}
+    hr::after{content:'· · ·';color:#aaa;font-size:13pt;letter-spacing:.4em}
+  </style></head><body>
+  <div class="title-page">
+    <h1>${bookTitle}</h1>
+    <p class="sub">A memoir</p>
+    <p class="names">${aName} &amp; ${bName}</p>
+  </div>
+  ${chaptersHtml}
+  </body></html>`;
+
+  const requireFrom = createRequire('file:///C:/Users/super/AppData/Local/Temp/puppeteer-test/');
+  const puppeteer = requireFrom('puppeteer');
+  const browser = await puppeteer.launch({
+    executablePath: 'C:/Users/super/.cache/puppeteer/chrome/win64-147.0.7727.56/chrome-win64/chrome.exe',
+    headless: true,
+  });
+  const page = await browser.newPage();
+  await page.setContent(html, { waitUntil: 'networkidle0' });
+  const pdfPath = path.join(STORIED_OUTPUT, `storied-${Date.now()}.pdf`);
+  await page.pdf({ path: pdfPath, format: 'A5', margin: { top:'0',bottom:'0',left:'0',right:'0' }, printBackground: true });
+  await browser.close();
+  return pdfPath;
+}
+
+// Run generation in background and stream to SSE listeners
+async function generateStoryForJob(jobId) {
+  const job = storiedJobs.get(jobId);
+  if (!job) return;
+
+  function send(data) {
+    const msg = `data: ${JSON.stringify(data)}\n\n`;
+    job.events.push(msg);
+    for (const res of job.listeners) {
+      try { res.write(msg); } catch(_) {}
+    }
+  }
+
+  try {
+    // Plan chapters
+    const chapters = await planChapters(job.data);
+    job.chapterPlan = chapters;
+    send({ type: 'plan', chapters: chapters.map(c => ({ num: c.num, title: c.title })) });
+
+    // Generate book title
+    const bookTitle = await generateBookTitle(job.data);
+    job.bookTitle = bookTitle;
+    send({ type: 'book_title', title: bookTitle });
+
+    // Generate each chapter
+    const generatedChapters = [];
+    for (const chPlan of chapters) {
+      send({ type: 'chapter_start', num: chPlan.num });
+      const text = await generateChapter(job.data, chPlan);
+      generatedChapters.push({ num: chPlan.num, title: chPlan.title, text });
+      job.chapters = generatedChapters;
+      send({ type: 'chapter_done', num: chPlan.num });
+    }
+
+    // Generate PDF
+    const pdfPath = await buildStoriedPDF(bookTitle, generatedChapters, job.data);
+    job.pdfPath = pdfPath;
+    job.status = 'done';
+
+    const pdfUrl = `/api/storied/pdf/${jobId}`;
+    send({ type: 'done', bookTitle, pdfUrl });
+
+    // Close all listeners
+    for (const res of job.listeners) {
+      try { res.end(); } catch(_) {}
+    }
+    job.listeners = [];
+
+  } catch (err) {
+    console.error('Storied generation error:', err.message);
+    send({ type: 'error', message: err.message });
+    job.status = 'error';
+    for (const res of job.listeners) {
+      try { res.end(); } catch(_) {}
+    }
+    job.listeners = [];
+  }
+}
+
+// POST /api/storied/queue — start a generation job
+app.post('/api/storied/queue', (req, res) => {
+  const jobId = crypto.randomUUID();
+  storiedJobs.set(jobId, {
+    data: req.body,
+    status: 'generating',
+    events: [],
+    listeners: [],
+    chapters: [],
+    bookTitle: '',
+    pdfPath: null,
+  });
+  res.json({ jobId });
+  generateStoryForJob(jobId);
+});
+
+// GET /api/storied/stream/:jobId — SSE stream
+app.get('/api/storied/stream/:jobId', (req, res) => {
+  const job = storiedJobs.get(req.params.jobId);
+  if (!job) {
+    res.status(404).json({ error: 'Job not found' });
+    return;
+  }
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  // Replay any events that already happened
+  for (const event of job.events) {
+    res.write(event);
+  }
+
+  if (job.status === 'done' || job.status === 'error') {
+    res.end();
+    return;
+  }
+
+  job.listeners.push(res);
+  req.on('close', () => {
+    job.listeners = job.listeners.filter(l => l !== res);
+  });
+});
+
+// GET /api/storied/pdf/:jobId — download PDF
+app.get('/api/storied/pdf/:jobId', (req, res) => {
+  const job = storiedJobs.get(req.params.jobId);
+  if (!job || !job.pdfPath) {
+    res.status(404).json({ error: 'PDF not ready' });
+    return;
+  }
+  const title = (job.bookTitle || 'Storied').replace(/[^a-zA-Z0-9 \-]/g, '');
+  res.download(job.pdfPath, `${title}.pdf`);
+});
 
 // ─── Start server ──────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3001;
