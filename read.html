@@ -1315,9 +1315,7 @@ function openDecisions(decisions) {
     if (inp) inp.addEventListener('keydown', e => { if (e.key === 'Enter') submitCustom(); });
   }, 100);
 
-  const panel = document.getElementById('decision-panel');
-  panel.classList.add('open');
-  setTimeout(() => panel.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  document.getElementById('decision-panel').classList.add('open');
 }
 
 function toggleCustomInput(btn) {
