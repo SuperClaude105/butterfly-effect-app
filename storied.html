@@ -504,8 +504,8 @@ header {
         <label class="field-label">Point of View</label>
         <div class="option-group">
           <div class="option-pill selected" data-group="pov" data-val="alternating" onclick="selectPill(this)">Alternating</div>
-          <div class="option-pill" data-group="pov" data-val="personA" onclick="selectPill(this)">Person A only</div>
-          <div class="option-pill" data-group="pov" data-val="personB" onclick="selectPill(this)">Person B only</div>
+          <div class="option-pill" data-group="pov" data-val="personA" id="povPillA" onclick="selectPill(this)">Person A only</div>
+          <div class="option-pill" data-group="pov" data-val="personB" id="povPillB" onclick="selectPill(this)">Person B only</div>
         </div>
       </div>
 
@@ -590,6 +590,10 @@ function updateNameLabels() {
   const bLabel = document.getElementById('bNameLabel');
   if (aLabel) aLabel.textContent = a;
   if (bLabel) bLabel.textContent = b;
+  const povA = document.getElementById('povPillA');
+  const povB = document.getElementById('povPillB');
+  if (povA) povA.textContent = `${a} only`;
+  if (povB) povB.textContent = `${b} only`;
 }
 
 function checkResume() {
