@@ -692,7 +692,7 @@ const GENRE_ORDER=['Dark Romance','Fantasy Romance','Paranormal Romance','Histor
 // ── Render shelf ─────────────────────────────────────────────────
 function render(){
   const lib=getLibrary();
-  const stories=Object.values(lib).sort((a,b)=>(b.lastReadAt||0)-(a.lastReadAt||0));
+  const stories=Object.entries(lib).map(([id,data])=>({...data,id})).sort((a,b)=>(b.lastReadAt||0)-(a.lastReadAt||0));
   const bc=document.getElementById('bookcase');
   bc.innerHTML='';
 
