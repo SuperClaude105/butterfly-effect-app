@@ -62,9 +62,10 @@ header {
   flex-shrink:0;
 }
 .logo { font-family:'Playfair Display',serif; font-style:italic; font-size:1.35rem; color:var(--accent); text-shadow:0 0 30px var(--glow); text-decoration:none; }
-.storied-header { display:flex; align-items:center; gap:0.75rem; }
-.storied-title { font-family:'Playfair Display',serif; font-size:1.1rem; font-style:italic; color:var(--text); opacity:0.7; }
-.storied-sep { color:var(--accent); opacity:0.4; }
+.storied-header { display:flex; flex-direction:column; align-items:center; gap:0.25rem; }
+.storied-title { font-family:'Playfair Display',serif; font-size:2.4rem; font-style:italic; color:var(--accent); text-shadow:0 0 40px var(--glow); line-height:1; letter-spacing:-0.01em; }
+.storied-tagline { font-family:'EB Garamond',serif; font-style:italic; font-size:0.95rem; color:rgba(232,213,183,0.5); letter-spacing:0.06em; }
+.storied-hint { font-family:'EB Garamond',serif; font-size:0.78rem; color:rgba(232,213,183,0.3); letter-spacing:0.1em; text-transform:uppercase; margin-top:0.1rem; }
 .save-status { font-size:0.72rem; letter-spacing:0.18em; text-transform:uppercase; color:var(--accent); opacity:0; transition:opacity 0.5s; }
 .save-status.visible { opacity:0.7; }
 
@@ -304,16 +305,14 @@ header {
   <header>
     <a class="logo" href="shelf.html">Unwritten</a>
     <div class="storied-header">
-      <span class="storied-sep">·</span>
       <span class="storied-title">Storied</span>
+      <span class="storied-tagline">You lived it. We write it.</span>
+      <span class="storied-hint">The more detailed you are, the more accurate we can be</span>
     </div>
     <span class="save-status" id="saveStatus">Saved</span>
   </header>
 
   <div class="main" id="mainForm">
-
-    <!-- Tagline -->
-    <p style="font-family:'Playfair Display',serif;font-style:italic;font-size:1rem;color:rgba(196,162,100,0.55);letter-spacing:0.06em;text-align:center;margin-bottom:1.75rem;">You lived it. We write it.</p>
 
     <!-- Resume banner -->
     <div class="resume-banner" id="resumeBanner" style="display:none">
@@ -835,6 +834,7 @@ async function startGeneration() {
     });
     const json = await res.json();
     jobId = json.jobId;
+    _currentJobId = jobId;
   } catch (err) {
     alert('Could not start generation. Is the server running?');
     document.getElementById('mainForm').style.display = 'flex';
@@ -899,7 +899,7 @@ async function startGeneration() {
   };
 }
 
-function showComplete(msg) {
+async function showComplete(msg) {
   document.getElementById('screenGenerating').classList.remove('active');
   const screen = document.getElementById('screenComplete');
   screen.classList.add('active');
@@ -912,6 +912,29 @@ function showComplete(msg) {
     btn.href = msg.pdfUrl;
     btn.download = `${msg.bookTitle || 'Storied'}.pdf`;
   }
+
+  // Save finished story to shelf
+  try {
+    const { data: { session } } = await _SB.auth.getSession();
+    if (session) {
+      const id = _shelfStoryId || crypto.randomUUID();
+      _shelfStoryId = id;
+      await _SB.from('stories').upsert({
+        id,
+        user_id: session.user.id,
+        data: {
+          bookTitle: msg.bookTitle || `${aName} & ${bName}`,
+          config: { genre: 'Your Story — Complete' },
+          storiedFormData: collectFormData(),
+          storiedComplete: true,
+          storiedInProgress: false,
+          pdfJobId: _currentJobId,
+          lastReadAt: Date.now(),
+        },
+        updated_at: new Date().toISOString(),
+      });
+    }
+  } catch (_) {}
 }
 
 function startOver() {
@@ -924,7 +947,8 @@ function esc(str) { return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;'
 
 // ── Supabase save to shelf ─────────────────────────────────────────────────
 let _sbSession = null;
-let _shelfStoryId = null; // ID of existing shelf save, if resuming
+let _shelfStoryId = null;
+let _currentJobId = null; // ID of existing shelf save, if resuming
 
 async function saveToShelf() {
   const btn = document.getElementById('saveShelfBtn');

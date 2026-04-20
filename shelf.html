@@ -463,6 +463,29 @@ header::after {
   background:radial-gradient(ellipse at 80% 50%,rgba(255,100,20,0.08) 0%,transparent 60%);
 }
 
+/* ── Storied panel ── */
+#storied-panel {
+  position:fixed; bottom:0; left:0; right:0;
+  background:linear-gradient(to top,rgba(10,5,2,0.98) 70%,transparent);
+  backdrop-filter:blur(8px);
+  padding:2.5rem 2rem 2rem;
+  transform:translateY(100%);
+  transition:transform 0.55s cubic-bezier(0.33,1,0.68,1);
+  z-index:500; display:flex; flex-direction:column; align-items:center; gap:1.1rem;
+}
+#storied-panel.open { transform:translateY(0); }
+.storied-panel-badge {
+  font-family:'EB Garamond',serif;
+  font-size:0.72rem;
+  letter-spacing:0.22em;
+  text-transform:uppercase;
+  color:var(--accent);
+  opacity:0.6;
+  border:1px solid rgba(196,162,100,0.25);
+  padding:0.2rem 0.8rem;
+  border-radius:2px;
+}
+
 /* ── Book detail panel ── */
 #detail-panel {
   position:fixed; bottom:0; left:0; right:0;
@@ -577,7 +600,7 @@ header::after {
 
 </div>
 
-<div id="panel-overlay" onclick="closePanel()"></div>
+<div id="panel-overlay" onclick="closeAnyPanel()"></div>
 <div id="detail-panel">
   <h2 class="detail-title" id="dp-title"></h2>
   <div class="detail-meta" id="dp-meta"></div>
@@ -587,6 +610,18 @@ header::after {
     <button class="btn-delete"   id="dp-delete"   onclick="confirmDelete()">Delete</button>
   </div>
   <button class="btn-dismiss" onclick="closePanel()">dismiss</button>
+</div>
+
+<div id="storied-panel">
+  <div class="storied-panel-badge">Your Story</div>
+  <h2 class="detail-title" id="sp-title"></h2>
+  <p class="detail-chars" id="sp-chars"></p>
+  <div class="detail-meta" id="sp-meta"></div>
+  <div class="detail-btns">
+    <button class="btn-continue" id="sp-download" onclick="downloadStoriedPDF()"><span>Download PDF</span></button>
+    <button class="btn-delete"   id="sp-delete"   onclick="confirmDeleteStoried()">Delete</button>
+  </div>
+  <button class="btn-dismiss" onclick="closeStoriedPanel()">dismiss</button>
 </div>
 
 <script>
@@ -691,6 +726,8 @@ function render(){
       const story = getLibrary()[el.dataset.id];
       if (story?.storiedInProgress) {
         location.href = `/storied.html?id=${el.dataset.id}`;
+      } else if (story?.storiedComplete) {
+        openStoriedPanel(el.dataset.id);
       } else {
         openPanel(el.dataset.id);
       }
@@ -765,6 +802,52 @@ function closePanel(){
   document.getElementById('detail-panel').classList.remove('open');
   document.getElementById('panel-overlay').classList.remove('open');
   document.querySelectorAll('.book').forEach(b=>b.classList.remove('selected'));
+}
+function closeAnyPanel(){ closePanel(); closeStoriedPanel(); }
+
+// ── Storied panel ─────────────────────────────────────────────────
+let _storiedSelectedId=null, _storiedDeleteConfirming=false;
+function openStoriedPanel(id){
+  const lib=getLibrary(),story=lib[id];if(!story)return;
+  _storiedSelectedId=id; _storiedDeleteConfirming=false;
+  const fd=story.storiedFormData||{};
+  const personA=(fd.personA?.name||'').trim();
+  const personB=(fd.personB?.name||'').trim();
+  const title=story.bookTitle||`${personA} & ${personB}`||'Your Story';
+  const chars=personA&&personB?`${personA} & ${personB}`:personA||personB||'';
+  document.getElementById('sp-title').textContent=title;
+  document.getElementById('sp-chars').textContent=chars;
+  document.getElementById('sp-meta').innerHTML=[
+    `<span>Your Story</span>`,
+    story.lastReadAt&&`<span>Completed ${relativeDate(story.lastReadAt)}</span>`,
+    story.pdfJobId&&`<span>PDF ready</span>`,
+  ].filter(Boolean).join('');
+  const dlBtn=document.getElementById('sp-download');
+  dlBtn.style.display=story.pdfJobId?'':'none';
+  const db=document.getElementById('sp-delete');db.textContent='Delete';db.classList.remove('confirming');
+  document.querySelectorAll('.book').forEach(b=>b.classList.remove('selected'));
+  document.querySelector(`.book[data-id="${id}"]`)?.classList.add('selected');
+  document.getElementById('storied-panel').classList.add('open');
+  document.getElementById('panel-overlay').classList.add('open');
+}
+function closeStoriedPanel(){
+  _storiedSelectedId=null;_storiedDeleteConfirming=false;
+  document.getElementById('storied-panel').classList.remove('open');
+  document.getElementById('panel-overlay').classList.remove('open');
+  document.querySelectorAll('.book').forEach(b=>b.classList.remove('selected'));
+}
+function downloadStoriedPDF(){
+  if(!_storiedSelectedId)return;
+  const story=getLibrary()[_storiedSelectedId];
+  if(!story?.pdfJobId)return;
+  window.open(`/api/storied/pdf/${story.pdfJobId}`,'_blank');
+}
+function confirmDeleteStoried(){
+  const btn=document.getElementById('sp-delete');
+  if(!_storiedDeleteConfirming){
+    _storiedDeleteConfirming=true;btn.textContent='Confirm delete?';btn.classList.add('confirming');
+    setTimeout(()=>{if(_storiedDeleteConfirming){_storiedDeleteConfirming=false;btn.textContent='Delete';btn.classList.remove('confirming');}},3000);
+  }else{deleteStory(_storiedSelectedId).then(()=>{closeStoriedPanel();render();});}
 }
 function continueStory(){
   if(!selectedId)return;
