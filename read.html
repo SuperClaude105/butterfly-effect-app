@@ -346,22 +346,15 @@ body::after {
 
 /* ── Decision panel ── */
 #decision-panel {
-  position: fixed;
-  bottom: 0; left: 0; right: 0;
-  padding: 5rem 2rem 3rem;
-  background: linear-gradient(to top, rgba(10,3,3,0.98) 70%, transparent);
-  backdrop-filter: blur(6px);
-  transform: translateY(100%);
-  transition: transform 0.65s cubic-bezier(0.33,1,0.68,1);
-  z-index: 200;
-  display: flex;
+  display: none;
   flex-direction: column;
   align-items: center;
   gap: 1.4rem;
-  max-height: 85vh;
-  overflow-y: auto;
+  padding: 3rem 2rem 5rem;
+  margin-top: 2rem;
+  border-top: 1px solid rgba(255,255,255,0.07);
 }
-#decision-panel.open { transform: translateY(0); }
+#decision-panel.open { display: flex; }
 
 .decision-prompt {
   font-family: 'Playfair Display', serif;
@@ -819,6 +812,10 @@ body::after {
       <h2 class="ch-title" id="ch-title">The Cartographer's Thread</h2>
     </div>
     <div class="story" id="story"></div>
+    <div id="decision-panel">
+      <p class="decision-prompt" id="d-prompt"></p>
+      <div class="choices" id="d-choices"></div>
+    </div>
   </div>
 
 </div>
@@ -893,11 +890,6 @@ body::after {
   <div id="vp-list"></div>
 </div>
 
-<!-- Decision panel (fixed, overlays reading screen) -->
-<div id="decision-panel">
-  <p class="decision-prompt" id="d-prompt"></p>
-  <div class="choices" id="d-choices"></div>
-</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>const _SB=supabase.createClient('https://puywhvrgixlhijxzircy.supabase.co','sb_publishable_ob7bw2JF-iSjqyjSXRu4-g_lLuFagj7');</script>
@@ -1200,8 +1192,11 @@ async function loadChapter(decision, chapterNum, isFirst = false) {
   // Stop any narration between chapters
   narrator.stop();
 
-  // Hide decision panel
-  document.getElementById('decision-panel').classList.remove('open');
+  // Hide decision panel and scroll to top for new chapter
+  const dp = document.getElementById('decision-panel');
+  dp.classList.remove('open');
+  dp.querySelector('#d-choices').innerHTML = '';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 
   // Reset reading area
   const storyEl = document.getElementById('story');
@@ -1278,8 +1273,6 @@ async function showReading(data, animate) {
     S.pendingDecisions = decisions;
     saveProgress();
     await delay(narrator.active ? 1200 : 900);
-    // Scroll so last story line is visible above the panel
-    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
     openDecisions(decisions);
   }
 }
@@ -1322,7 +1315,9 @@ function openDecisions(decisions) {
     if (inp) inp.addEventListener('keydown', e => { if (e.key === 'Enter') submitCustom(); });
   }, 100);
 
-  document.getElementById('decision-panel').classList.add('open');
+  const panel = document.getElementById('decision-panel');
+  panel.classList.add('open');
+  setTimeout(() => panel.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
 }
 
 function toggleCustomInput(btn) {
