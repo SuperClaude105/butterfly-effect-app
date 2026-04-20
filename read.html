@@ -833,6 +833,8 @@ body::after {
     <input type="range" class="t-font-slider" id="font-slider" min="85" max="145" value="100" oninput="setFontSize(this.value)">
   </div>
   <button class="ti" id="export-btn" onclick="exportPDF();closeTools()">↓ Download PDF</button>
+  <div class="t-sep"></div>
+  <button class="ti" onclick="replayFromBeginning()" style="opacity:0.7">↩ Read from Beginning</button>
 </div>
 
 <!-- Journey modal -->
@@ -1864,6 +1866,57 @@ function closeQuoteCard() {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// REPLAY MODE — re-read from chapter 1 using saved chapter texts
+// ═══════════════════════════════════════════════════════════════
+let _replayIdx = 0;
+
+async function showReplayChapter(idx) {
+  _replayIdx = idx;
+  const isLast = idx === S.chapters.length - 1;
+
+  const panel = document.getElementById('decision-panel');
+  panel.classList.remove('open');
+  document.getElementById('d-choices').innerHTML = '';
+
+  const storyEl = document.getElementById('story');
+  storyEl.classList.remove('in');
+  storyEl.innerHTML = '';
+  document.getElementById('ch-header').classList.remove('in');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  show('s-reading');
+  showHUD();
+
+  await delay(350);
+  document.getElementById('ch-num-label').textContent = ordinal(idx + 1);
+  document.getElementById('ch-title').textContent = S.titles[idx] || '';
+  document.getElementById('ch-header').classList.add('in');
+  await delay(700);
+
+  storyEl.classList.add('in');
+  storyEl.innerHTML = (S.chapters[idx] || '').split(/\n\n+/).filter(Boolean).map(p => `<p>${p.trim()}</p>`).join('');
+
+  if (isLast) {
+    // Back at the furthest chapter — show pending decisions if any
+    if (S.pendingDecisions && S.pendingDecisions.length > 0) {
+      await delay(600);
+      openDecisions(S.pendingDecisions);
+    }
+  } else {
+    // Show a simple "Next Chapter" button — no decision choices
+    document.getElementById('d-prompt').textContent = '';
+    document.getElementById('d-choices').innerHTML = `<button class="choice" onclick="showReplayChapter(${idx + 1})"><span>Continue to ${ordinal(idx + 2)} Chapter →</span></button>`;
+    panel.classList.add('open');
+  }
+}
+
+function replayFromBeginning() {
+  closeTools();
+  if (!S.chapters || S.chapters.length === 0) return;
+  showReplayChapter(0);
+}
+
+// ═══════════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════════
 (async function init() {
@@ -1894,11 +1947,17 @@ function closeQuoteCard() {
   }
 
   const saved = loadProgress();
-  if (saved && saved.chapters && saved.chapters.length > 0) {
-    document.getElementById('resume-btn').style.display = 'inline-block';
-  }
 
-  particles.setType('embers');
+  if (PREFETCH && PREFETCH.success) {
+    // Brand new story — skip welcome, start immediately
+    startStory();
+  } else if (saved && saved.chapters && saved.chapters.length > 0) {
+    // Existing book — skip welcome, resume immediately
+    resumeStory();
+  } else {
+    // No data yet — show welcome with Begin button
+    particles.setType('embers');
+  }
 })();
 </script>
 </body>
