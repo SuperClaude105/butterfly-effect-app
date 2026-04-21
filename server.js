@@ -235,22 +235,23 @@ app.post('/api/start', async (req, res) => {
 
 // ─── API: Next chapter ─────────────────────────────────────────────────────
 app.post('/api/chapter', async (req, res) => {
-  const { storyBible, decision, chapterNumber, storyConfig } = req.body;
+  const { storyBible, decision, chapterNumber, storyConfig, isFinalChapter } = req.body;
   const systemPrompt = storyConfig ? buildSystemPrompt(storyConfig) : EMBERS_PROMPT;
   const protagonist  = storyConfig?.protagonistName || 'the protagonist';
   const loveInterest = storyConfig?.loveInterestName || 'the love interest';
+  const targetChapters = storyConfig?.targetChapters || 20;
+  const isFinal = isFinalChapter || chapterNumber >= targetChapters;
 
   try {
+    const chapterPrompt = isFinal
+      ? `STORY BIBLE (current state):\n${storyBible}\n\nREADER'S DECISION: "${decision}"\n\nGenerate Chapter ${chapterNumber} — THE FINAL CHAPTER. This is the ending. Resolve all major threads. Give ${protagonist} and ${loveInterest} a satisfying, emotionally resonant conclusion shaped by the reader's choices. Write with finality and weight. Do NOT include any decisions or choices — the story ends here. Return an empty decisions array.`
+      : `STORY BIBLE (current state):\n${storyBible}\n\nREADER'S DECISION: "${decision}"\n\nGenerate Chapter ${chapterNumber} of ${targetChapters}. The reader's choice must carry real weight — let it shape where ${protagonist} ends up, what they discover, how ${loveInterest} responds. Continue building the slow-burn tension. This chapter should feel like a consequence of that choice.`;
+
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 2048,
       system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
-      messages: [
-        {
-          role: 'user',
-          content: `STORY BIBLE (current state):\n${storyBible}\n\nREADER'S DECISION: "${decision}"\n\nGenerate Chapter ${chapterNumber}. The reader's choice must carry real weight — let it shape where ${protagonist} ends up, what they discover, how ${loveInterest} responds. Continue building the slow-burn tension. This chapter should feel like a consequence of that choice.`,
-        },
-      ],
+      messages: [{ role: 'user', content: chapterPrompt }],
     });
 
     const parsed = parseResponse(response.content[0].text);

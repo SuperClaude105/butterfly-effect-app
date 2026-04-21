@@ -1185,7 +1185,7 @@ async function resumeStory() {
   }, false);
 }
 
-async function loadChapter(decision, chapterNum, isFirst = false) {
+async function loadChapter(decision, chapterNum, isFirst = false, isFinal = false) {
   // Switch to loading
   show('s-loading');
   const msgIdx = Math.min(chapterNum - 1, LOAD_MSGS.length - 1);
@@ -1210,18 +1210,18 @@ async function loadChapter(decision, chapterNum, isFirst = false) {
     const endpoint = isFirst ? '/api/start' : '/api/chapter';
     const body = isFirst
       ? { storyConfig: STORY_CONFIG }
-      : { storyBible: S.bible, decision, chapterNumber: chapterNum, storyConfig: STORY_CONFIG };
+      : { storyBible: S.bible, decision, chapterNumber: chapterNum, storyConfig: STORY_CONFIG, isFinalChapter: isFinal };
     const res  = await fetch(endpoint, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
     const data = await res.json();
     if (!data.success) throw new Error(data.error || 'Unknown error');
-    showReading(data, true);
+    showReading(data, true, isFinal);
   } catch (err) {
     show('s-welcome');
     alert('Error: ' + err.message + '\n\nIs the server running? (node server.js)');
   }
 }
 
-async function showReading(data, animate) {
+async function showReading(data, animate, isFinal = false) {
   const { chapterText, title, mood, decisions, bible, chapterNumber } = data;
 
   S.chapter = chapterNumber;
@@ -1271,11 +1271,15 @@ async function showReading(data, animate) {
   // Generate spine SVG after chapter 1 (fire-and-forget, no await)
   if (chapterNumber === 1 && STORY_ID && STORY_CONFIG) generateSpine();
 
-  if (decisions && decisions.length > 0) {
+  const atLimit = S.chapter >= (STORY_CONFIG?.targetChapters || 20);
+  if (!isFinal && !atLimit && decisions && decisions.length > 0) {
     S.pendingDecisions = decisions;
     saveProgress();
     await delay(narrator.active ? 1200 : 900);
     openDecisions(decisions);
+  } else if (isFinal || atLimit) {
+    S.pendingDecisions = null;
+    saveProgress();
   }
 }
 
@@ -1339,7 +1343,9 @@ async function choose(option) {
   S.decisionHistory.push({ chapter: S.chapter, prompt, chosen: option });
   S.decisions.push(option);
   S.pendingDecisions = null;
-  await loadChapter(option, S.chapter + 1);
+  const nextChapter = S.chapter + 1;
+  const limit = STORY_CONFIG?.targetChapters || 20;
+  await loadChapter(option, nextChapter, false, nextChapter >= limit);
 }
 
 // ═══════════════════════════════════════════════════════════════
