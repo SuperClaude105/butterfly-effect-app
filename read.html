@@ -784,7 +784,7 @@ body::after {
   <div id="mood-label"></div>
 
   <!-- ── Screen: Welcome ── -->
-  <div class="screen active" id="s-welcome">
+  <div class="screen" id="s-welcome">
     <p class="ornament">⟡ ⟡ ⟡</p>
     <h1 class="book-title" id="welcome-title">Your Story</h1>
     <p class="book-genre" id="welcome-genre">An Interactive Story</p>
@@ -800,7 +800,7 @@ body::after {
   </div>
 
   <!-- ── Screen: Loading ── -->
-  <div class="screen" id="s-loading">
+  <div class="screen active" id="s-loading">
     <div class="spinner"></div>
     <p class="loading-msg" id="loading-msg">The shadows are gathering…</p>
   </div>
@@ -1957,6 +1957,11 @@ function replayFromBeginning() {
   } else {
     // No data yet — show welcome with Begin button
     particles.setType('embers');
+    show('s-welcome');
+    if (saved) {
+      // Has some progress but no chapters — show resume option anyway
+      document.getElementById('resume-btn').style.display = '';
+    }
   }
 })();
 </script>
