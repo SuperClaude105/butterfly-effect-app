@@ -1920,48 +1920,47 @@ function replayFromBeginning() {
 // INIT
 // ═══════════════════════════════════════════════════════════════
 (async function init() {
-  // Load story data from Supabase before anything else
-  const uid = await _ensureUser();
-  if (uid && STORY_ID) {
-    const { data } = await _SB.from('stories').select('data').eq('id', STORY_ID).single();
-    if (data) _storyCache = data.data;
-  }
+  try {
+    // Load story data from Supabase before anything else
+    const uid = await _ensureUser();
+    if (uid && STORY_ID) {
+      const { data } = await _SB.from('stories').select('data').eq('id', STORY_ID).single();
+      if (data) _storyCache = data.data;
+    }
 
-  // Populate welcome screen from config
-  if (STORY_CONFIG) {
-    const titleEl = document.getElementById('welcome-title');
-    const genreEl = document.getElementById('welcome-genre');
+    // Populate welcome screen from config
+    if (STORY_CONFIG) {
+      const titleEl = document.getElementById('welcome-title');
+      const genreEl = document.getElementById('welcome-genre');
+      const libEntry = STORY_ID ? (getLibrary()[STORY_ID] || {}) : {};
+      const displayTitle = PREFETCH?.bookTitle || libEntry.bookTitle || STORY_CONFIG.bookTitleInput || null;
+      if (displayTitle) {
+        titleEl.textContent = displayTitle;
+      } else {
+        const p = STORY_CONFIG.protagonistName || '';
+        titleEl.textContent = p ? `${p}'s Story` : 'Your Story';
+      }
+      const themes = (STORY_CONFIG.themes || []).slice(0,2).join(' · ');
+      genreEl.textContent = [STORY_CONFIG.genre, themes].filter(Boolean).join(' — ');
+    }
 
-    // Priority: prefetch title → library saved title → user-entered title → name fallback
-    const libEntry = STORY_ID ? (getLibrary()[STORY_ID] || {}) : {};
-    const displayTitle = PREFETCH?.bookTitle || libEntry.bookTitle || STORY_CONFIG.bookTitleInput || null;
+    const saved = loadProgress();
 
-    if (displayTitle) {
-      titleEl.textContent = displayTitle;
+    if (PREFETCH && PREFETCH.success) {
+      startStory();
+    } else if (saved && saved.chapters && saved.chapters.length > 0) {
+      resumeStory();
     } else {
-      const p = STORY_CONFIG.protagonistName || '';
-      titleEl.textContent = p ? `${p}'s Story` : 'Your Story';
+      particles.setType('embers');
+      show('s-welcome');
+      if (saved) {
+        document.getElementById('resume-btn').style.display = '';
+      }
     }
-    const themes = (STORY_CONFIG.themes || []).slice(0,2).join(' · ');
-    genreEl.textContent = [STORY_CONFIG.genre, themes].filter(Boolean).join(' — ');
-  }
-
-  const saved = loadProgress();
-
-  if (PREFETCH && PREFETCH.success) {
-    // Brand new story — skip welcome, start immediately
-    startStory();
-  } else if (saved && saved.chapters && saved.chapters.length > 0) {
-    // Existing book — skip welcome, resume immediately
-    resumeStory();
-  } else {
-    // No data yet — show welcome with Begin button
-    particles.setType('embers');
+  } catch (err) {
+    // If anything fails, show welcome screen so user isn't stuck on spinner
+    console.error('Init error:', err);
     show('s-welcome');
-    if (saved) {
-      // Has some progress but no chapters — show resume option anyway
-      document.getElementById('resume-btn').style.display = '';
-    }
   }
 })();
 </script>
