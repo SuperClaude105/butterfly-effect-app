@@ -112,6 +112,20 @@ ${proseStyle}
 - Chapter length: 650–900 words of prose
 ${avoidBlock}${sequelBlock}${seriesBlock}${namesBlock}
 
+CONTINUITY MANDATE — before writing each chapter:
+- Read the Story Bible in full. Every fact in it is CANON and cannot change.
+- Never alter an established location (if someone died in Martintown, they died in Martintown — forever).
+- Never alter an established time reference (if the investigation is 3 weeks old, it stays 3 weeks old — unless the new chapter explicitly advances time and the bible is updated accordingly).
+- Never resurrect a dead character, move a crime scene, or change who the suspects are without plot reason.
+- If in doubt, match the bible exactly.
+
+CHARACTER DEVELOPMENT — characters must grow and change as the story moves forward:
+- Track time passing. If a character is introduced at age 7 and two years pass in the story, they are now 9 — reference them accordingly.
+- Let story events reshape characters visibly. Trauma, love, loss, and survival leave marks — in how they carry themselves, how they speak, what they notice, what they avoid.
+- Physical details can evolve: a character who goes through hardship might cut their hair, dress differently, carry new tension in their body. Show the change, don't announce it.
+- Emotional arc must be consistent: a character who was guarded should not suddenly be open without a reason earned on the page. Show the before, show the shift, show the after.
+- When referencing a character at a later point in time, always check the bible for their current state — never write them as they were in Chapter 1 if they have changed.
+
 RESPONSE FORMAT — include ALL FIVE blocks after every chapter, in this exact order:
 
 <booktitle>A thrilling, evocative book title that makes a reader stop and reach for it — vivid, atmospheric, specific to this story's world. Never generic. Only include in Chapter 1; omit from all other chapters.</booktitle>
@@ -149,7 +163,24 @@ MOOD OPTIONS (pick the one that best fits THIS chapter's emotional core):
 </decisions>
 
 <bible>
-STORY BIBLE (200 words max): What has happened. Key decisions made. Where characters stand emotionally. Active plot threads. Present tense.
+STORY BIBLE — update after every chapter. Be specific. This is the continuity record.
+
+ESTABLISHED FACTS (never change these):
+- Locations: list every named place where key events occurred (crime scenes, deaths, meetings)
+- Time: exact elapsed time since story began, and any specific durations mentioned
+- Character fates: who is alive, dead, missing, arrested — and where it happened
+- Key revelations: evidence found, secrets exposed, identities confirmed
+
+CHARACTER STATES (update every chapter — this is how they are RIGHT NOW):
+- For each named character: current age (adjust as story time passes), current physical state/appearance (note any changes from how they started), current emotional/psychological state, and what has changed them since the story began
+- Example: "Maya — now 9 (was 7 at start, 2 years have passed). Hair cut short after the fire. Quieter than she was. Doesn't talk about her mother anymore."
+
+CURRENT STATE:
+- Where protagonist is and what they know
+- Active suspects and their status
+- Open threads / unresolved mysteries
+
+(No word limit — be as detailed as needed. Present tense. Specifics over summaries — write "victim found in Martintown, 3 weeks ago" not "a crime was discovered". Every named place, every stated time, every character fate and current character state must be recorded here so future chapters never contradict them.)
 </bible>
 
 IMPORTANT: All blocks required (except <booktitle> after Chapter 1). JSON must be valid. No commentary outside these blocks after the prose.`;
@@ -244,8 +275,8 @@ app.post('/api/chapter', async (req, res) => {
 
   try {
     const chapterPrompt = isFinal
-      ? `STORY BIBLE (current state):\n${storyBible}\n\nREADER'S DECISION: "${decision}"\n\nGenerate Chapter ${chapterNumber} — THE FINAL CHAPTER. This is the ending. Resolve all major threads. Give ${protagonist} and ${loveInterest} a satisfying, emotionally resonant conclusion shaped by the reader's choices. Write with finality and weight. Do NOT include any decisions or choices — the story ends here. Return an empty decisions array.`
-      : `STORY BIBLE (current state):\n${storyBible}\n\nREADER'S DECISION: "${decision}"\n\nGenerate Chapter ${chapterNumber} of ${targetChapters}. The reader's choice must carry real weight — let it shape where ${protagonist} ends up, what they discover, how ${loveInterest} responds. Continue building the slow-burn tension. This chapter should feel like a consequence of that choice.`;
+      ? `STORY BIBLE (current state — this is CANON, do not contradict it):\n${storyBible}\n\nREADER'S DECISION: "${decision}"\n\nBefore writing: verify every location, time reference, and character fate in the bible above. This chapter must be consistent with all of them.\n\nGenerate Chapter ${chapterNumber} — THE FINAL CHAPTER. This is the ending. Resolve all major threads. Give ${protagonist} and ${loveInterest} a satisfying, emotionally resonant conclusion shaped by the reader's choices. Write with finality and weight. Do NOT include any decisions or choices — the story ends here. Return an empty decisions array.`
+      : `STORY BIBLE (current state — this is CANON, do not contradict it):\n${storyBible}\n\nREADER'S DECISION: "${decision}"\n\nBefore writing: verify every location, time reference, and character fate in the bible above. This chapter must be consistent with all of them — same locations, same elapsed time, same character statuses.\n\nGenerate Chapter ${chapterNumber} of ${targetChapters}. The reader's choice must carry real weight — let it shape where ${protagonist} ends up, what they discover, how ${loveInterest} responds. Continue building the slow-burn tension. This chapter should feel like a consequence of that choice.`;
 
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
