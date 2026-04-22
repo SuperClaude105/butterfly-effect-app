@@ -109,7 +109,7 @@ PROSE STYLE (literary bestseller quality):
 ${proseStyle}
 - Sensory and cinematic: long sentences that breathe, short ones that cut
 - Every word earns its place. No filler. No clichés.
-- Chapter length: 650–900 words of prose
+- Chapter length: 1000–1400 words of prose
 ${avoidBlock}${sequelBlock}${seriesBlock}${namesBlock}
 
 CONTINUITY MANDATE — before writing each chapter:
@@ -251,7 +251,7 @@ app.post('/api/start', async (req, res) => {
   try {
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 2048,
+      max_tokens: 3200,
       system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
       messages: [{ role: 'user', content: openingInstruction }],
     });
@@ -272,15 +272,33 @@ app.post('/api/chapter', async (req, res) => {
   const loveInterest = storyConfig?.loveInterestName || 'the love interest';
   const targetChapters = storyConfig?.targetChapters || 20;
   const isFinal = isFinalChapter || chapterNumber >= targetChapters;
+  const chaptersRemaining = targetChapters - chapterNumber;
+
+  // Arc phase: how close are we to the end?
+  const arcPhase = isFinal ? 'final'
+    : chaptersRemaining <= 3  ? 'resolving'
+    : chaptersRemaining <= 8  ? 'climax'
+    : 'building';
+
+  const isSeries = storyConfig?.isSeries || false;
+
+  const arcInstruction = {
+    building:  `Generate Chapter ${chapterNumber} of ${targetChapters}. The reader's choice must carry real weight — let it shape where ${protagonist} ends up, what they discover, how ${loveInterest} responds. Continue building the slow-burn tension. This chapter should feel like a consequence of that choice.`,
+    climax:    `Generate Chapter ${chapterNumber} of ${targetChapters}. The story is entering its final act — ${chaptersRemaining} chapters remain. Escalate meaningfully: raise the stakes, force ${protagonist} into harder choices, bring the central conflict into sharp focus. Start pulling the major threads together. The reader should feel the story accelerating toward its end.`,
+    resolving: isSeries
+      ? `Generate Chapter ${chapterNumber} of ${targetChapters}. Only ${chaptersRemaining} chapters remain. Begin landing the central conflict of THIS book — the core arc between ${protagonist} and the forces driving this story must reach its breaking point. However, this is Book 1 of a series: be deliberate about which threads you close and which you leave breathing. Secondary mysteries, the wider world, and deeper relationship questions should remain alive — not forgotten, but unresolved in a way that feels intentional rather than incomplete.`
+      : `Generate Chapter ${chapterNumber} of ${targetChapters}. Only ${chaptersRemaining} chapters remain. Begin landing the story — major threads should be moving toward resolution. The core conflict between ${protagonist} and the forces opposing them must reach a breaking point. Leave room for the final chapter to close things out, but this chapter should feel like the last pieces falling into place.`,
+    final: isSeries
+      ? `Generate Chapter ${chapterNumber} — THE FINAL CHAPTER of Book 1. Resolve the central conflict of this book and give ${protagonist} and ${loveInterest} a genuinely satisfying emotional landing — the reader must feel this story is complete. BUT: this is a series. Do not close off the world. Leave at least one meaningful thread unresolved — a new threat on the horizon, a secret not fully uncovered, a relationship with more to say. The last lines should feel like an ending and a beginning. Do NOT include decisions. Return an empty decisions array.`
+      : `Generate Chapter ${chapterNumber} — THE FINAL CHAPTER. This is the ending. Resolve all major threads. Give ${protagonist} and ${loveInterest} a satisfying, emotionally resonant conclusion shaped by the reader's choices. Write with finality and weight. Do NOT include any decisions or choices — the story ends here. Return an empty decisions array.`,
+  }[arcPhase];
 
   try {
-    const chapterPrompt = isFinal
-      ? `STORY BIBLE (current state — this is CANON, do not contradict it):\n${storyBible}\n\nREADER'S DECISION: "${decision}"\n\nBefore writing: verify every location, time reference, and character fate in the bible above. This chapter must be consistent with all of them.\n\nGenerate Chapter ${chapterNumber} — THE FINAL CHAPTER. This is the ending. Resolve all major threads. Give ${protagonist} and ${loveInterest} a satisfying, emotionally resonant conclusion shaped by the reader's choices. Write with finality and weight. Do NOT include any decisions or choices — the story ends here. Return an empty decisions array.`
-      : `STORY BIBLE (current state — this is CANON, do not contradict it):\n${storyBible}\n\nREADER'S DECISION: "${decision}"\n\nBefore writing: verify every location, time reference, and character fate in the bible above. This chapter must be consistent with all of them — same locations, same elapsed time, same character statuses.\n\nGenerate Chapter ${chapterNumber} of ${targetChapters}. The reader's choice must carry real weight — let it shape where ${protagonist} ends up, what they discover, how ${loveInterest} responds. Continue building the slow-burn tension. This chapter should feel like a consequence of that choice.`;
+    const chapterPrompt = `STORY BIBLE (current state — this is CANON, do not contradict it):\n${storyBible}\n\nREADER'S DECISION: "${decision}"\n\nBefore writing: verify every location, time reference, and character fate in the bible above. This chapter must be consistent with all of them.\n\n${arcInstruction}`;
 
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 2048,
+      max_tokens: 3200,
       system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
       messages: [{ role: 'user', content: chapterPrompt }],
     });
