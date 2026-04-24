@@ -840,7 +840,7 @@ function bookHTML(story){
       if(!/viewBox/i.test(a))a+=' viewBox="0 0 80 260"';
       return `<svg${a} width="${w}" height="${h}" preserveAspectRatio="xMidYMid slice" style="display:block;position:absolute;top:0;left:0;">`;
     });
-    return `<div class="book" data-id="${story.id}" title="${title}"><div class="book-top"></div><div class="spine" style="width:${w}px;height:${h}px;overflow:hidden;padding:0;position:relative;">${svg}<div style="position:absolute;inset:0;z-index:2;background:linear-gradient(to top,rgba(0,0,0,0.6) 0%,transparent 40%);"></div>${titleOverlay}</div></div>`;
+    return `<div class="book" data-id="${story.id}" title="${title}"><div class="book-top"></div><div class="spine" style="width:${w}px;height:${h}px;overflow:hidden;padding:0;position:relative;">${svg}<div style="position:absolute;inset:0;z-index:2;background:linear-gradient(to top,rgba(0,0,0,0.6) 0%,transparent 40%);"></div></div></div>`;
   }
 
   return `<div class="book" data-id="${story.id}" title="${title}"><div class="book-top"></div><div class="spine" style="width:${w}px;height:${h}px;position:relative;background:linear-gradient(90deg,rgba(0,0,0,0.5) 0%,${col.base} 12%,${col.mid} 50%,${col.base} 88%,rgba(0,0,0,0.45) 100%);">${titleOverlay}</div></div>`;
