@@ -1176,11 +1176,18 @@ async function resumeStory() {
   if (!S.decisionHistory) S.decisionHistory = [];
   if (S.mood) applyTheme(S.mood);
   showHUD();
+  const atLimit = S.chapter >= (STORY_CONFIG?.targetChapters || 20);
+  // If decisions were lost (navigated away mid-animation), inject a generic continue
+  const decisions = (S.pendingDecisions && S.pendingDecisions.length > 0)
+    ? S.pendingDecisions
+    : (!atLimit && S.chapter > 0)
+      ? [{ prompt: 'How does the story continue?', options: ['Press forward', 'Tread carefully', 'Take a different path'] }]
+      : [];
   showReading({
     chapterText: S.chapters[S.chapters.length - 1],
     title: S.titles[S.titles.length - 1],
     chapterNumber: S.chapter,
-    decisions: S.pendingDecisions || [],
+    decisions,
     bible: S.bible,
   }, false);
 }
