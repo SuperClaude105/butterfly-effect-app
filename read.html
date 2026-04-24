@@ -1256,6 +1256,18 @@ async function showReading(data, animate, isFinal = false) {
   const storyEl = document.getElementById('story');
   storyEl.classList.add('in');
 
+  const atLimit = S.chapter >= (STORY_CONFIG?.targetChapters || 20);
+
+  // Queue decisions to appear after a fixed delay — independent of typewrite length
+  if (!isFinal && !atLimit && decisions && decisions.length > 0) {
+    S.pendingDecisions = decisions;
+    saveProgress();
+    setTimeout(() => openDecisions(decisions), narrator.active ? 1200 : 4000);
+  } else if (isFinal || atLimit) {
+    S.pendingDecisions = null;
+    saveProgress();
+  }
+
   if (animate && !narrator.active) {
     await typewrite(storyEl, chapterText || '');
   } else {
@@ -1270,17 +1282,6 @@ async function showReading(data, animate, isFinal = false) {
 
   // Generate spine SVG after chapter 1 (fire-and-forget, no await)
   if (chapterNumber === 1 && STORY_ID && STORY_CONFIG) generateSpine();
-
-  const atLimit = S.chapter >= (STORY_CONFIG?.targetChapters || 20);
-  if (!isFinal && !atLimit && decisions && decisions.length > 0) {
-    S.pendingDecisions = decisions;
-    saveProgress();
-    await delay(narrator.active ? 1200 : 900);
-    openDecisions(decisions);
-  } else if (isFinal || atLimit) {
-    S.pendingDecisions = null;
-    saveProgress();
-  }
 }
 
 function showHUD() {
