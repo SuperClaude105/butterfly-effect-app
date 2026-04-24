@@ -13,6 +13,15 @@ app.get('/', (_req, res) => res.redirect('/login.html'));
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+const { createClient } = require('@supabase/supabase-js');
+const { Resend } = require('resend');
+const supabaseAdmin = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_KEY,
+  { auth: { autoRefreshToken: false, persistSession: false } }
+);
+const resend = new Resend(process.env.RESEND_API_KEY);
+
 // ─── Dynamic system prompt builder ────────────────────────────────────────
 function buildSystemPrompt(config = {}) {
   const genre        = config.genre           || 'Dark Romance';
@@ -750,6 +759,91 @@ app.get('/api/storied/pdf/:jobId', (req, res) => {
   }
   const title = (job.bookTitle || 'Storied').replace(/[^a-zA-Z0-9 \-]/g, '');
   res.download(job.pdfPath, `${title}.pdf`);
+});
+
+// ─── Share a finished book ────────────────────────────────────────────────
+app.post('/api/share', async (req, res) => {
+  const { storyId, toEmail, authToken } = req.body;
+  if (!storyId || !toEmail || !authToken) return res.status(400).json({ error: 'Missing fields' });
+
+  const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(authToken);
+  if (authErr || !user) return res.status(401).json({ error: 'Unauthorized' });
+
+  const { data: story, error: storyErr } = await supabaseAdmin
+    .from('stories').select('*').eq('id', storyId).eq('user_id', user.id).single();
+  if (storyErr || !story) return res.status(404).json({ error: 'Story not found' });
+
+  const chapter = story.data?.progress?.chapter || 0;
+  const target  = story.data?.config?.targetChapters || 20;
+  if (chapter < target) return res.status(400).json({ error: 'Book is not finished yet' });
+
+  const { data: { users } } = await supabaseAdmin.auth.admin.listUsers();
+  const recipient = (users || []).find(u => u.email === toEmail);
+
+  if (recipient) {
+    const { error: insertErr } = await supabaseAdmin.from('stories').insert({
+      id: crypto.randomUUID(), user_id: recipient.id,
+      data: story.data, created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+    });
+    if (insertErr) return res.status(500).json({ error: 'Failed to share' });
+    return res.json({ success: true, existing: true });
+  }
+
+  const { data: pending, error: pendingErr } = await supabaseAdmin
+    .from('pending_shares')
+    .insert({ story_id: storyId, from_user_id: user.id, to_email: toEmail })
+    .select().single();
+  if (pendingErr) return res.status(500).json({ error: 'Failed to create share' });
+
+  const bookTitle = story.data?.bookTitle || 'a book';
+  const appUrl    = process.env.APP_URL || 'http://localhost:3001';
+  const acceptUrl = `${appUrl}/accept-share.html?token=${pending.token}`;
+
+  await resend.emails.send({
+    from: 'Unwritten <onboarding@resend.dev>',
+    to:   toEmail,
+    subject: `"${bookTitle}" has been shared with you`,
+    html: `
+      <div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;padding:40px 24px;background:#0d0a07;color:#e8d5b0;">
+        <h1 style="font-size:26px;color:#c8a96e;margin-bottom:4px;">Unwritten</h1>
+        <p style="color:#7a6a58;font-size:13px;margin-bottom:36px;">A story has been shared with you</p>
+        <h2 style="font-size:22px;color:#f0e8d0;margin-bottom:14px;">"${bookTitle}"</h2>
+        <p style="font-size:16px;line-height:1.75;color:#c0a880;margin-bottom:32px;">
+          Someone thought you'd love this story. Create a free account to claim it and start reading.
+        </p>
+        <a href="${acceptUrl}" style="display:inline-block;padding:13px 30px;background:#c8a96e;color:#0d0a07;text-decoration:none;font-size:15px;font-weight:bold;border-radius:3px;">
+          Claim Your Book →
+        </a>
+        <p style="margin-top:40px;font-size:12px;color:#3a2e1e;">This link can only be used once. If you didn't expect this, you can ignore it.</p>
+      </div>`,
+  });
+
+  return res.json({ success: true, existing: false });
+});
+
+app.post('/api/accept-share', async (req, res) => {
+  const { token, authToken } = req.body;
+  if (!token || !authToken) return res.status(400).json({ error: 'Missing fields' });
+
+  const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(authToken);
+  if (authErr || !user) return res.status(401).json({ error: 'Unauthorized' });
+
+  const { data: pending, error: pendingErr } = await supabaseAdmin
+    .from('pending_shares').select('*').eq('token', token).is('accepted_at', null).single();
+  if (pendingErr || !pending) return res.status(404).json({ error: 'Share link not found or already used' });
+
+  const { data: story, error: storyErr } = await supabaseAdmin
+    .from('stories').select('*').eq('id', pending.story_id).single();
+  if (storyErr || !story) return res.status(404).json({ error: 'Original story no longer exists' });
+
+  const { error: insertErr } = await supabaseAdmin.from('stories').insert({
+    id: crypto.randomUUID(), user_id: user.id,
+    data: story.data, created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+  });
+  if (insertErr) return res.status(500).json({ error: 'Failed to claim book' });
+
+  await supabaseAdmin.from('pending_shares').update({ accepted_at: new Date().toISOString() }).eq('token', token);
+  return res.json({ success: true, bookTitle: story.data?.bookTitle || 'Your book' });
 });
 
 // ─── Start server ──────────────────────────────────────────────────────────
