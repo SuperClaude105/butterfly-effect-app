@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0c0704">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
 <title>My Library — Unwritten</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Playfair+Display:ital,wght@0,700;0,900;1,400;1,700&display=swap" rel="stylesheet">
@@ -1003,6 +1006,11 @@ async function submitShare(){
 
   render();
 })();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
 </script>
 <footer style="text-align:center;padding:20px;font-size:0.78rem;color:rgba(122,106,88,0.6);border-top:1px solid rgba(196,162,100,0.08);margin-top:auto;">
   <a href="/legal.html" style="color:rgba(196,162,100,0.5);text-decoration:none;" onmouseover="this.style.color='#c4a264'" onmouseout="this.style.color='rgba(196,162,100,0.5)'">Legal &amp; Disclaimers</a>
