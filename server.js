@@ -800,7 +800,7 @@ app.post('/api/share', async (req, res) => {
   const acceptUrl = `${appUrl}/accept-share.html?token=${pending.token}`;
 
   await resend.emails.send({
-    from: 'Unwritten <onboarding@resend.dev>',
+    from: 'Unwritten <noreply@entertheunwritten.com>',
     to:   toEmail,
     subject: `"${bookTitle}" has been shared with you`,
     html: `
