@@ -21,7 +21,7 @@ app.get('/api/credits', async (req, res) => {
 
 // ─── POST /api/checkout ────────────────────────────────────────────────────
 app.post('/api/checkout', async (req, res) => {
-  const { tier, bundle, giftEmail } = req.body;
+  const { tier, bundle, giftEmail, giftFrom } = req.body;
   const user = await getUserFromToken(req.headers.authorization);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -58,6 +58,7 @@ app.post('/api/checkout', async (req, res) => {
         userId:    user.id,
         credits:   String(price.credits),
         giftEmail: giftEmail || '',
+        giftFrom:  giftFrom  || '',
       },
     });
     res.json({ url: session.url, discount });
@@ -88,6 +89,7 @@ app.post('/api/payment/confirm', async (req, res) => {
 
     const credits   = parseInt(session.metadata.credits);
     const giftEmail = session.metadata.giftEmail || '';
+    const giftFrom  = session.metadata.giftFrom  || '';
 
     if (giftEmail) {
       // Gift flow — find recipient
@@ -98,7 +100,25 @@ app.post('/api/payment/confirm', async (req, res) => {
 
       if (recipient) {
         await supabaseAdmin.rpc('add_credits', { p_user_id: recipient.id, p_credits: credits });
-        return res.json({ success: true, gift: true, delivered: true, credits });
+        const fromEmail = giftFrom || user.email || 'Someone';
+        await resend.emails.send({
+          from: 'Unwritten <noreply@entertheunwritten.com>',
+          to:   giftEmail,
+          subject: `You've received ${credits} Unwritten credit${credits !== 1 ? 's' : ''}`,
+          html: `
+            <div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;padding:40px 24px;background:#0d0a07;color:#e8d5b0;">
+              <h1 style="font-size:26px;color:#c8a96e;margin-bottom:4px;">Unwritten</h1>
+              <p style="color:#7a6a58;font-size:13px;margin-bottom:36px;">A gift has been sent your way</p>
+              <h2 style="font-size:22px;color:#f0e8d0;margin-bottom:14px;">${credits} Story Credit${credits !== 1 ? 's' : ''}</h2>
+              <p style="font-size:16px;line-height:1.75;color:#c0a880;margin-bottom:32px;">
+                ${fromEmail} sent you ${credits} credit${credits !== 1 ? 's' : ''} on Unwritten — ${credits === 1 ? 'it has' : "they've"} been added to your account automatically. Log in anytime to use ${credits === 1 ? 'it' : 'them'}.
+              </p>
+              <a href="${process.env.APP_URL}/shelf.html" style="display:inline-block;padding:13px 30px;background:#c8a96e;color:#0d0a07;text-decoration:none;font-size:15px;font-weight:bold;border-radius:3px;">
+                Go to My Library →
+              </a>
+            </div>`,
+        }).catch(() => {});
+        return res.json({ success: true, gift: true, delivered: true, credits, giftEmail });
       } else {
         // Recipient not registered — create pending gift + send email
         const { data: gift } = await supabaseAdmin
@@ -107,7 +127,7 @@ app.post('/api/payment/confirm', async (req, res) => {
           .select().single();
 
         const claimUrl = `${process.env.APP_URL}/accept-gift.html?token=${gift.token}`;
-        const fromEmail = user.email || 'Someone';
+        const fromEmail = giftFrom || user.email || 'Someone';
         await resend.emails.send({
           from: 'Unwritten <noreply@entertheunwritten.com>',
           to:   giftEmail,
@@ -127,7 +147,7 @@ app.post('/api/payment/confirm', async (req, res) => {
             </div>`,
         });
 
-        return res.json({ success: true, gift: true, delivered: false, credits });
+        return res.json({ success: true, gift: true, delivered: false, credits, giftEmail });
       }
     }
 

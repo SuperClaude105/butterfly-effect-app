@@ -1936,9 +1936,13 @@ async function togglePublic() {
         const data = await res.json();
         if (data.success) {
           const added = data.credits || 0;
-          showToast(added > 0
-            ? `Payment confirmed — ${added} credit${added !== 1 ? 's' : ''} added to your account`
-            : 'Credits already applied to your account');
+          if (data.gift && data.giftEmail) {
+            showToast(`${added} credit${added !== 1 ? 's' : ''} sent to ${data.giftEmail}`);
+          } else {
+            showToast(added > 0
+              ? `Payment confirmed — ${added} credit${added !== 1 ? 's' : ''} added to your account`
+              : 'Credits already applied to your account');
+          }
         }
       } catch (_) {}
     } else {
