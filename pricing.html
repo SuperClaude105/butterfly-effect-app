@@ -95,10 +95,10 @@ body::before{
 @media(max-width:600px){.pricing-section{padding:0 20px 48px;}}
 
 .pricing-grid{
-  display:grid;grid-template-columns:repeat(3,1fr);gap:20px;
+  display:grid;grid-template-columns:repeat(2,1fr);gap:20px;
+  max-width:720px;margin:0 auto;
 }
-@media(max-width:860px){.pricing-grid{grid-template-columns:1fr;max-width:380px;margin:0 auto;}}
-@media(min-width:540px) and (max-width:860px){.pricing-grid{grid-template-columns:1fr 1fr;max-width:620px;margin:0 auto;}}
+@media(max-width:600px){.pricing-grid{grid-template-columns:1fr;max-width:380px;}}
 
 .price-card{
   background:var(--card);border:1px solid var(--border);border-radius:4px;
@@ -175,6 +175,26 @@ body::before{
 .price-cta-note{
   font-size:0.68rem;color:var(--faint);text-align:center;margin-top:10px;letter-spacing:0.05em;
 }
+
+/* ── Series callout ── */
+.series-callout{
+  max-width:720px;margin:24px auto 0;
+}
+.series-callout-inner{
+  display:flex;align-items:flex-start;gap:20px;
+  background:rgba(201,168,76,0.04);border:1px solid rgba(201,168,76,0.18);
+  border-radius:4px;padding:24px 28px;
+}
+.series-icon{
+  font-size:1.2rem;color:var(--gold);flex-shrink:0;margin-top:2px;
+}
+.series-callout-title{
+  font-size:0.88rem;font-weight:600;color:var(--text);margin-bottom:6px;
+}
+.series-callout-desc{
+  font-size:0.78rem;color:var(--muted);line-height:1.7;
+}
+@media(max-width:600px){.series-callout-inner{padding:20px;gap:14px;}}
 
 /* ── Included in every story ── */
 .included-section{
@@ -361,34 +381,17 @@ footer{
       <div class="price-cta-note">Payment coming soon · Free access while in beta</div>
     </div>
 
-    <!-- Epic -->
-    <div class="price-card">
-      <div class="price-tier">Epic</div>
-      <div class="price-range">50–100 chapters<br>~80,000–160,000 words</div>
-      <div class="price-main">
-        <div class="price-amount">
-          <span class="price-dollar">$</span>8.99
-        </div>
-      </div>
-      <div class="price-per">per story</div>
-      <div class="price-bundle-box">
-        <div class="price-bundle-label">Bundle of 3</div>
-        <div class="price-bundle-amount">$22.00</div>
-        <div class="price-bundle-save">Save $4.97 — $7.33 per story</div>
-      </div>
-      <ul class="price-features">
-        <li>Full AI-generated novel</li>
-        <li>50–100 chapters — saga length</li>
-        <li>Saved to your library permanently</li>
-        <li>Read, share, and continue with sequels</li>
-        <li>Share to the Public Library</li>
-        <li>Content warning controls</li>
-        <li>Series and sequel support</li>
-      </ul>
-      <a class="price-cta" href="login.html">Get Started</a>
-      <div class="price-cta-note">Payment coming soon · Free access while in beta</div>
-    </div>
+  </div>
 
+  <!-- Series callout -->
+  <div class="series-callout">
+    <div class="series-callout-inner">
+      <div class="series-icon">⟡</div>
+      <div>
+        <div class="series-callout-title">Want a longer story? Write a series.</div>
+        <p class="series-callout-desc">Each book ends on a complete, satisfying arc — then continues into the next. The AI carries your world, characters, and lore forward. One book at a time, each for $7.99.</p>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -447,7 +450,7 @@ footer{
   <div class="faq-list">
     <div class="faq-item">
       <div class="faq-q" onclick="toggleFaq(this)">What is a story credit?</div>
-      <div class="faq-a">One story credit lets you generate one complete AI novel. The price depends on how many chapters you choose at the time of creation — under 25 chapters is Compact, 25–50 is Standard, 50–100 is Epic.</div>
+      <div class="faq-a">One story credit lets you generate one complete AI novel. The price depends on how many chapters you choose — under 25 chapters is Compact ($6.99), 25–50 chapters is Standard ($7.99). Want a longer story? Write a series — each book uses one credit and the AI carries your world forward.</div>
     </div>
     <div class="faq-item">
       <div class="faq-q" onclick="toggleFaq(this)">Do credits expire?</div>
@@ -459,7 +462,7 @@ footer{
     </div>
     <div class="faq-item">
       <div class="faq-q" onclick="toggleFaq(this)">Is Storied (the personal memoir product) included?</div>
-      <div class="faq-a">Storied uses the same credit system — the chapter length you choose when filling in the Storied form determines which tier applies. Storied stories are private by default and never appear in the public library unless you choose to share them.</div>
+      <div class="faq-a">Storied uses the same credit system — the chapter length you choose determines whether it's Compact or Standard. Storied stories are private by default and never appear in the public library unless you choose to share them.</div>
     </div>
     <div class="faq-item">
       <div class="faq-q" onclick="toggleFaq(this)">When does payment go live?</div>
