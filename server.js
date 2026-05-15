@@ -11,7 +11,100 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.static(path.join(__dirname)));
 app.get('/', (_req, res) => res.redirect('/login.html'));
 
+// ─── GET /api/credits ──────────────────────────────────────────────────────
+app.get('/api/credits', async (req, res) => {
+  const user = await getUserFromToken(req.headers.authorization);
+  if (!user) return res.json({ credits: 0, is_comped: false });
+  const profile = await getProfile(user.id);
+  res.json(profile);
+});
+
+// ─── POST /api/checkout ────────────────────────────────────────────────────
+app.post('/api/checkout', async (req, res) => {
+  const { tier, bundle } = req.body;
+  const user = await getUserFromToken(req.headers.authorization);
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+  const key = `${tier}_${bundle ? 'bundle' : 'single'}`;
+  const price = TIER_PRICING[key];
+  if (!price) return res.status(400).json({ error: 'Invalid tier' });
+
+  try {
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [{
+        price_data: {
+          currency: 'usd',
+          product_data: { name: `Unwritten — ${price.label}` },
+          unit_amount: price.amount,
+        },
+        quantity: 1,
+      }],
+      mode: 'payment',
+      success_url: `${process.env.APP_URL}/shelf.html?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url:  `${process.env.APP_URL}/index.html?payment=cancelled`,
+      metadata: { userId: user.id, credits: String(price.credits) },
+    });
+    res.json({ url: session.url });
+  } catch (err) {
+    console.error('Stripe checkout error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── POST /api/payment/confirm — verify session after redirect ─────────────
+app.post('/api/payment/confirm', async (req, res) => {
+  const { sessionId } = req.body;
+  const user = await getUserFromToken(req.headers.authorization);
+  if (!user || !sessionId) return res.status(400).json({ error: 'Missing fields' });
+
+  // Prevent double-crediting
+  const { data: existing } = await supabaseAdmin
+    .from('processed_payments')
+    .select('id')
+    .eq('session_id', sessionId)
+    .maybeSingle();
+  if (existing) return res.json({ success: true, already: true, credits: 0 });
+
+  try {
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    if (session.payment_status !== 'paid') return res.status(400).json({ error: 'Not paid' });
+    if (session.metadata.userId !== user.id) return res.status(403).json({ error: 'Forbidden' });
+
+    const credits = parseInt(session.metadata.credits);
+    await supabaseAdmin.rpc('add_credits', { p_user_id: user.id, p_credits: credits });
+    await supabaseAdmin.from('processed_payments').insert({ session_id: sessionId, user_id: user.id, credits });
+
+    res.json({ success: true, credits });
+  } catch (err) {
+    console.error('Payment confirm error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── POST /api/webhook — Stripe webhook (backup for missed redirects) ───────
+// TODO: enable signature verification when STRIPE_WEBHOOK_SECRET is set in prod
+app.post('/api/webhook', async (req, res) => {
+  const event = req.body;
+  if (event?.type === 'checkout.session.completed') {
+    const session = event.data?.object;
+    if (session) {
+      const { data: existing } = await supabaseAdmin
+        .from('processed_payments').select('id').eq('session_id', session.id).maybeSingle();
+      if (!existing) {
+        const { userId, credits } = session.metadata || {};
+        if (userId && credits) {
+          await supabaseAdmin.rpc('add_credits', { p_user_id: userId, p_credits: parseInt(credits) });
+          await supabaseAdmin.from('processed_payments').insert({ session_id: session.id, user_id: userId, credits: parseInt(credits) });
+        }
+      }
+    }
+  }
+  res.json({ received: true });
+});
+
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const stripe    = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 const { createClient } = require('@supabase/supabase-js');
 const { Resend } = require('resend');
@@ -21,6 +114,31 @@ const supabaseAdmin = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } }
 );
 const resend = new Resend(process.env.RESEND_API_KEY);
+
+// ─── Pricing ───────────────────────────────────────────────────────────────
+const TIER_PRICING = {
+  compact_single:  { amount: 699,  credits: 1, label: 'Compact Story — 1 credit (<25 chapters)' },
+  compact_bundle:  { amount: 1500, credits: 3, label: 'Compact Bundle — 3 credits (<25 chapters each)' },
+  standard_single: { amount: 799,  credits: 1, label: 'Standard Story — 1 credit (25–50 chapters)' },
+  standard_bundle: { amount: 2000, credits: 3, label: 'Standard Bundle — 3 credits (25–50 chapters each)' },
+};
+
+// ─── Auth helpers ──────────────────────────────────────────────────────────
+async function getUserFromToken(authHeader) {
+  if (!authHeader) return null;
+  const token = authHeader.replace('Bearer ', '');
+  const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+  return error ? null : user;
+}
+
+async function getProfile(userId) {
+  const { data } = await supabaseAdmin
+    .from('profiles')
+    .select('credits, is_comped')
+    .eq('user_id', userId)
+    .maybeSingle();
+  return data || { credits: 0, is_comped: false };
+}
 
 // ─── Dynamic system prompt builder ────────────────────────────────────────
 function buildSystemPrompt(config = {}) {
@@ -251,6 +369,18 @@ function parseResponse(text) {
 // ─── API: Start (Chapter 1) ────────────────────────────────────────────────
 app.post('/api/start', async (req, res) => {
   const { storyConfig } = req.body;
+
+  // Auth + credit check
+  const user = await getUserFromToken(req.headers.authorization);
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+  const profile = await getProfile(user.id);
+  if (!profile.is_comped) {
+    if (profile.credits < 1) return res.status(402).json({ error: 'No credits', code: 'NO_CREDITS' });
+    const { data: ok } = await supabaseAdmin.rpc('deduct_credit', { p_user_id: user.id });
+    if (!ok) return res.status(402).json({ error: 'No credits', code: 'NO_CREDITS' });
+  }
+
   const systemPrompt = storyConfig ? buildSystemPrompt(storyConfig) : EMBERS_PROMPT;
 
   const openingInstruction = storyConfig

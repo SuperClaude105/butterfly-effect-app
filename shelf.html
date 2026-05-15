@@ -1847,7 +1847,40 @@ async function togglePublic() {
   (rows||[]).forEach(r => { _lib[r.id] = { ...r.data, _isPublic: r.is_public }; });
   render();
   loadReadingBookmarks(session.user.id);
+
+  // ── Handle payment success redirect ───────────────────────────
+  const params = new URLSearchParams(location.search);
+  if (params.get('payment') === 'success') {
+    const sessionId = params.get('session_id');
+    history.replaceState({}, '', location.pathname);
+    if (sessionId) {
+      try {
+        const res = await fetch('/api/payment/confirm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+          body: JSON.stringify({ sessionId }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          const added = data.credits || 0;
+          showToast(added > 0
+            ? `Payment confirmed — ${added} credit${added !== 1 ? 's' : ''} added to your account`
+            : 'Credits already applied to your account');
+        }
+      } catch (_) {}
+    } else {
+      showToast('Payment received — credits will appear shortly');
+    }
+  }
 })();
+
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.textContent = msg;
+  t.style.cssText = 'position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:#1a1206;border:1px solid rgba(196,162,100,0.35);color:#e8d5b7;padding:12px 22px;border-radius:3px;font-size:0.82rem;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.5);white-space:nowrap;';
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 5000);
+}
 </script>
 </body>
 </html>
