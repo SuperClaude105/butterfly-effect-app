@@ -49,54 +49,72 @@ body::before {
   pointer-events:none;
 }
 .topnav>*{pointer-events:auto;}
+@media(max-width:640px){.topnav{padding:0 16px;}}
 .nav-wordmark {
   font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;
   font-size:1.55rem;color:var(--gold);letter-spacing:0.04em;text-decoration:none;cursor:pointer;
 }
-.nav-right{display:flex;align-items:center;gap:20px;}
+.nav-right{display:flex;align-items:center;gap:8px;}
 .nav-btn {
   background:none;border:1px solid var(--border2);color:var(--text);
-  font-family:'Inter',sans-serif;font-size:0.75rem;font-weight:500;
-  letter-spacing:0.08em;text-transform:uppercase;padding:7px 16px;
-  border-radius:2px;cursor:pointer;
+  font-family:'Inter',sans-serif;font-size:0.72rem;font-weight:500;
+  letter-spacing:0.08em;text-transform:uppercase;padding:7px 14px;
+  border-radius:2px;cursor:pointer;text-decoration:none;display:inline-block;
   transition:background 0.2s,border-color 0.2s,color 0.2s;
 }
 .nav-btn:hover{background:rgba(201,168,76,0.08);border-color:var(--gold);color:var(--gold);}
-.nav-btn:active{transform:scale(0.97);}
 .nav-btn.active{border-color:var(--gold);color:var(--gold);background:rgba(201,168,76,0.06);}
 .nav-btn.primary{background:var(--gold);border-color:var(--gold);color:#080705;font-weight:600;}
-.nav-btn.primary:hover{background:var(--gold2);border-color:var(--gold2);}
+.nav-btn.primary:hover{background:var(--gold2);}
+@media(max-width:640px){.nav-btn:not(.primary){display:none;}}
 
 /* ── Page header ── */
 .page-header {
-  padding: 120px 60px 48px;
+  padding: 110px 60px 36px;
   position: relative;
 }
-@media(max-width:768px){.page-header{padding:100px 20px 32px;}}
+@media(max-width:768px){.page-header{padding:90px 20px 28px;}}
 
 .page-eyebrow {
   font-size:0.7rem;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;
-  color:var(--gold);margin-bottom:14px;
+  color:var(--gold);margin-bottom:12px;
 }
 .page-title {
   font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;
   font-size:clamp(2rem,5vw,3.2rem);color:var(--text);letter-spacing:-0.01em;
-  margin-bottom:12px;
+  margin-bottom:10px;
 }
 .page-desc {
-  font-size:0.88rem;color:var(--muted);line-height:1.65;max-width:520px;
+  font-size:0.88rem;color:var(--muted);line-height:1.65;max-width:480px;
+  margin-bottom:24px;
 }
-
-/* ── Filter bar ── */
-.filter-bar {
-  padding:0 60px 32px;
-  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+.header-ctas{display:flex;gap:10px;flex-wrap:wrap;}
+.header-cta{
+  font-family:'Inter',sans-serif;font-size:0.7rem;font-weight:600;
+  letter-spacing:0.1em;text-transform:uppercase;
+  padding:9px 20px;border-radius:2px;cursor:pointer;
+  text-decoration:none;display:inline-block;
+  transition:background 0.2s,border-color 0.2s,color 0.2s;
 }
-@media(max-width:768px){.filter-bar{padding:0 20px 24px;}}
+.header-cta.primary{background:var(--gold);border:1px solid var(--gold);color:#080705;}
+.header-cta.primary:hover{background:var(--gold2);}
+.header-cta.outline{background:none;border:1px solid var(--border2);color:var(--text);}
+.header-cta.outline:hover{border-color:var(--gold);color:var(--gold);background:rgba(201,168,76,0.06);}
 
+/* ── Filter + sort bar ── */
+.controls-bar {
+  padding:0 60px 28px;
+  display:flex;align-items:center;justify-content:space-between;
+  gap:16px;flex-wrap:wrap;
+}
+@media(max-width:768px){.controls-bar{padding:0 20px 20px;}}
+
+.filter-tabs {
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex:1;
+}
 .filter-tab {
   background:none;border:1px solid var(--border);color:var(--muted);
-  font-family:'Inter',sans-serif;font-size:0.72rem;font-weight:500;
+  font-family:'Inter',sans-serif;font-size:0.7rem;font-weight:500;
   letter-spacing:0.08em;text-transform:uppercase;padding:6px 14px;
   border-radius:2px;cursor:pointer;
   transition:background 0.15s,border-color 0.15s,color 0.15s;
@@ -104,35 +122,47 @@ body::before {
 .filter-tab:hover{border-color:var(--border2);color:var(--text);}
 .filter-tab.active{border-color:var(--gold);color:var(--gold);background:rgba(201,168,76,0.06);}
 
+.sort-controls{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.sort-label{font-size:0.66rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--faint);margin-right:2px;}
+.sort-btn{
+  background:none;border:1px solid var(--border);color:var(--muted);
+  font-family:'Inter',sans-serif;font-size:0.68rem;font-weight:500;
+  letter-spacing:0.06em;text-transform:uppercase;padding:5px 12px;
+  border-radius:2px;cursor:pointer;
+  transition:background 0.15s,border-color 0.15s,color 0.15s;
+}
+.sort-btn:hover{border-color:var(--border2);color:var(--text);}
+.sort-btn.active{border-color:var(--gold);color:var(--gold);background:rgba(201,168,76,0.06);}
+
 /* ── Book grid ── */
 .book-grid {
   padding:0 60px 80px;
   display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+  grid-template-columns:repeat(auto-fill,minmax(185px,1fr));
   gap:28px;
 }
-@media(max-width:768px){.book-grid{padding:0 20px 60px;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:16px;}}
+@media(max-width:768px){.book-grid{padding:0 20px 60px;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:16px;}}
 
 /* ── Book card ── */
 .book-card {
-  display:flex;flex-direction:column;gap:12px;cursor:pointer;
+  display:flex;flex-direction:column;gap:10px;cursor:pointer;
   text-decoration:none;
   transition:transform 0.2s;
 }
-.book-card:hover{transform:translateY(-3px);}
+.book-card:hover{transform:translateY(-4px);}
 .book-card:active{transform:translateY(0);}
 
 .cover-wrap {
   aspect-ratio:2/3;border-radius:3px;overflow:hidden;
   position:relative;
-  box-shadow:0 4px 20px rgba(0,0,0,0.5),0 1px 4px rgba(0,0,0,0.4);
+  box-shadow:0 4px 24px rgba(0,0,0,0.55),0 1px 4px rgba(0,0,0,0.4);
 }
 .cover-bg {
   position:absolute;inset:0;
 }
 .cover-overlay {
   position:absolute;inset:0;
-  background:linear-gradient(to top,rgba(0,0,0,0.7) 0%,transparent 50%);
+  background:linear-gradient(to top,rgba(0,0,0,0.72) 0%,transparent 55%);
 }
 .cover-info {
   position:absolute;bottom:0;left:0;right:0;padding:14px 12px 12px;
@@ -146,36 +176,36 @@ body::before {
   display:flex;flex-direction:column;gap:4px;
 }
 .book-genre {
-  font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;
+  font-size:0.67rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;
   color:var(--dim);
 }
 .book-stars {
   display:flex;gap:3px;align-items:center;
 }
 .star {
-  font-size:0.8rem;cursor:default;
+  font-size:0.78rem;cursor:default;
   color:var(--faint);
-  transition:color 0.1s;
 }
 .star.filled{color:var(--gold);}
+.book-blurb {
+  font-size:0.74rem;color:var(--muted);line-height:1.5;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  overflow:hidden;margin-top:2px;
+}
 
-/* ── Empty state ── */
+/* ── Empty / Loading ── */
 .empty-state {
-  grid-column:1/-1;
-  padding:80px 0;text-align:center;
+  grid-column:1/-1;padding:80px 0;text-align:center;
 }
 .empty-ornament{color:var(--faint);letter-spacing:0.3em;margin-bottom:24px;}
 .empty-text{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:1.3rem;color:var(--muted);margin-bottom:8px;}
 .empty-hint{font-size:0.8rem;color:var(--faint);}
-
-/* ── Loading ── */
 .loading-state {
-  grid-column:1/-1;
-  padding:80px 0;text-align:center;
-  color:var(--muted);font-size:0.82rem;letter-spacing:0.12em;text-transform:uppercase;
+  grid-column:1/-1;padding:80px 0;text-align:center;
+  color:var(--muted);font-size:0.8rem;letter-spacing:0.14em;text-transform:uppercase;
 }
 
-/* ── Ambient bg ── */
+/* ── Ambient ── */
 .ambient {
   position:fixed;inset:0;pointer-events:none;z-index:0;
   background:
@@ -189,23 +219,34 @@ body::before {
 <div class="ambient"></div>
 
 <nav class="topnav">
-  <span class="nav-wordmark" onclick="location.href='shelf.html'">Un&#x200C;writ&#x200C;ten</span>
+  <span class="nav-wordmark" onclick="location.href='landing.html'">Un&#x200C;writ&#x200C;ten</span>
   <div class="nav-right">
-    <button class="nav-btn active">Public Library</button>
+    <button class="nav-btn active" onclick="location.href='library.html'">Public Library</button>
     <button class="nav-btn" onclick="location.href='shelf.html'">My Library</button>
     <button class="nav-btn" onclick="location.href='storied.html'">Your Story</button>
-    <button class="nav-btn primary" onclick="location.href='index.html'">+ New Story</button>
+    <button class="nav-btn primary" onclick="location.href='login.html'">+ New Story</button>
   </div>
 </nav>
 
 <div class="page-header">
   <div class="page-eyebrow">Community</div>
   <h1 class="page-title">Public Library</h1>
-  <p class="page-desc">Stories written by the Unwritten community — shared for anyone to read.</p>
+  <p class="page-desc">Stories written by the Unwritten community — shared for anyone to read. No account required.</p>
+  <div class="header-ctas">
+    <a class="header-cta primary" href="login.html">+ Write Your Own Story</a>
+    <a class="header-cta outline" href="storied-pitch.html">Give Storied as a Gift</a>
+  </div>
 </div>
 
-<div class="filter-bar" id="filter-bar">
-  <button class="filter-tab active" onclick="filterGenre('all')" id="tab-all">All</button>
+<div class="controls-bar">
+  <div class="filter-tabs" id="filter-tabs">
+    <button class="filter-tab active" onclick="filterGenre('all')" id="tab-all">All</button>
+  </div>
+  <div class="sort-controls">
+    <span class="sort-label">Sort</span>
+    <button class="sort-btn active" id="sort-newest" onclick="setSort('newest')">Newest</button>
+    <button class="sort-btn" id="sort-top" onclick="setSort('top')">Top Rated</button>
+  </div>
 </div>
 
 <div class="book-grid" id="book-grid">
@@ -221,7 +262,8 @@ const _SB = supabase.createClient(
 
 let _stories = [];
 let _currentGenre = 'all';
-let _ratings = {}; // story_id -> avg stars
+let _sortBy = 'newest';
+let _ratings = {};
 
 const GENRE_GRADIENTS = {
   'Fantasy':       'linear-gradient(145deg,#1a0a2e 0%,#3d1a6e 50%,#6b2fa0 100%)',
@@ -246,14 +288,29 @@ function renderStars(avg, count) {
   for (let i = 1; i <= 5; i++) {
     s += `<span class="star${i <= full ? ' filled' : ''}">${i <= full ? '★' : '☆'}</span>`;
   }
-  if (count > 0) s += `<span style="font-size:0.68rem;color:var(--muted);margin-left:4px">(${count})</span>`;
+  if (count > 0) s += `<span style="font-size:0.66rem;color:var(--muted);margin-left:4px">(${count})</span>`;
   return s;
 }
 
+function getBlurb(d) {
+  const ch = (d?.progress?.chapters?.[0] || '').replace(/\n+/g, ' ').trim();
+  if (!ch) return '';
+  return ch.length > 130 ? ch.slice(0, 130) + '…' : ch;
+}
+
 function render() {
-  const filtered = _currentGenre === 'all'
-    ? _stories
+  let filtered = _currentGenre === 'all'
+    ? [..._stories]
     : _stories.filter(s => (s.data?.config?.genre || 'Other') === _currentGenre);
+
+  if (_sortBy === 'top') {
+    filtered.sort((a, b) => {
+      const aRating = _ratings[a.id]?.avg || 0;
+      const bRating = _ratings[b.id]?.avg || 0;
+      return bRating - aRating;
+    });
+  }
+  // 'newest' preserves the DB order (updated_at DESC)
 
   const grid = document.getElementById('book-grid');
 
@@ -271,6 +328,7 @@ function render() {
     const title = d.bookTitle || d.config?.protagonistName || 'Untitled';
     const genre = d.config?.genre || 'Fiction';
     const r = _ratings[s.id] || { avg: 0, count: 0 };
+    const blurb = getBlurb(d);
     return `<a class="book-card" href="public-read.html?id=${s.id}" style="color:inherit;">
       <div class="cover-wrap">
         <div class="cover-bg" style="background:${genreGradient(genre)}"></div>
@@ -283,6 +341,7 @@ function render() {
       <div class="book-meta">
         <div class="book-genre">${genre}</div>
         <div class="book-stars">${renderStars(r.avg, r.count)}</div>
+        ${blurb ? `<div class="book-blurb">${blurb}</div>` : ''}
       </div>
     </a>`;
   }).join('');
@@ -291,9 +350,16 @@ function render() {
 function filterGenre(genre) {
   _currentGenre = genre;
   document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
-  const id = genre === 'all' ? 'tab-all' : `tab-${genre.replace(/\s/g,'_')}`;
+  const id = genre === 'all' ? 'tab-all' : `tab-${genre.replace(/[\s\/]/g,'_')}`;
   const el = document.getElementById(id);
   if (el) el.classList.add('active');
+  render();
+}
+
+function setSort(mode) {
+  _sortBy = mode;
+  document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`sort-${mode}`).classList.add('active');
   render();
 }
 
@@ -312,7 +378,6 @@ async function load() {
 
   _stories = stories;
 
-  // Load ratings
   if (stories.length > 0) {
     const ids = stories.map(s => s.id);
     const { data: ratings } = await _SB
@@ -335,11 +400,12 @@ async function load() {
 
   // Build genre filter tabs
   const genres = [...new Set(stories.map(s => s.data?.config?.genre || 'Other'))].sort();
-  const bar = document.getElementById('filter-bar');
-  bar.innerHTML = `<button class="filter-tab active" id="tab-all" onclick="filterGenre('all')">All (${stories.length})</button>`;
+  const tabs = document.getElementById('filter-tabs');
+  tabs.innerHTML = `<button class="filter-tab active" id="tab-all" onclick="filterGenre('all')">All (${stories.length})</button>`;
   genres.forEach(g => {
     const cnt = stories.filter(s => (s.data?.config?.genre || 'Other') === g).length;
-    bar.innerHTML += `<button class="filter-tab" id="tab-${g.replace(/\s/g,'_')}" onclick="filterGenre(${JSON.stringify(g)})">${g} (${cnt})</button>`;
+    const safeId = g.replace(/[\s\/]/g,'_');
+    tabs.innerHTML += `<button class="filter-tab" id="tab-${safeId}" onclick="filterGenre(${JSON.stringify(g)})">${g} (${cnt})</button>`;
   });
 
   render();

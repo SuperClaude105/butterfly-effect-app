@@ -233,6 +233,34 @@ body::after {
 .nav-save:hover{border-color:var(--gold);color:var(--gold);background:rgba(201,168,76,0.06);}
 .nav-save.saved{border-color:var(--gold);color:var(--gold);background:rgba(201,168,76,0.08);}
 
+/* ── Share button ── */
+.nav-share {
+  font-family:'Inter',sans-serif;font-size:0.7rem;font-weight:600;
+  letter-spacing:0.1em;text-transform:uppercase;
+  padding:6px 14px;border-radius:2px;cursor:pointer;
+  background:none;border:1px solid var(--border);color:var(--muted);
+  transition:background 0.15s,border-color 0.15s,color 0.15s;
+  white-space:nowrap;
+}
+.nav-share:hover{border-color:var(--gold);color:var(--gold);background:rgba(201,168,76,0.06);}
+.nav-share.copied{border-color:var(--gold);color:var(--gold);}
+
+/* ── Unauthed CTA ── */
+.create-cta-wrap {
+  display:none;
+  margin-top:44px;padding-top:44px;
+  border-top:1px solid var(--border);
+  text-align:center;
+}
+.create-cta-title {
+  font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;
+  font-size:1.3rem;color:var(--muted);margin-bottom:8px;
+}
+.create-cta-sub {
+  font-family:'Inter',sans-serif;font-size:0.74rem;
+  color:var(--faint);margin-bottom:22px;letter-spacing:0.06em;
+}
+
 /* ── Swap modal ── */
 .swap-backdrop {
   display:none;position:fixed;inset:0;z-index:500;
@@ -289,14 +317,17 @@ body::after {
     Library
   </button>
   <span class="nav-wordmark" onclick="location.href='library.html'">Un&#x200C;writ&#x200C;ten</span>
-  <button class="nav-save" id="btn-save" onclick="handleSave()" style="display:none">+ Reading List</button>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <button class="nav-share" id="btn-share" onclick="shareStory()">Share</button>
+    <button class="nav-save" id="btn-save" onclick="handleSave()" style="display:none">+ Reading List</button>
+  </div>
 </nav>
 
 <!-- Swap modal -->
 <div class="swap-backdrop" id="swap-backdrop">
   <div class="swap-box">
     <div class="swap-title">Your reading list is full</div>
-    <div class="swap-hint">You have 2 saved books. Choose one to replace with <span id="swap-new-title" style="color:var(--text)"></span>.</div>
+    <div class="swap-hint">Your reading slot is full. Replace your current book with <span id="swap-new-title" style="color:var(--text)"></span>?</div>
     <div class="swap-options" id="swap-options"></div>
     <button class="swap-cancel" onclick="closeSwap()">Cancel</button>
   </div>
@@ -336,6 +367,11 @@ body::after {
       <div class="end-ornament">— fin —</div>
       <div class="end-text">The story has ended.</div>
       <a href="library.html" class="end-btn">Back to Library</a>
+      <div class="create-cta-wrap" id="create-cta">
+        <div class="create-cta-title">Ready to write your own?</div>
+        <div class="create-cta-sub">Stories from $6.99 · Yours to keep forever</div>
+        <a href="login.html" class="ch-nav-btn primary" style="text-decoration:none;display:inline-block;">Start Writing →</a>
+      </div>
     </div>
   </div>
 </div>
@@ -414,6 +450,7 @@ async function showChapter(idx) {
   document.getElementById('book-end').classList.toggle('visible', isLast);
 
   updateProgress();
+  updateCreateCTA();
   if (_isBookmarked && _session) saveChapterPosition(_idx);
 }
 
@@ -467,7 +504,7 @@ async function handleSave() {
     .eq('user_id', _session.user.id);
 
   const slots = existing || [];
-  if (slots.length < 2) {
+  if (slots.length < 1) {
     await saveChapterPosition(_idx);
     _isBookmarked = true;
     updateSaveBtn();
@@ -516,8 +553,21 @@ function closeSwap() {
   document.getElementById('swap-backdrop').classList.remove('open');
 }
 
+function updateCreateCTA() {
+  const el = document.getElementById('create-cta');
+  if (!el) return;
+  el.style.display = (!_session && _idx === _chapters.length - 1) ? '' : 'none';
+}
+
 async function setupBookmark() {
-  if (!_session || !STORY_ID) return;
+  const btn = document.getElementById('btn-save');
+  if (!_session) {
+    btn.style.display = '';
+    updateSaveBtn();
+    updateCreateCTA();
+    return;
+  }
+  if (!STORY_ID) return;
   const { data } = await _SB
     .from('reading_bookmarks')
     .select('chapter_idx')
@@ -525,12 +575,11 @@ async function setupBookmark() {
     .eq('story_id', STORY_ID)
     .maybeSingle();
 
-  document.getElementById('btn-save').style.display = '';
+  btn.style.display = '';
 
   if (data) {
     _isBookmarked = true;
     updateSaveBtn();
-    // Resume from saved chapter
     if (data.chapter_idx > 0 && data.chapter_idx < _chapters.length) {
       showChapter(data.chapter_idx);
     }
@@ -544,7 +593,7 @@ async function setupRating() {
   const hint = document.querySelector('.rating-hint');
   const starsEl = document.getElementById('rating-stars');
 
-  if (!session) {
+  if (!_session) {
     hint.innerHTML = `<a href="login.html?next=${encodeURIComponent(location.href)}" style="color:var(--gold);text-decoration:none;">Sign in</a> to leave a rating.`;
     starsEl.style.opacity = '0.35';
     starsEl.style.pointerEvents = 'none';
@@ -609,6 +658,23 @@ async function rate(stars) {
     msg.textContent = 'Thanks for rating!';
     msg.className = 'rating-msg success';
   }
+}
+
+// ── Share ─────────────────────────────────────────────────────
+function shareStory() {
+  const url = location.href;
+  const btn = document.getElementById('btn-share');
+  const orig = btn.textContent;
+  const write = navigator.clipboard
+    ? navigator.clipboard.writeText(url)
+    : Promise.reject();
+  write.then(() => {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2200);
+  }).catch(() => {
+    prompt('Copy this link:', url);
+  });
 }
 
 // ── Ambient theme ────────────────────────────────────────────

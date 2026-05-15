@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0c0704">
+<title>Storied — Tell the Story They Deserve</title>
+<meta name="description" content="Storied turns real memories into a real book. Tell us about two people — who they are, how they met, the moments that shaped them — and we write their story.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --amber:   #c4a264;
+  --amber2:  #e8cfa0;
+  --dim:     #7a6040;
+  --bg:      #0c0704;
+  --bg2:     #130a04;
+  --card:    #1a0e06;
+  --border:  rgba(196,162,100,0.12);
+  --border2: rgba(196,162,100,0.25);
+  --text:    #e8d5b7;
+  --muted:   #7a6a54;
+  --faint:   #2e1e0e;
+  --glow:    rgba(196,162,100,0.18);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden;
+  background-image:
+    repeating-linear-gradient(90deg,
+      transparent 0px, transparent 179px,
+      rgba(0,0,0,0.08) 179px, rgba(0,0,0,0.08) 181px,
+      transparent 181px, transparent 359px,
+      rgba(0,0,0,0.05) 359px, rgba(0,0,0,0.05) 361px);
+}
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.028'/%3E%3C/svg%3E");
+  pointer-events:none;z-index:9999;
+}
+
+/* Ambient glow */
+.ambient-top{
+  position:fixed;top:-10%;left:50%;transform:translateX(-50%);
+  width:70vw;height:45vh;
+  background:radial-gradient(ellipse 70% 100% at 50% 0%, rgba(180,110,30,0.1) 0%, transparent 70%);
+  pointer-events:none;z-index:0;
+}
+.ambient-bottom{
+  position:fixed;bottom:-5%;right:-5%;width:55vw;height:70vh;
+  background:radial-gradient(ellipse at 85% 80%, rgba(200,100,20,0.09) 0%, transparent 55%);
+  pointer-events:none;z-index:0;
+  animation:breathe 4s ease-in-out infinite alternate;
+}
+@keyframes breathe{from{opacity:0.7}to{opacity:1}}
+
+/* ── Nav ── */
+.topnav{
+  position:fixed;top:0;left:0;right:0;height:62px;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 40px;z-index:200;
+  background:linear-gradient(to bottom,rgba(12,7,4,0.98) 0%,rgba(12,7,4,0) 100%);
+  pointer-events:none;
+}
+.topnav>*{pointer-events:auto;}
+@media(max-width:640px){.topnav{padding:0 20px;}}
+.nav-back{
+  font-family:'Inter',sans-serif;font-size:0.7rem;font-weight:500;
+  letter-spacing:0.1em;text-transform:uppercase;
+  color:var(--muted);text-decoration:none;
+  display:flex;align-items:center;gap:6px;
+  transition:color 0.2s;
+}
+.nav-back:hover{color:var(--amber);}
+.nav-wordmark{
+  font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;
+  font-size:1.5rem;color:var(--amber);letter-spacing:0.04em;text-decoration:none;
+  text-shadow:0 0 30px var(--glow);
+}
+.nav-cta{
+  font-family:'Inter',sans-serif;font-size:0.7rem;font-weight:600;
+  letter-spacing:0.1em;text-transform:uppercase;
+  padding:8px 18px;border-radius:2px;
+  background:var(--amber);border:1px solid var(--amber);color:#0c0704;
+  text-decoration:none;display:inline-block;
+  transition:background 0.2s,box-shadow 0.2s;
+}
+.nav-cta:hover{background:var(--amber2);box-shadow:0 0 20px rgba(196,162,100,0.2);}
+
+/* ── Sections ── */
+.section{position:relative;z-index:10;padding:100px 40px;}
+@media(max-width:768px){.section{padding:72px 20px;}}
+.section-inner{max-width:1020px;margin:0 auto;}
+.section-alt{
+  background:rgba(255,255,255,0.015);
+  border-top:1px solid var(--border);
+  border-bottom:1px solid var(--border);
+}
+
+/* ── Hero ── */
+.hero{
+  position:relative;z-index:10;
+  min-height:100vh;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  text-align:center;padding:80px 24px 80px;
+  overflow:hidden;
+}
+.hero-content{max-width:720px;}
+.hero-ornament{
+  font-size:0.72rem;letter-spacing:0.55em;
+  color:var(--amber);opacity:0.4;margin-bottom:28px;
+}
+.hero-eyebrow{
+  font-size:0.65rem;font-weight:600;letter-spacing:0.3em;text-transform:uppercase;
+  color:var(--dim);margin-bottom:22px;
+}
+.hero-title{
+  font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;
+  font-size:clamp(3rem,7.5vw,6rem);color:var(--text);
+  line-height:1.05;letter-spacing:-0.02em;margin-bottom:28px;
+}
+.hero-title em{color:var(--amber);}
+.hero-sub{
+  font-size:clamp(0.9rem,1.8vw,1.05rem);color:var(--muted);
+  line-height:1.8;max-width:480px;margin:0 auto 40px;
+  font-family:'EB Garamond',serif;font-style:italic;
+}
+.hero-cta{
+  font-family:'Inter',sans-serif;font-size:0.8rem;font-weight:700;
+  letter-spacing:0.1em;text-transform:uppercase;
+  padding:16px 44px;border-radius:2px;
+  background:var(--amber);border:1px solid var(--amber);color:#0c0704;
+  text-decoration:none;display:inline-block;
+  transition:background 0.2s,box-shadow 0.2s;
+}
+.hero-cta:hover{background:var(--amber2);box-shadow:0 0 50px rgba(196,162,100,0.3);}
+
+.eyebrow{
+  font-size:0.63rem;font-weight:600;letter-spacing:0.3em;text-transform:uppercase;
+  color:var(--amber);margin-bottom:14px;
+}
+.section-title{
+  font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;
+  font-size:clamp(2rem,4vw,3rem);color:var(--text);
+  letter-spacing:-0.01em;margin-bottom:14px;line-height:1.15;
+}
+.section-sub{
+  font-size:0.88rem;color:var(--muted);line-height:1.75;max-width:500px;
+  font-family:'EB Garamond',serif;font-style:italic;
+}
+
+/* ── Occasions ── */
+.occasions-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:48px;
+}
+@media(max-width:700px){.occasions-grid{grid-template-columns:1fr 1fr;}}
+@media(max-width:400px){.occasions-grid{grid-template-columns:1fr;}}
+
+.occasion-card{
+  background:var(--card);border:1px solid var(--border);border-radius:4px;
+  padding:28px 24px;text-align:center;
+  transition:border-color 0.25s,box-shadow 0.25s;
+}
+.occasion-card:hover{border-color:var(--border2);box-shadow:0 0 20px rgba(196,162,100,0.05);}
+.occasion-icon{font-size:1.5rem;margin-bottom:12px;display:block;}
+.occasion-title{
+  font-family:'Cormorant Garamond',serif;font-style:italic;font-size:1.1rem;
+  color:var(--text);margin-bottom:6px;
+}
+.occasion-desc{font-size:0.76rem;color:var(--muted);line-height:1.6;}
+
+/* ── Steps ── */
+.story-steps{display:flex;flex-direction:column;gap:0;margin-top:52px;}
+.story-step{
+  display:grid;grid-template-columns:80px 1fr;gap:32px;
+  padding:32px 0;border-bottom:1px solid var(--border);
+  align-items:start;
+}
+.story-step:last-child{border-bottom:none;}
+@media(max-width:560px){
+  .story-step{grid-template-columns:1fr;gap:12px;}
+}
+.story-step-num{
+  font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;
+  font-size:3.5rem;color:var(--faint);line-height:1;padding-top:4px;
+  text-align:center;
+}
+.story-step-content{}
+.story-step-title{
+  font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:400;
+  font-size:1.4rem;color:var(--text);margin-bottom:10px;
+}
+.story-step-desc{font-size:0.84rem;color:var(--muted);line-height:1.75;}
+.story-step-detail{
+  margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;
+}
+.story-step-tag{
+  font-size:0.65rem;letter-spacing:0.06em;color:var(--dim);
+  border:1px solid var(--border);border-radius:2px;padding:3px 9px;
+}
+
+/* ── Excerpt ── */
+.excerpt-wrap{max-width:680px;margin:0 auto;text-align:center;}
+.excerpt-ornament{font-size:0.68rem;letter-spacing:0.5em;color:var(--amber);opacity:0.3;margin-bottom:32px;}
+.excerpt-label{
+  font-size:0.62rem;letter-spacing:0.3em;text-transform:uppercase;
+  color:var(--dim);margin-bottom:24px;
+}
+blockquote.excerpt{
+  font-family:'EB Garamond',serif;font-style:italic;font-weight:400;
+  font-size:clamp(1.1rem,2.3vw,1.4rem);color:var(--text);
+  line-height:1.82;margin-bottom:28px;
+}
+.excerpt-credit{font-size:0.72rem;letter-spacing:0.1em;color:var(--muted);}
+.excerpt-link{color:var(--amber);text-decoration:none;transition:opacity 0.2s;}
+.excerpt-link:hover{opacity:0.7;}
+
+/* ── FAQ ── */
+.faq-list{display:flex;flex-direction:column;gap:0;margin-top:48px;max-width:720px;}
+.faq-item{border-bottom:1px solid var(--border);padding:24px 0;}
+.faq-item:first-child{border-top:1px solid var(--border);}
+.faq-q{
+  font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:400;
+  font-size:1.15rem;color:var(--text);margin-bottom:10px;
+  cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:16px;
+}
+.faq-q::after{
+  content:'+';font-style:normal;font-size:1.3rem;color:var(--amber);
+  flex-shrink:0;transition:transform 0.25s;
+}
+.faq-item.open .faq-q::after{transform:rotate(45deg);}
+.faq-a{
+  font-size:0.84rem;color:var(--muted);line-height:1.75;
+  max-height:0;overflow:hidden;transition:max-height 0.35s ease,opacity 0.3s;
+  opacity:0;
+}
+.faq-item.open .faq-a{max-height:300px;opacity:1;}
+
+/* ── Final CTA ── */
+.final-cta-section{text-align:center;}
+.final-cta-title{
+  font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;
+  font-size:clamp(2.4rem,5.5vw,4.4rem);color:var(--text);
+  line-height:1.1;margin-bottom:18px;
+}
+.final-cta-sub{
+  font-size:0.9rem;color:var(--muted);margin-bottom:36px;
+  font-family:'EB Garamond',serif;font-style:italic;
+}
+
+/* ── Footer ── */
+footer{
+  position:relative;z-index:10;
+  padding:36px 40px;border-top:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:16px;
+}
+@media(max-width:600px){footer{padding:28px 20px;}}
+.footer-wordmark{
+  font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;
+  font-size:1.1rem;color:var(--dim);letter-spacing:0.04em;
+}
+.footer-links{display:flex;gap:20px;flex-wrap:wrap;}
+.footer-link{font-size:0.68rem;letter-spacing:0.08em;color:var(--faint);text-decoration:none;transition:color 0.2s;}
+.footer-link:hover{color:var(--muted);}
+
+/* ── Reveal ── */
+.reveal{opacity:0;transform:translateY(20px);transition:opacity 0.65s ease,transform 0.65s ease;}
+.reveal.in{opacity:1;transform:none;}
+</style>
+</head>
+<body>
+
+<div class="ambient-top"></div>
+<div class="ambient-bottom"></div>
+
+<nav class="topnav">
+  <a class="nav-back" href="landing.html">← Unwritten</a>
+  <a class="nav-wordmark" href="storied-pitch.html">Storied</a>
+  <a class="nav-cta" href="storied.html">Write Their Story</a>
+</nav>
+
+<!-- ── Hero ── -->
+<div class="hero">
+  <div class="hero-content">
+    <div class="hero-ornament">⟡ &nbsp;⟡ &nbsp;⟡</div>
+    <div class="hero-eyebrow">A gift that outlasts anything else</div>
+    <h1 class="hero-title">Tell the story<br>they <em>deserve.</em></h1>
+    <p class="hero-sub">You know the moments. The way they met. The year that was hardest. The joke only they understand. Storied turns those memories into a book worth keeping forever.</p>
+    <a class="hero-cta" href="storied.html">Write Their Story →</a>
+  </div>
+</div>
+
+<!-- ── Occasions ── -->
+<div class="section">
+  <div class="section-inner">
+    <div class="reveal">
+      <div class="eyebrow">The perfect occasion</div>
+      <h2 class="section-title">Some gifts need more than a card.</h2>
+      <p class="section-sub">When the person deserves something real. Something they'll read and re-read, and pass down.</p>
+    </div>
+    <div class="occasions-grid">
+      <div class="occasion-card reveal">
+        <span class="occasion-icon">🥂</span>
+        <div class="occasion-title">Anniversary</div>
+        <p class="occasion-desc">Their full story — from how they met to who they've become — told the way it deserves to be.</p>
+      </div>
+      <div class="occasion-card reveal" style="transition-delay:0.07s">
+        <span class="occasion-icon">💍</span>
+        <div class="occasion-title">Wedding Gift</div>
+        <p class="occasion-desc">Commission their love story before the wedding. Present it at the reception. Give it to the couple to keep.</p>
+      </div>
+      <div class="occasion-card reveal" style="transition-delay:0.14s">
+        <span class="occasion-icon">🕯️</span>
+        <div class="occasion-title">Retirement</div>
+        <p class="occasion-desc">Decades of partnership — professional and personal — written as the memoir it always should have been.</p>
+      </div>
+      <div class="occasion-card reveal" style="transition-delay:0.21s">
+        <span class="occasion-icon">🎂</span>
+        <div class="occasion-title">Milestone Birthday</div>
+        <p class="occasion-desc">A 50th, 60th, or 70th birthday deserves more than a party. Give them a chapter of their own story.</p>
+      </div>
+      <div class="occasion-card reveal" style="transition-delay:0.28s">
+        <span class="occasion-icon">🌹</span>
+        <div class="occasion-title">Memorial</div>
+        <p class="occasion-desc">Preserve what made them who they were. A book their family can read, share, and hold onto.</p>
+      </div>
+      <div class="occasion-card reveal" style="transition-delay:0.35s">
+        <span class="occasion-icon">🎓</span>
+        <div class="occasion-title">Graduation</div>
+        <p class="occasion-desc">Two people who shaped who they became — a teacher and student, a parent and child, best friends.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── How it works ── -->
+<div class="section section-alt">
+  <div class="section-inner">
+    <div class="reveal">
+      <div class="eyebrow">How it works</div>
+      <h2 class="section-title">Six questions. One book.</h2>
+      <p class="section-sub">You don't need to be a writer. You just need to know them.</p>
+    </div>
+    <div class="story-steps">
+      <div class="story-step reveal">
+        <div class="story-step-num">01</div>
+        <div class="story-step-content">
+          <div class="story-step-title">Tell us about the two people</div>
+          <p class="story-step-desc">Names, ages, where they're from, what makes them who they are. Three personality traits each. Fill in as much or as little as you know.</p>
+          <div class="story-step-detail">
+            <span class="story-step-tag">Names</span>
+            <span class="story-step-tag">Ages</span>
+            <span class="story-step-tag">Personality</span>
+            <span class="story-step-tag">Appearance</span>
+            <span class="story-step-tag">What they call each other</span>
+          </div>
+        </div>
+      </div>
+      <div class="story-step reveal">
+        <div class="story-step-num">02</div>
+        <div class="story-step-content">
+          <div class="story-step-title">Add the animals in their life</div>
+          <p class="story-step-desc">Pets, horses, any animal that's part of their story. The AI will weave them in naturally wherever they belong.</p>
+        </div>
+      </div>
+      <div class="story-step reveal">
+        <div class="story-step-num">03</div>
+        <div class="story-step-content">
+          <div class="story-step-title">Build their timeline</div>
+          <p class="story-step-desc">Key events in chronological order — milestones, challenges, funny moments, romantic moments. The more specific, the more accurate the story.</p>
+          <div class="story-step-detail">
+            <span class="story-step-tag">Milestones</span>
+            <span class="story-step-tag">Challenges</span>
+            <span class="story-step-tag">Funny moments</span>
+            <span class="story-step-tag">Romantic moments</span>
+          </div>
+        </div>
+      </div>
+      <div class="story-step reveal">
+        <div class="story-step-num">04</div>
+        <div class="story-step-content">
+          <div class="story-step-title">Add the texture</div>
+          <p class="story-step-desc">Their restaurant. Their song. Inside jokes. The funniest memory they still laugh about. This is where the story stops being generic and starts being unmistakably theirs.</p>
+        </div>
+      </div>
+      <div class="story-step reveal">
+        <div class="story-step-num">05</div>
+        <div class="story-step-content">
+          <div class="story-step-title">Write anything else</div>
+          <p class="story-step-desc">A free-text box with no rules. Write whatever you want woven in — the AI interprets it. This is where people put the things that don't fit anywhere else.</p>
+        </div>
+      </div>
+      <div class="story-step reveal">
+        <div class="story-step-num">06</div>
+        <div class="story-step-content">
+          <div class="story-step-title">Choose the style</div>
+          <p class="story-step-desc">Relationship type, tone, point of view, narrative style. Heartwarming or bittersweet. Novel, memoir, or fairy tale. It's their story — you decide how it sounds.</p>
+          <div class="story-step-detail">
+            <span class="story-step-tag">Spouses</span>
+            <span class="story-step-tag">Best Friends</span>
+            <span class="story-step-tag">Parent & Child</span>
+            <span class="story-step-tag">Heartwarming</span>
+            <span class="story-step-tag">Bittersweet</span>
+            <span class="story-step-tag">Memoir</span>
+            <span class="story-step-tag">Novel</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Excerpt ── -->
+<div class="section">
+  <div class="section-inner excerpt-wrap">
+    <div class="excerpt-ornament reveal">⟡ &nbsp;⟡ &nbsp;⟡</div>
+    <div class="excerpt-label reveal">From a finished Storied story</div>
+    <blockquote class="excerpt reveal">
+      "Elin returned to the island three weeks after her mother died, on a ferry that listed to port in the autumn swells. She had not been back in eleven years. She had reasons for that — a career in the city, a life that kept expanding until there was no room for the island in it, the particular stubbornness that her mother had called distance and Elin had called survival."
+    </blockquote>
+    <div class="excerpt-credit reveal">
+      — <em>Salt and Memory</em> · Literary Memoir &nbsp;·&nbsp;
+      <a class="excerpt-link" href="library.html">Read the full story →</a>
+    </div>
+  </div>
+</div>
+
+<!-- ── FAQ ── -->
+<div class="section section-alt">
+  <div class="section-inner">
+    <div class="reveal">
+      <div class="eyebrow">Questions</div>
+      <h2 class="section-title">Everything you need to know.</h2>
+    </div>
+    <div class="faq-list">
+      <div class="faq-item reveal">
+        <div class="faq-q" onclick="toggleFaq(this)">Who is Storied for?</div>
+        <div class="faq-a">Anyone who knows two people with a story worth telling. Spouses, best friends, a parent and child, siblings — even two business partners who built something together. If you can answer the six questions, we can write their book.</div>
+      </div>
+      <div class="faq-item reveal">
+        <div class="faq-q" onclick="toggleFaq(this)">How long is a Storied book?</div>
+        <div class="faq-a">A standard Storied book is 5 chapters — typically 8,000–12,000 words, similar in length to a long short story. Each chapter focuses on a different period or theme of their relationship. You can request more chapters if their story needs more room.</div>
+      </div>
+      <div class="faq-item reveal">
+        <div class="faq-q" onclick="toggleFaq(this)">Will it really sound like them?</div>
+        <div class="faq-a">The more detail you give, the more accurate it becomes. The form asks for personality traits, nicknames, specific memories, inside jokes, and their unique texture as a couple or pair. When those details are rich, the result is unmistakably theirs — not a generic love story.</div>
+      </div>
+      <div class="faq-item reveal">
+        <div class="faq-q" onclick="toggleFaq(this)">Can the people in the story read it?</div>
+        <div class="faq-a">Yes — once the story is created, it's saved to your shelf. You can read it in the web reader chapter by chapter, or download it as a PDF to print or share. It's yours to give however you want.</div>
+      </div>
+      <div class="faq-item reveal">
+        <div class="faq-q" onclick="toggleFaq(this)">Does it go into the public library?</div>
+        <div class="faq-a">No — Storied stories are private by default and never shared publicly unless you choose to make them public. The people in the story are real, so privacy is the default.</div>
+      </div>
+      <div class="faq-item reveal">
+        <div class="faq-q" onclick="toggleFaq(this)">How do I start?</div>
+        <div class="faq-a">Create an account, then click "Your Story" in the navigation to open the Storied form. The six-step questionnaire saves as you go, so you can take your time filling it in.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Final CTA ── -->
+<div class="section final-cta-section">
+  <div class="section-inner" style="text-align:center">
+    <div class="final-cta-title reveal">Their story has<br>already been lived.</div>
+    <p class="final-cta-sub reveal">All it needs is someone to write it down.</p>
+    <div class="reveal">
+      <a class="hero-cta" href="storied.html">Write Their Story →</a>
+    </div>
+  </div>
+</div>
+
+<!-- ── Footer ── -->
+<footer>
+  <span class="footer-wordmark">Storied</span>
+  <div class="footer-links">
+    <a class="footer-link" href="landing.html">Unwritten</a>
+    <a class="footer-link" href="library.html">Public Library</a>
+    <a class="footer-link" href="pricing.html">Pricing</a>
+    <a class="footer-link" href="login.html">Sign In</a>
+    <a class="footer-link" href="legal.html">Legal</a>
+  </div>
+</footer>
+
+<script>
+function toggleFaq(el) {
+  const item = el.closest('.faq-item');
+  const wasOpen = item.classList.contains('open');
+  document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+  if (!wasOpen) item.classList.add('open');
+}
+
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('in'); });
+},{threshold:0.1,rootMargin:'0px 0px -50px 0px'});
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>

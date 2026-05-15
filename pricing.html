@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#080705">
+<title>Pricing — Unwritten</title>
+<meta name="description" content="Simple, honest pricing. Pay per story — yours to keep forever. No subscription required.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --gold:    #c9a84c;
+  --gold2:   #e8d08a;
+  --dim:     #7a6040;
+  --bg:      #080705;
+  --bg2:     #0f0d0a;
+  --card:    #141109;
+  --border:  rgba(201,168,76,0.1);
+  --border2: rgba(201,168,76,0.22);
+  --text:    #ede0c8;
+  --muted:   #7a6a54;
+  --faint:   #2e2518;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden;}
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.028'/%3E%3C/svg%3E");
+  pointer-events:none;z-index:9999;
+}
+.ambient{
+  position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(ellipse 55% 40% at 80% 10%,rgba(100,50,0,0.1) 0%,transparent 55%),
+    radial-gradient(ellipse 40% 50% at 20% 90%,rgba(50,30,0,0.07) 0%,transparent 55%);
+}
+
+/* ── Nav ── */
+.topnav{
+  position:sticky;top:0;left:0;right:0;height:62px;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 40px;z-index:200;
+  background:rgba(8,7,5,0.97);border-bottom:1px solid var(--border);
+}
+@media(max-width:600px){.topnav{padding:0 20px;}}
+.nav-back{
+  font-family:'Inter',sans-serif;font-size:0.7rem;font-weight:500;
+  letter-spacing:0.1em;text-transform:uppercase;
+  color:var(--muted);text-decoration:none;
+  display:flex;align-items:center;gap:6px;
+  transition:color 0.2s;
+}
+.nav-back:hover{color:var(--gold);}
+.nav-wordmark{
+  font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;
+  font-size:1.4rem;color:var(--gold);letter-spacing:0.04em;text-decoration:none;
+}
+.nav-cta{
+  font-family:'Inter',sans-serif;font-size:0.7rem;font-weight:600;
+  letter-spacing:0.1em;text-transform:uppercase;
+  padding:8px 18px;border-radius:2px;
+  background:var(--gold);border:1px solid var(--gold);color:#080705;
+  text-decoration:none;display:inline-block;
+  transition:background 0.2s;
+}
+.nav-cta:hover{background:var(--gold2);}
+
+/* ── Page header ── */
+.page-header{
+  position:relative;z-index:10;
+  max-width:700px;margin:0 auto;
+  padding:72px 40px 48px;text-align:center;
+}
+@media(max-width:600px){.page-header{padding:56px 20px 36px;}}
+.page-eyebrow{
+  font-size:0.64rem;font-weight:600;letter-spacing:0.3em;text-transform:uppercase;
+  color:var(--gold);margin-bottom:16px;
+}
+.page-title{
+  font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;
+  font-size:clamp(2.2rem,5vw,3.4rem);color:var(--text);
+  line-height:1.12;letter-spacing:-0.01em;margin-bottom:16px;
+}
+.page-desc{font-size:0.9rem;color:var(--muted);line-height:1.75;}
+
+/* ── Pricing cards ── */
+.pricing-section{
+  position:relative;z-index:10;
+  max-width:1000px;margin:0 auto;
+  padding:0 40px 60px;
+}
+@media(max-width:600px){.pricing-section{padding:0 20px 48px;}}
+
+.pricing-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:20px;
+}
+@media(max-width:860px){.pricing-grid{grid-template-columns:1fr;max-width:380px;margin:0 auto;}}
+@media(min-width:540px) and (max-width:860px){.pricing-grid{grid-template-columns:1fr 1fr;max-width:620px;margin:0 auto;}}
+
+.price-card{
+  background:var(--card);border:1px solid var(--border);border-radius:4px;
+  padding:40px 28px;position:relative;display:flex;flex-direction:column;
+}
+.price-card.featured{
+  border-color:rgba(201,168,76,0.45);
+  box-shadow:0 0 50px rgba(201,168,76,0.07),0 2px 20px rgba(0,0,0,0.4);
+}
+.price-badge{
+  position:absolute;top:-12px;left:50%;transform:translateX(-50%);
+  font-family:'Inter',sans-serif;font-size:0.6rem;font-weight:700;
+  letter-spacing:0.2em;text-transform:uppercase;
+  background:var(--gold);color:#080705;
+  padding:5px 16px;border-radius:2px;white-space:nowrap;
+}
+.price-tier{
+  font-size:0.6rem;font-weight:600;letter-spacing:0.3em;text-transform:uppercase;
+  color:var(--dim);margin-bottom:6px;
+}
+.price-range{
+  font-size:0.8rem;color:var(--muted);margin-bottom:24px;padding-bottom:24px;
+  border-bottom:1px solid var(--border);
+}
+.price-main{margin-bottom:6px;}
+.price-amount{
+  font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;
+  font-size:3.6rem;color:var(--text);line-height:1;
+  display:flex;align-items:flex-start;gap:2px;
+}
+.price-dollar{font-size:1.6rem;margin-top:10px;}
+.price-per{font-size:0.72rem;color:var(--muted);margin-bottom:20px;}
+
+.price-bundle-box{
+  background:rgba(201,168,76,0.05);border:1px solid rgba(201,168,76,0.15);
+  border-radius:3px;padding:14px 16px;margin-bottom:28px;
+}
+.price-bundle-label{
+  font-size:0.6rem;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;
+  color:var(--dim);margin-bottom:6px;
+}
+.price-bundle-amount{
+  font-family:'Cormorant Garamond',serif;font-style:italic;
+  font-size:1.4rem;color:var(--gold);margin-bottom:2px;
+}
+.price-bundle-save{
+  font-size:0.68rem;color:var(--dim);letter-spacing:0.05em;
+}
+
+.price-features{
+  list-style:none;display:flex;flex-direction:column;gap:10px;
+  margin-bottom:32px;flex:1;
+}
+.price-features li{
+  font-size:0.8rem;color:var(--muted);padding-left:18px;position:relative;
+  line-height:1.5;
+}
+.price-features li::before{
+  content:'✦';position:absolute;left:0;
+  font-size:0.5rem;color:var(--gold);top:2px;
+}
+
+.price-cta{
+  display:block;width:100%;padding:13px;border-radius:2px;
+  font-family:'Inter',sans-serif;font-size:0.72rem;font-weight:600;
+  letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;
+  text-decoration:none;text-align:center;
+  background:none;border:1px solid var(--border2);color:var(--text);
+  transition:background 0.2s,border-color 0.2s,color 0.2s;
+}
+.price-cta:hover{border-color:var(--gold);color:var(--gold);background:rgba(201,168,76,0.06);}
+.price-cta.gold{background:var(--gold);border-color:var(--gold);color:#080705;font-weight:700;}
+.price-cta.gold:hover{background:var(--gold2);}
+.price-cta-note{
+  font-size:0.68rem;color:var(--faint);text-align:center;margin-top:10px;letter-spacing:0.05em;
+}
+
+/* ── Included in every story ── */
+.included-section{
+  position:relative;z-index:10;
+  max-width:1000px;margin:0 auto;
+  padding:60px 40px;
+  border-top:1px solid var(--border);
+}
+@media(max-width:600px){.included-section{padding:48px 20px;}}
+.included-title{
+  font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;
+  font-size:1.6rem;color:var(--text);margin-bottom:32px;
+  text-align:center;
+}
+.included-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:16px;
+}
+@media(max-width:700px){.included-grid{grid-template-columns:1fr 1fr;}}
+@media(max-width:440px){.included-grid{grid-template-columns:1fr;}}
+.included-item{
+  display:flex;align-items:flex-start;gap:12px;
+  padding:20px;background:var(--card);border:1px solid var(--border);border-radius:3px;
+}
+.included-icon{
+  font-size:1rem;flex-shrink:0;margin-top:1px;
+}
+.included-text{}
+.included-item-title{
+  font-size:0.82rem;font-weight:500;color:var(--text);margin-bottom:4px;
+}
+.included-item-desc{font-size:0.74rem;color:var(--muted);line-height:1.55;}
+
+/* ── FAQ ── */
+.faq-section{
+  position:relative;z-index:10;
+  max-width:720px;margin:0 auto;
+  padding:60px 40px 80px;
+  border-top:1px solid var(--border);
+}
+@media(max-width:600px){.faq-section{padding:48px 20px 60px;}}
+.faq-title{
+  font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;
+  font-size:1.8rem;color:var(--text);margin-bottom:32px;
+}
+.faq-list{display:flex;flex-direction:column;gap:0;}
+.faq-item{border-bottom:1px solid var(--border);padding:22px 0;}
+.faq-item:first-child{border-top:1px solid var(--border);}
+.faq-q{
+  font-size:0.9rem;font-weight:500;color:var(--text);margin-bottom:0;
+  cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:16px;
+}
+.faq-q::after{
+  content:'+';font-size:1.2rem;color:var(--gold);flex-shrink:0;
+  transition:transform 0.25s;
+}
+.faq-item.open .faq-q::after{transform:rotate(45deg);}
+.faq-a{
+  font-size:0.82rem;color:var(--muted);line-height:1.75;
+  max-height:0;overflow:hidden;transition:max-height 0.35s ease,opacity 0.3s,margin-top 0.3s;
+  opacity:0;margin-top:0;
+}
+.faq-item.open .faq-a{max-height:300px;opacity:1;margin-top:12px;}
+
+/* ── Library subscription ── */
+.subscription-section{
+  position:relative;z-index:10;
+  max-width:700px;margin:0 auto;padding:0 40px 80px;
+  text-align:center;
+}
+@media(max-width:600px){.subscription-section{padding:0 20px 60px;}}
+.subscription-box{
+  background:var(--card);border:1px solid var(--border);border-radius:4px;
+  padding:40px 32px;
+  background-image:linear-gradient(135deg,rgba(201,168,76,0.03) 0%,transparent 60%);
+}
+.subscription-eyebrow{
+  font-size:0.62rem;font-weight:600;letter-spacing:0.3em;text-transform:uppercase;
+  color:var(--dim);margin-bottom:12px;
+}
+.subscription-title{
+  font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;
+  font-size:1.8rem;color:var(--text);margin-bottom:12px;
+}
+.subscription-desc{font-size:0.84rem;color:var(--muted);line-height:1.75;margin-bottom:24px;}
+.subscription-badge{
+  display:inline-block;
+  font-family:'Inter',sans-serif;font-size:0.62rem;font-weight:600;
+  letter-spacing:0.15em;text-transform:uppercase;
+  border:1px solid rgba(201,168,76,0.3);color:var(--dim);
+  padding:6px 16px;border-radius:2px;
+}
+
+/* ── Footer ── */
+footer{
+  position:relative;z-index:10;
+  padding:32px 40px;border-top:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:16px;
+}
+@media(max-width:600px){footer{padding:24px 20px;}}
+.footer-wordmark{
+  font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;
+  font-size:1.1rem;color:var(--dim);
+}
+.footer-links{display:flex;gap:20px;flex-wrap:wrap;}
+.footer-link{font-size:0.68rem;letter-spacing:0.08em;color:var(--faint);text-decoration:none;transition:color 0.2s;}
+.footer-link:hover{color:var(--muted);}
+</style>
+</head>
+<body>
+
+<div class="ambient"></div>
+
+<nav class="topnav">
+  <a class="nav-back" href="landing.html">← Unwritten</a>
+  <a class="nav-wordmark" href="landing.html">Un&#x200C;writ&#x200C;ten</a>
+  <a class="nav-cta" href="login.html">Get Started</a>
+</nav>
+
+<!-- ── Page Header ── -->
+<div class="page-header">
+  <div class="page-eyebrow">Pricing</div>
+  <h1 class="page-title">Simple, honest pricing.</h1>
+  <p class="page-desc">Pay per story — yours to keep, read, and continue forever. No subscription. No monthly fees. Buy one or save with a bundle of three.</p>
+</div>
+
+<!-- ── Pricing Cards ── -->
+<div class="pricing-section">
+  <div class="pricing-grid">
+
+    <!-- Compact -->
+    <div class="price-card">
+      <div class="price-tier">Compact</div>
+      <div class="price-range">Under 25 chapters<br>~20,000–40,000 words</div>
+      <div class="price-main">
+        <div class="price-amount">
+          <span class="price-dollar">$</span>6.99
+        </div>
+      </div>
+      <div class="price-per">per story</div>
+      <div class="price-bundle-box">
+        <div class="price-bundle-label">Bundle of 3</div>
+        <div class="price-bundle-amount">$15.00</div>
+        <div class="price-bundle-save">Save $5.97 — $5.00 per story</div>
+      </div>
+      <ul class="price-features">
+        <li>Full AI-generated novel</li>
+        <li>Under 25 chapters</li>
+        <li>Saved to your library permanently</li>
+        <li>Read, share, and continue with sequels</li>
+        <li>Share to the Public Library</li>
+        <li>Content warning controls</li>
+      </ul>
+      <a class="price-cta" href="login.html">Get Started</a>
+      <div class="price-cta-note">Payment coming soon · Free access while in beta</div>
+    </div>
+
+    <!-- Standard (featured) -->
+    <div class="price-card featured">
+      <div class="price-badge">Most Popular</div>
+      <div class="price-tier">Standard</div>
+      <div class="price-range">25–50 chapters<br>~40,000–80,000 words</div>
+      <div class="price-main">
+        <div class="price-amount">
+          <span class="price-dollar">$</span>7.99
+        </div>
+      </div>
+      <div class="price-per">per story</div>
+      <div class="price-bundle-box">
+        <div class="price-bundle-label">Bundle of 3</div>
+        <div class="price-bundle-amount">$20.00</div>
+        <div class="price-bundle-save">Save $3.97 — $6.67 per story</div>
+      </div>
+      <ul class="price-features">
+        <li>Full AI-generated novel</li>
+        <li>25–50 chapters — full novel length</li>
+        <li>Saved to your library permanently</li>
+        <li>Read, share, and continue with sequels</li>
+        <li>Share to the Public Library</li>
+        <li>Content warning controls</li>
+        <li>Series and sequel support</li>
+      </ul>
+      <a class="price-cta gold" href="login.html">Get Started</a>
+      <div class="price-cta-note">Payment coming soon · Free access while in beta</div>
+    </div>
+
+    <!-- Epic -->
+    <div class="price-card">
+      <div class="price-tier">Epic</div>
+      <div class="price-range">50–100 chapters<br>~80,000–160,000 words</div>
+      <div class="price-main">
+        <div class="price-amount">
+          <span class="price-dollar">$</span>8.99
+        </div>
+      </div>
+      <div class="price-per">per story</div>
+      <div class="price-bundle-box">
+        <div class="price-bundle-label">Bundle of 3</div>
+        <div class="price-bundle-amount">$22.00</div>
+        <div class="price-bundle-save">Save $4.97 — $7.33 per story</div>
+      </div>
+      <ul class="price-features">
+        <li>Full AI-generated novel</li>
+        <li>50–100 chapters — saga length</li>
+        <li>Saved to your library permanently</li>
+        <li>Read, share, and continue with sequels</li>
+        <li>Share to the Public Library</li>
+        <li>Content warning controls</li>
+        <li>Series and sequel support</li>
+      </ul>
+      <a class="price-cta" href="login.html">Get Started</a>
+      <div class="price-cta-note">Payment coming soon · Free access while in beta</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Included in every story ── -->
+<div class="included-section">
+  <div class="included-title">Every story includes</div>
+  <div class="included-grid">
+    <div class="included-item">
+      <span class="included-icon">📚</span>
+      <div class="included-text">
+        <div class="included-item-title">Saved forever</div>
+        <p class="included-item-desc">Stories live in your library permanently — no expiry, no re-purchase.</p>
+      </div>
+    </div>
+    <div class="included-item">
+      <span class="included-icon">📖</span>
+      <div class="included-text">
+        <div class="included-item-title">Web reader</div>
+        <p class="included-item-desc">Read chapter by chapter in the beautiful Unwritten reader.</p>
+      </div>
+    </div>
+    <div class="included-item">
+      <span class="included-icon">🔁</span>
+      <div class="included-text">
+        <div class="included-item-title">Sequel support</div>
+        <p class="included-item-desc">Continue your story with a sequel — same world, same characters, new arc.</p>
+      </div>
+    </div>
+    <div class="included-item">
+      <span class="included-icon">🌐</span>
+      <div class="included-text">
+        <div class="included-item-title">Public sharing</div>
+        <p class="included-item-desc">Optionally share your story to the community library for others to read.</p>
+      </div>
+    </div>
+    <div class="included-item">
+      <span class="included-icon">🛡️</span>
+      <div class="included-text">
+        <div class="included-item-title">Content controls</div>
+        <p class="included-item-desc">Select trigger warnings to exclude from your story — the AI honours them strictly.</p>
+      </div>
+    </div>
+    <div class="included-item">
+      <span class="included-icon">⭐</span>
+      <div class="included-text">
+        <div class="included-item-title">Ratings & community</div>
+        <p class="included-item-desc">Rate stories you read, and see how yours lands with the community.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── FAQ ── -->
+<div class="faq-section">
+  <div class="faq-title">Frequently asked</div>
+  <div class="faq-list">
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">What is a story credit?</div>
+      <div class="faq-a">One story credit lets you generate one complete AI novel. The price depends on how many chapters you choose at the time of creation — under 25 chapters is Compact, 25–50 is Standard, 50–100 is Epic.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">Do credits expire?</div>
+      <div class="faq-a">No. Credits never expire. Buy a bundle of 3 whenever you want and use them at your own pace — this month, next year, whenever you're ready to write.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">Can I write sequels?</div>
+      <div class="faq-a">Yes — sequels use a credit the same as any new story. When you create a sequel, the AI is given your previous book's world bible to maintain continuity. Same characters, same world, new story.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">Is Storied (the personal memoir product) included?</div>
+      <div class="faq-a">Storied uses the same credit system — the chapter length you choose when filling in the Storied form determines which tier applies. Storied stories are private by default and never appear in the public library unless you choose to share them.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">When does payment go live?</div>
+      <div class="faq-a">Payment integration is coming soon. During the beta period, story generation is free while we build out the community. When payment launches, all stories created during beta will remain in your library at no cost.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">What about a Public Library subscription?</div>
+      <div class="faq-a">A subscription for unlimited reading access to the full Public Library community is planned for when the library grows large enough to make it worthwhile. Details will be announced when it launches. Story generation will remain pay-per-story.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Library Subscription Coming Soon ── -->
+<div class="subscription-section">
+  <div class="subscription-box">
+    <div class="subscription-eyebrow">Coming Soon</div>
+    <div class="subscription-title">Public Library Subscription</div>
+    <p class="subscription-desc">When the community library reaches a meaningful size, we'll offer a subscription for unlimited reading access — browse and bookmark everything the community has shared, at a flat monthly rate.</p>
+    <span class="subscription-badge">Launching when the library is ready</span>
+  </div>
+</div>
+
+<footer>
+  <span class="footer-wordmark">Un&#x200C;writ&#x200C;ten</span>
+  <div class="footer-links">
+    <a class="footer-link" href="landing.html">Home</a>
+    <a class="footer-link" href="library.html">Public Library</a>
+    <a class="footer-link" href="storied-pitch.html">Storied</a>
+    <a class="footer-link" href="login.html">Sign In</a>
+    <a class="footer-link" href="legal.html">Legal</a>
+  </div>
+</footer>
+
+<script>
+function toggleFaq(el) {
+  const item = el.closest('.faq-item');
+  const wasOpen = item.classList.contains('open');
+  document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+  if (!wasOpen) item.classList.add('open');
+}
+</script>
+</body>
+</html>

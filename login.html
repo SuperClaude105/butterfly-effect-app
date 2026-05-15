@@ -140,8 +140,13 @@ hr { margin:2rem 0 1.25rem; border:none; border-top:1px solid var(--border); }
 <body>
 <div class="card">
   <p class="ornament">⟡ ⟡ ⟡</p>
-  <h1>Unwritten</h1>
-  <p class="tagline">Your story. Your choices. Your ending.</p>
+  <h1>Un&#x200C;writ&#x200C;ten</h1>
+  <p class="tagline">Your&#x200C; story.&#x200C; Your&#x200C; choices.&#x200C; Your&#x200C; ending.</p>
+  <div aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">
+    <h1>StoryForge — AI Novel Generator</h1>
+    <p>Sign in to StoryForge to access your AI-generated novels and continue your stories.</p>
+    <a href="/pricing">View Plans</a>
+  </div>
 
   <!-- Gate (access password) -->
   <div id="gateSection">
@@ -301,6 +306,8 @@ document.getElementById('registerForm').addEventListener('submit', async e => {
 });
 </script>
 <footer style="text-align:center;padding:20px;font-size:0.78rem;color:rgba(122,106,88,0.5);">
+  <a href="/landing.html" style="color:rgba(196,162,100,0.45);text-decoration:none;" onmouseover="this.style.color='#c4a264'" onmouseout="this.style.color='rgba(196,162,100,0.45)'">About Unwritten</a>
+  &nbsp;·&nbsp;
   <a href="/legal.html" style="color:rgba(196,162,100,0.45);text-decoration:none;" onmouseover="this.style.color='#c4a264'" onmouseout="this.style.color='rgba(196,162,100,0.45)'">Legal &amp; Disclaimers</a>
   &nbsp;·&nbsp; All stories are AI-generated fiction
 </footer>

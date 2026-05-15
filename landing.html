@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#080705">
+<title>Unwritten — AI Storytelling</title>
+<meta name="description" content="AI-powered novels personalized to you. Choose your world, name your characters, and read your book in minutes. Or turn real memories into a book worth keeping with Storied.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --gold:    #c9a84c;
+  --gold2:   #e8d08a;
+  --dim:     #7a6040;
+  --bg:      #080705;
+  --bg2:     #0f0d0a;
+  --card:    #141109;
+  --border:  rgba(201,168,76,0.1);
+  --border2: rgba(201,168,76,0.2);
+  --text:    #ede0c8;
+  --muted:   #7a6a54;
+  --faint:   #2e2518;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden;}
+
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.028'/%3E%3C/svg%3E");
+  pointer-events:none;z-index:9999;
+}
+
+/* ── Nav ── */
+.topnav {
+  position:fixed;top:0;left:0;right:0;height:64px;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 40px;z-index:200;
+  background:linear-gradient(to bottom,rgba(8,7,5,0.98) 0%,rgba(8,7,5,0) 100%);
+  pointer-events:none;
+}
+.topnav>*{pointer-events:auto;}
+@media(max-width:768px){.topnav{padding:0 20px;}}
+
+.nav-wordmark{
+  font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;
+  font-size:1.55rem;color:var(--gold);letter-spacing:0.04em;text-decoration:none;
+}
+.nav-links{display:flex;align-items:center;gap:8px;}
+.nav-link{
+  font-family:'Inter',sans-serif;font-size:0.72rem;font-weight:500;
+  letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);
+  text-decoration:none;padding:8px 12px;transition:color 0.2s;
+}
+.nav-link:hover{color:var(--gold);}
+.nav-btn{
+  background:none;border:1px solid var(--border2);color:var(--text);
+  font-family:'Inter',sans-serif;font-size:0.72rem;font-weight:500;
+  letter-spacing:0.08em;text-transform:uppercase;padding:8px 18px;
+  border-radius:2px;cursor:pointer;text-decoration:none;display:inline-block;
+  transition:background 0.2s,border-color 0.2s,color 0.2s;
+}
+.nav-btn:hover{background:rgba(201,168,76,0.08);border-color:var(--gold);color:var(--gold);}
+.nav-btn.primary{background:var(--gold);border-color:var(--gold);color:#080705;font-weight:700;}
+.nav-btn.primary:hover{background:var(--gold2);}
+@media(max-width:640px){.nav-link{display:none;}}
+
+/* ── Hero ── */
+.hero{
+  position:relative;min-height:100vh;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  text-align:center;padding:80px 24px 80px;
+  overflow:hidden;
+}
+#hero-canvas{position:absolute;inset:0;pointer-events:none;z-index:0;}
+.hero-ambient{
+  position:absolute;inset:0;pointer-events:none;z-index:1;
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 30%,rgba(100,50,0,0.18) 0%,transparent 60%),
+    radial-gradient(ellipse 50% 60% at 20% 80%,rgba(50,30,0,0.1) 0%,transparent 55%);
+}
+.hero-content{position:relative;z-index:10;max-width:780px;}
+.hero-ornament{font-size:0.72rem;letter-spacing:0.6em;color:var(--gold);opacity:0.45;margin-bottom:28px;}
+.hero-eyebrow{
+  font-size:0.67rem;font-weight:600;letter-spacing:0.3em;text-transform:uppercase;
+  color:var(--dim);margin-bottom:22px;
+}
+.hero-title{
+  font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;
+  font-size:clamp(3.2rem,8vw,6.8rem);color:var(--text);
+  line-height:1.04;letter-spacing:-0.02em;margin-bottom:28px;
+}
+.hero-title em{color:var(--gold);font-style:italic;}
+.hero-sub{
+  font-size:clamp(0.9rem,1.8vw,1.05rem);color:var(--muted);
+  line-height:1.8;max-width:500px;margin:0 auto 44px;
+}
+.hero-ctas{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+.cta-primary{
+  font-family:'Inter',sans-serif;font-size:0.78rem;font-weight:700;
+  letter-spacing:0.1em;text-transform:uppercase;
+  padding:15px 40px;border-radius:2px;
+  background:var(--gold);border:1px solid var(--gold);color:#080705;
+  text-decoration:none;display:inline-block;
+  transition:background 0.2s,box-shadow 0.2s;
+}
+.cta-primary:hover{background:var(--gold2);box-shadow:0 0 40px rgba(201,168,76,0.25);}
+.cta-outline{
+  font-family:'Inter',sans-serif;font-size:0.78rem;font-weight:500;
+  letter-spacing:0.1em;text-transform:uppercase;
+  padding:15px 40px;border-radius:2px;
+  background:none;border:1px solid var(--border2);color:var(--text);
+  text-decoration:none;display:inline-block;
+  transition:background 0.2s,border-color 0.2s,color 0.2s;
+}
+.cta-outline:hover{background:rgba(201,168,76,0.06);border-color:var(--gold);color:var(--gold);}
+.hero-scroll-hint{
+  position:absolute;bottom:36px;left:50%;transform:translateX(-50%);
+  font-size:0.6rem;letter-spacing:0.35em;text-transform:uppercase;
+  color:var(--faint);z-index:10;
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+}
+.hero-scroll-hint::after{
+  content:'';width:1px;height:36px;
+  background:linear-gradient(to bottom,var(--faint),transparent);
+  animation:scrollline 2s ease-in-out infinite;
+}
+@keyframes scrollline{0%,100%{opacity:0.3;transform:scaleY(0.6)}50%{opacity:1;transform:scaleY(1)}}
+
+/* ── Sections ── */
+.section{padding:100px 40px;}
+@media(max-width:768px){.section{padding:72px 20px;}}
+.section-inner{max-width:1080px;margin:0 auto;}
+.section-alt{background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border);}
+
+.eyebrow{
+  font-size:0.64rem;font-weight:600;letter-spacing:0.3em;text-transform:uppercase;
+  color:var(--gold);margin-bottom:14px;
+}
+.section-title{
+  font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;
+  font-size:clamp(2rem,4vw,3rem);color:var(--text);
+  letter-spacing:-0.01em;margin-bottom:14px;
+  line-height:1.15;
+}
+.section-sub{font-size:0.88rem;color:var(--muted);line-height:1.75;max-width:500px;}
+
+/* ── Products ── */
+.products-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:52px;}
+@media(max-width:800px){.products-grid{grid-template-columns:1fr;}}
+
+.product-card{
+  background:var(--card);border:1px solid var(--border);border-radius:4px;
+  padding:40px 36px;position:relative;overflow:hidden;
+}
+.product-card::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(201,168,76,0.04) 0%,transparent 55%);
+  pointer-events:none;
+}
+.product-card-eyebrow{
+  font-size:0.6rem;font-weight:600;letter-spacing:0.3em;text-transform:uppercase;
+  color:var(--gold);opacity:0.65;margin-bottom:18px;
+}
+.product-card-title{
+  font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;
+  font-size:2.4rem;color:var(--text);line-height:1;margin-bottom:16px;
+}
+.product-card-desc{
+  font-size:0.86rem;color:var(--muted);line-height:1.75;margin-bottom:24px;
+}
+.product-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:28px;}
+.product-tag{
+  font-size:0.67rem;letter-spacing:0.06em;color:var(--dim);
+  border:1px solid rgba(201,168,76,0.12);border-radius:2px;
+  padding:4px 10px;
+}
+.product-cta{
+  font-family:'Inter',sans-serif;font-size:0.7rem;font-weight:600;
+  letter-spacing:0.12em;text-transform:uppercase;
+  color:var(--gold);text-decoration:none;
+  display:inline-flex;align-items:center;gap:8px;
+  transition:gap 0.2s;
+}
+.product-cta::after{content:'→';}
+.product-cta:hover{gap:14px;}
+
+/* ── How it works ── */
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:32px;margin-top:52px;}
+@media(max-width:768px){.steps{grid-template-columns:1fr;gap:24px;}}
+
+.step{
+  background:var(--card);border:1px solid var(--border);border-radius:4px;
+  padding:32px 28px 28px;position:relative;
+}
+.step-num{
+  font-family:'Cormorant Garamond',serif;font-style:italic;
+  font-size:3.8rem;color:var(--faint);line-height:1;
+  position:absolute;top:20px;right:20px;
+}
+.step-title{
+  font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:400;
+  font-size:1.3rem;color:var(--text);margin-bottom:12px;
+}
+.step-desc{font-size:0.82rem;color:var(--muted);line-height:1.72;}
+
+/* ── Excerpt ── */
+.excerpt-wrap{max-width:700px;margin:0 auto;text-align:center;}
+.excerpt-ornament{font-size:0.68rem;letter-spacing:0.5em;color:var(--gold);opacity:0.35;margin-bottom:32px;}
+.excerpt-label{
+  font-size:0.62rem;letter-spacing:0.3em;text-transform:uppercase;
+  color:var(--dim);margin-bottom:24px;
+}
+blockquote.excerpt{
+  font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;
+  font-size:clamp(1.1rem,2.4vw,1.45rem);color:var(--text);
+  line-height:1.78;margin-bottom:28px;
+}
+.excerpt-credit{font-size:0.72rem;letter-spacing:0.1em;color:var(--muted);}
+.excerpt-link{color:var(--gold);text-decoration:none;transition:opacity 0.2s;}
+.excerpt-link:hover{opacity:0.7;}
+
+/* ── Pricing ── */
+.pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:52px;}
+@media(max-width:860px){.pricing-grid{grid-template-columns:1fr;max-width:340px;margin-left:auto;margin-right:auto;}}
+@media(min-width:560px) and (max-width:860px){.pricing-grid{grid-template-columns:1fr 1fr;max-width:640px;}}
+
+.price-card{
+  background:var(--card);border:1px solid var(--border);border-radius:4px;
+  padding:36px 28px;text-align:center;position:relative;
+}
+.price-card.featured{border-color:rgba(201,168,76,0.45);box-shadow:0 0 40px rgba(201,168,76,0.06);}
+.price-badge{
+  position:absolute;top:-11px;left:50%;transform:translateX(-50%);
+  font-family:'Inter',sans-serif;font-size:0.58rem;font-weight:700;
+  letter-spacing:0.18em;text-transform:uppercase;
+  background:var(--gold);color:#080705;
+  padding:4px 14px;border-radius:2px;white-space:nowrap;
+}
+.price-tier{font-size:0.6rem;font-weight:600;letter-spacing:0.3em;text-transform:uppercase;color:var(--dim);margin-bottom:8px;}
+.price-range{font-size:0.76rem;color:var(--muted);margin-bottom:20px;}
+.price-amount{
+  font-family:'Cormorant Garamond',serif;font-style:italic;
+  font-size:3.2rem;color:var(--text);line-height:1;margin-bottom:4px;
+}
+.price-amount sup{font-size:1.3rem;vertical-align:top;margin-top:7px;display:inline-block;}
+.price-per{font-size:0.7rem;color:var(--muted);margin-bottom:12px;}
+.price-bundle{font-size:0.82rem;color:var(--gold);margin-bottom:2px;}
+.price-savings{font-size:0.66rem;letter-spacing:0.06em;color:var(--dim);margin-bottom:24px;}
+.price-divider{height:1px;background:var(--border);margin:0 0 24px;}
+.price-cta{
+  display:block;width:100%;padding:11px;border-radius:2px;
+  font-family:'Inter',sans-serif;font-size:0.7rem;font-weight:600;
+  letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;
+  text-decoration:none;text-align:center;
+  background:none;border:1px solid var(--border2);color:var(--text);
+  transition:background 0.2s,border-color 0.2s,color 0.2s;
+}
+.price-cta:hover{border-color:var(--gold);color:var(--gold);background:rgba(201,168,76,0.06);}
+.price-cta.gold{background:var(--gold);border-color:var(--gold);color:#080705;font-weight:700;}
+.price-cta.gold:hover{background:var(--gold2);}
+
+/* ── Final CTA ── */
+.final-cta{
+  text-align:center;
+  background:
+    radial-gradient(ellipse 60% 80% at 50% 50%, rgba(80,40,0,0.12) 0%, transparent 65%);
+}
+.final-cta-title{
+  font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;
+  font-size:clamp(2.5rem,6vw,4.8rem);color:var(--text);
+  line-height:1.08;margin-bottom:20px;
+}
+.final-cta-sub{font-size:0.88rem;color:var(--muted);margin-bottom:40px;}
+
+/* ── Footer ── */
+footer{
+  padding:36px 40px;border-top:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:16px;
+}
+@media(max-width:600px){footer{padding:28px 20px;}}
+.footer-wordmark{
+  font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;
+  font-size:1.1rem;color:var(--dim);letter-spacing:0.04em;
+}
+.footer-links{display:flex;gap:20px;flex-wrap:wrap;}
+.footer-link{
+  font-size:0.68rem;letter-spacing:0.08em;color:var(--faint);
+  text-decoration:none;transition:color 0.2s;
+}
+.footer-link:hover{color:var(--muted);}
+
+/* ── Reveal animation ── */
+.reveal{opacity:0;transform:translateY(22px);transition:opacity 0.65s ease,transform 0.65s ease;}
+.reveal.in{opacity:1;transform:none;}
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="nav-wordmark" href="landing.html">Un&#x200C;writ&#x200C;ten</a>
+  <div class="nav-links">
+    <a class="nav-link" href="library.html">Public Library</a>
+    <a class="nav-link" href="storied-pitch.html">Storied</a>
+    <a class="nav-link" href="pricing.html">Pricing</a>
+    <a class="nav-btn" href="login.html">Sign In</a>
+    <a class="nav-btn primary" href="login.html">Start Writing</a>
+  </div>
+</nav>
+
+<!-- ── Hero ── -->
+<div class="hero">
+  <canvas id="hero-canvas"></canvas>
+  <div class="hero-ambient"></div>
+  <div class="hero-content">
+    <div class="hero-ornament">⟡ &nbsp;⟡ &nbsp;⟡</div>
+    <div class="hero-eyebrow">AI-Powered Storytelling</div>
+    <h1 class="hero-title">Every story you've<br><em>imagined,</em> written.</h1>
+    <p class="hero-sub">Choose your world. Name your characters. Unwritten does the rest — complete novels, personalized to you, ready in minutes.</p>
+    <div class="hero-ctas">
+      <a class="cta-primary" href="login.html">Start Writing →</a>
+      <a class="cta-outline" href="library.html">Browse the Library</a>
+    </div>
+  </div>
+  <div class="hero-scroll-hint">scroll</div>
+</div>
+
+<!-- ── Two Products ── -->
+<div class="section">
+  <div class="section-inner">
+    <div class="reveal">
+      <div class="eyebrow">Two ways to tell a story</div>
+      <h2 class="section-title">Fiction on demand.<br>Or a memoir for real life.</h2>
+    </div>
+    <div class="products-grid">
+      <div class="product-card reveal">
+        <div class="product-card-eyebrow">AI Fiction</div>
+        <div class="product-card-title">Unwritten</div>
+        <p class="product-card-desc">Pick a genre, name your characters, set your themes. The AI writes your complete novel — full chapters, chapter by chapter, yours to keep and continue with a sequel.</p>
+        <div class="product-tags">
+          <span class="product-tag">Dark Romance</span>
+          <span class="product-tag">Epic Fantasy</span>
+          <span class="product-tag">Psychological Thriller</span>
+          <span class="product-tag">Sci-Fi</span>
+          <span class="product-tag">Historical Fiction</span>
+          <span class="product-tag">Horror</span>
+          <span class="product-tag">+ 14 more</span>
+        </div>
+        <a class="product-cta" href="login.html">Start your story</a>
+      </div>
+      <div class="product-card reveal" style="transition-delay:0.1s">
+        <div class="product-card-eyebrow">Personal Memoir — Gift</div>
+        <div class="product-card-title">Storied</div>
+        <p class="product-card-desc">Tell us about two real people — who they are, how they met, the moments that defined them. We write their story as a real book, the way it deserves to be told.</p>
+        <div class="product-tags">
+          <span class="product-tag">Anniversary</span>
+          <span class="product-tag">Birthday</span>
+          <span class="product-tag">Wedding Gift</span>
+          <span class="product-tag">Retirement</span>
+          <span class="product-tag">Memorial</span>
+          <span class="product-tag">Graduation</span>
+        </div>
+        <a class="product-cta" href="storied-pitch.html">Tell their story</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── How it works ── -->
+<div class="section section-alt">
+  <div class="section-inner">
+    <div class="reveal">
+      <div class="eyebrow">How it works</div>
+      <h2 class="section-title">Three steps to your book.</h2>
+      <p class="section-sub">From idea to finished novel in minutes. No writing required.</p>
+    </div>
+    <div class="steps">
+      <div class="step reveal">
+        <div class="step-num">01</div>
+        <div class="step-title">Choose your world</div>
+        <p class="step-desc">Pick from 20+ genres — romance, fantasy, thriller, sci-fi, horror, and more. Write a premise or leave it blank and we'll invent one.</p>
+      </div>
+      <div class="step reveal" style="transition-delay:0.1s">
+        <div class="step-num">02</div>
+        <div class="step-title">Shape the story</div>
+        <p class="step-desc">Name your characters, choose themes, set chapter length, and select what to keep out. Content warnings, series arcs, sequels — the AI follows your direction exactly.</p>
+      </div>
+      <div class="step reveal" style="transition-delay:0.2s">
+        <div class="step-num">03</div>
+        <div class="step-title">Read your book</div>
+        <p class="step-desc">Your complete novel is saved to your library permanently. Read chapter by chapter, share it to the public library, or continue it with a sequel.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Reading excerpt ── -->
+<div class="section">
+  <div class="section-inner excerpt-wrap">
+    <div class="excerpt-ornament reveal">⟡ &nbsp;⟡ &nbsp;⟡</div>
+    <div class="excerpt-label reveal">From the Public Library</div>
+    <blockquote class="excerpt reveal">
+      "Maren had drawn the edge of the world three times before she understood what it meant. The first time she was twelve, filling a borrowed journal with imaginary continents. The second time she was twenty-two, drafting survey maps for the Imperial Academy, her hands steady and her ambitions modest. The third time she was thirty-four, standing at the literal edge of what anyone had ever charted, her compass spinning in slow, uncertain circles."
+    </blockquote>
+    <div class="excerpt-credit reveal">
+      — <em>The Last Cartographer</em> · Fantasy &nbsp;·&nbsp;
+      <a class="excerpt-link" href="library.html">Browse the full library →</a>
+    </div>
+  </div>
+</div>
+
+<!-- ── Pricing ── -->
+<div class="section section-alt">
+  <div class="section-inner">
+    <div class="reveal">
+      <div class="eyebrow">Pricing</div>
+      <h2 class="section-title">Pay per story.<br>Keep them forever.</h2>
+      <p class="section-sub">No subscription required. Buy a single story or save with a bundle of three. Every story is saved to your library permanently — read, share, and continue with sequels anytime.</p>
+    </div>
+    <div class="pricing-grid">
+      <div class="price-card reveal">
+        <div class="price-tier">Compact</div>
+        <div class="price-range">Under 25 chapters</div>
+        <div class="price-amount"><sup>$</sup>6.99</div>
+        <div class="price-per">per story</div>
+        <div class="price-bundle">3 stories for $15.00</div>
+        <div class="price-savings">Save $5.97 with a bundle</div>
+        <div class="price-divider"></div>
+        <a class="price-cta" href="pricing.html">See full details</a>
+      </div>
+      <div class="price-card featured reveal" style="transition-delay:0.1s">
+        <div class="price-badge">Most Popular</div>
+        <div class="price-tier">Standard</div>
+        <div class="price-range">25–50 chapters</div>
+        <div class="price-amount"><sup>$</sup>7.99</div>
+        <div class="price-per">per story</div>
+        <div class="price-bundle">3 stories for $20.00</div>
+        <div class="price-savings">Save $3.97 with a bundle</div>
+        <div class="price-divider"></div>
+        <a class="price-cta gold" href="pricing.html">See full details</a>
+      </div>
+      <div class="price-card reveal" style="transition-delay:0.2s">
+        <div class="price-tier">Epic</div>
+        <div class="price-range">50–100 chapters</div>
+        <div class="price-amount"><sup>$</sup>8.99</div>
+        <div class="price-per">per story</div>
+        <div class="price-bundle">3 stories for $22.00</div>
+        <div class="price-savings">Save $4.97 with a bundle</div>
+        <div class="price-divider"></div>
+        <a class="price-cta" href="pricing.html">See full details</a>
+      </div>
+    </div>
+    <p class="reveal" style="text-align:center;margin-top:24px;font-size:0.76rem;color:var(--faint);">
+      Public Library subscription — unlimited reading for the full community — coming soon. &nbsp;
+      <a href="pricing.html" style="color:var(--gold);text-decoration:none;">Full pricing details →</a>
+    </p>
+  </div>
+</div>
+
+<!-- ── Final CTA ── -->
+<div class="section final-cta">
+  <div class="section-inner">
+    <div class="final-cta-title reveal">Your next chapter<br>is waiting.</div>
+    <p class="final-cta-sub reveal">Join the readers and writers shaping the Unwritten library.</p>
+    <div class="reveal" style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+      <a class="cta-primary" href="login.html">Begin Writing</a>
+      <a class="cta-outline" href="library.html">Browse for Free</a>
+    </div>
+  </div>
+</div>
+
+<!-- ── Footer ── -->
+<footer>
+  <span class="footer-wordmark">Un&#x200C;writ&#x200C;ten</span>
+  <div class="footer-links">
+    <a class="footer-link" href="library.html">Public Library</a>
+    <a class="footer-link" href="storied-pitch.html">Storied</a>
+    <a class="footer-link" href="pricing.html">Pricing</a>
+    <a class="footer-link" href="login.html">Sign In</a>
+    <a class="footer-link" href="legal.html">Legal</a>
+  </div>
+</footer>
+
+<script>
+// ── Ember particles ──
+const cv = document.getElementById('hero-canvas');
+const cx = cv.getContext('2d');
+let pool = [];
+function resize(){cv.width=innerWidth;cv.height=innerHeight;}
+window.addEventListener('resize',resize);resize();
+function spawnEmber(){
+  return{x:Math.random()*cv.width,y:cv.height+8,
+    vx:(Math.random()-.5)*.6,vy:-(Math.random()*1.2+.3),
+    r:Math.random()*2+.5,a:Math.random()*.5+.1,
+    col:`hsl(${Math.random()*25+8},100%,${Math.random()*25+48}%)`,
+    life:1,dec:Math.random()*.006+.002};
+}
+(function tick(){
+  cx.clearRect(0,0,cv.width,cv.height);
+  if(pool.length<60)pool.push(spawnEmber());
+  pool=pool.filter(p=>p.life>0);
+  for(const p of pool){
+    p.x+=p.vx;p.y+=p.vy;p.life-=p.dec;
+    p.vx+=(Math.random()-.5)*.06;p.vx=Math.max(-1,Math.min(1,p.vx));
+    cx.save();cx.globalAlpha=p.a*p.life;cx.shadowBlur=5;cx.shadowColor=p.col;
+    cx.fillStyle=p.col;cx.beginPath();cx.arc(p.x,p.y,p.r,0,Math.PI*2);cx.fill();cx.restore();
+  }
+  requestAnimationFrame(tick);
+})();
+
+// ── Scroll reveal ──
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('in'); });
+},{threshold:0.1,rootMargin:'0px 0px -50px 0px'});
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
