@@ -1,5 +1,11 @@
 # CLAUDE.md — Frontend Website Rules
 
+## Supabase — This Project Only
+- **This site's database:** Supabase project ref `puywhvrgixlhijxzircy` (`entertheunwritten.com`)
+- **MCP name:** `supabase-entertheunwritten` — use this one exclusively.
+- **Ignore all other Supabase connections** (`supabase-aac`, `supabase-assessments`, `supabase-rpg`) — those belong to a separate project (Continuum ABA) and have no relation to this site.
+- If `supabase-entertheunwritten` is not connected (only shows `authenticate`/`complete_authentication` tools), run the OAuth flow via `/mcp` or call `authenticate` to reconnect.
+
 ## Always Do First
 - **Invoke the `frontend-design` skill** before writing any frontend code, every session, no exceptions.
 

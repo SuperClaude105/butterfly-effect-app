@@ -9,7 +9,7 @@ const { createRequire } = require('module');
 const app = express();
 app.use(express.json({ limit: '50mb' }));
 app.use(express.static(path.join(__dirname)));
-app.get('/', (_req, res) => res.redirect('/login.html'));
+app.get('/', (_req, res) => res.redirect('/landing.html'));
 
 // ─── GET /api/credits ──────────────────────────────────────────────────────
 app.get('/api/credits', async (req, res) => {
@@ -21,7 +21,7 @@ app.get('/api/credits', async (req, res) => {
 
 // ─── POST /api/checkout ────────────────────────────────────────────────────
 app.post('/api/checkout', async (req, res) => {
-  const { tier, bundle } = req.body;
+  const { tier, bundle, giftEmail } = req.body;
   const user = await getUserFromToken(req.headers.authorization);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -29,23 +29,38 @@ app.post('/api/checkout', async (req, res) => {
   const price = TIER_PRICING[key];
   if (!price) return res.status(400).json({ error: 'Invalid tier' });
 
+  // $2 loyalty discount for users with 3+ public stories
+  const { count: publicCount } = await supabaseAdmin
+    .from('stories').select('id', { count: 'exact', head: true })
+    .eq('user_id', user.id).eq('is_public', true).is('deleted_at', null);
+  const discount = (publicCount >= 3 && !giftEmail) ? 200 : 0;
+  const finalAmount = Math.max(price.amount - discount, 100);
+
+  const label = giftEmail
+    ? `Gift — ${price.label}`
+    : discount > 0 ? `${price.label} (Library Contributor $2 off)` : price.label;
+
   try {
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [{
         price_data: {
           currency: 'usd',
-          product_data: { name: `Unwritten — ${price.label}` },
-          unit_amount: price.amount,
+          product_data: { name: `Unwritten — ${label}` },
+          unit_amount: finalAmount,
         },
         quantity: 1,
       }],
       mode: 'payment',
       success_url: `${process.env.APP_URL}/shelf.html?payment=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url:  `${process.env.APP_URL}/index.html?payment=cancelled`,
-      metadata: { userId: user.id, credits: String(price.credits) },
+      metadata: {
+        userId:    user.id,
+        credits:   String(price.credits),
+        giftEmail: giftEmail || '',
+      },
     });
-    res.json({ url: session.url });
+    res.json({ url: session.url, discount });
   } catch (err) {
     console.error('Stripe checkout error:', err.message);
     res.status(500).json({ error: err.message });
@@ -71,7 +86,52 @@ app.post('/api/payment/confirm', async (req, res) => {
     if (session.payment_status !== 'paid') return res.status(400).json({ error: 'Not paid' });
     if (session.metadata.userId !== user.id) return res.status(403).json({ error: 'Forbidden' });
 
-    const credits = parseInt(session.metadata.credits);
+    const credits   = parseInt(session.metadata.credits);
+    const giftEmail = session.metadata.giftEmail || '';
+
+    if (giftEmail) {
+      // Gift flow — find recipient
+      const { data: { users } } = await supabaseAdmin.auth.admin.listUsers();
+      const recipient = (users || []).find(u => u.email?.toLowerCase() === giftEmail.toLowerCase());
+
+      await supabaseAdmin.from('processed_payments').insert({ session_id: sessionId, user_id: user.id, credits });
+
+      if (recipient) {
+        await supabaseAdmin.rpc('add_credits', { p_user_id: recipient.id, p_credits: credits });
+        return res.json({ success: true, gift: true, delivered: true, credits });
+      } else {
+        // Recipient not registered — create pending gift + send email
+        const { data: gift } = await supabaseAdmin
+          .from('pending_gift_credits')
+          .insert({ from_user_id: user.id, to_email: giftEmail, credits, tier: 'gift' })
+          .select().single();
+
+        const claimUrl = `${process.env.APP_URL}/accept-gift.html?token=${gift.token}`;
+        const fromEmail = user.email || 'Someone';
+        await resend.emails.send({
+          from: 'Unwritten <noreply@entertheunwritten.com>',
+          to:   giftEmail,
+          subject: `You've received ${credits} Unwritten credit${credits !== 1 ? 's' : ''}`,
+          html: `
+            <div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;padding:40px 24px;background:#0d0a07;color:#e8d5b0;">
+              <h1 style="font-size:26px;color:#c8a96e;margin-bottom:4px;">Unwritten</h1>
+              <p style="color:#7a6a58;font-size:13px;margin-bottom:36px;">A gift has been sent your way</p>
+              <h2 style="font-size:22px;color:#f0e8d0;margin-bottom:14px;">${credits} Story Credit${credits !== 1 ? 's' : ''}</h2>
+              <p style="font-size:16px;line-height:1.75;color:#c0a880;margin-bottom:32px;">
+                ${fromEmail} sent you ${credits} credit${credits !== 1 ? 's' : ''} on Unwritten — use ${credits === 1 ? 'it' : 'them'} to generate your own AI-written novel, personalized to your characters and choices.
+              </p>
+              <a href="${claimUrl}" style="display:inline-block;padding:13px 30px;background:#c8a96e;color:#0d0a07;text-decoration:none;font-size:15px;font-weight:bold;border-radius:3px;">
+                Claim Your Credits →
+              </a>
+              <p style="margin-top:40px;font-size:12px;color:#3a2e1e;">This link can only be used once. Create a free account to claim it.</p>
+            </div>`,
+        });
+
+        return res.json({ success: true, gift: true, delivered: false, credits });
+      }
+    }
+
+    // Normal (non-gift) flow
     await supabaseAdmin.rpc('add_credits', { p_user_id: user.id, p_credits: credits });
     await supabaseAdmin.from('processed_payments').insert({ session_id: sessionId, user_id: user.id, credits });
 
@@ -80,6 +140,41 @@ app.post('/api/payment/confirm', async (req, res) => {
     console.error('Payment confirm error:', err.message);
     res.status(500).json({ error: err.message });
   }
+});
+
+// ─── POST /api/accept-gift ─────────────────────────────────────────────────
+app.post('/api/accept-gift', async (req, res) => {
+  const { token } = req.body;
+  const user = await getUserFromToken(req.headers.authorization);
+  if (!user || !token) return res.status(400).json({ error: 'Missing fields' });
+
+  const { data: gift } = await supabaseAdmin
+    .from('pending_gift_credits')
+    .select('*').eq('token', token).is('accepted_at', null).maybeSingle();
+  if (!gift) return res.status(404).json({ error: 'Gift not found or already claimed' });
+
+  await supabaseAdmin.rpc('add_credits', { p_user_id: user.id, p_credits: gift.credits });
+  await supabaseAdmin.from('pending_gift_credits')
+    .update({ accepted_at: new Date().toISOString() }).eq('id', gift.id);
+
+  res.json({ success: true, credits: gift.credits });
+});
+
+// ─── GET /api/gift-info/:token — validate gift token without auth ─────────
+app.get('/api/gift-info/:token', async (req, res) => {
+  const { token } = req.params;
+  if (!token) return res.status(400).json({ error: 'Missing token' });
+
+  const { data: gift } = await supabaseAdmin
+    .from('pending_gift_credits')
+    .select('credits, tier, accepted_at')
+    .eq('token', token)
+    .maybeSingle();
+
+  if (!gift) return res.status(404).json({ error: 'Gift not found' });
+  if (gift.accepted_at) return res.status(410).json({ error: 'Already claimed' });
+
+  res.json({ valid: true, credits: gift.credits, tier: gift.tier });
 });
 
 // ─── POST /api/webhook — Stripe webhook (backup for missed redirects) ───────
@@ -974,6 +1069,75 @@ app.post('/api/accept-share', async (req, res) => {
 
   await supabaseAdmin.from('pending_shares').update({ accepted_at: new Date().toISOString() }).eq('token', token);
   return res.json({ success: true, bookTitle: story.data?.bookTitle || 'Your book' });
+});
+
+// ─── GET /api/export-pdf/:storyId ─────────────────────────────────────────
+app.get('/api/export-pdf/:storyId', async (req, res) => {
+  const user = await getUserFromToken(req.headers.authorization);
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+  const { data: story } = await supabaseAdmin
+    .from('stories').select('*').eq('id', req.params.storyId).eq('user_id', user.id).maybeSingle();
+  if (!story) return res.status(404).json({ error: 'Story not found' });
+
+  const d        = story.data || {};
+  const chapters = d.progress?.chapters || [];
+  const titles   = d.progress?.titles   || [];
+  const decisions= d.progress?.decisions|| [];
+  const bookTitle= d.bookTitle || d.config?.bookTitleInput || 'Untitled';
+  const genre    = d.config?.genre || '';
+
+  const chaptersHtml = chapters.map((text, i) => {
+    const paragraphs = text.split(/\n\n+/).filter(p => p.trim())
+      .map(p => `<p>${p.trim().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p>`).join('');
+    const decisionNote = decisions[i]
+      ? `<div class="decision-divider"><span class="decision-text">You chose: ${decisions[i]}</span></div>` : '';
+    return `<div class="chapter ${i > 0 ? 'page-break' : ''}">
+      <div class="chapter-num">Chapter ${i + 1}</div>
+      <h2 class="chapter-title">${titles[i] || ''}</h2>
+      <div class="chapter-body">${paragraphs}</div>
+      ${decisionNote}</div>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Playfair+Display:ital,wght@0,700;1,400&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'EB Garamond',Georgia,serif;font-size:12.5pt;line-height:1.85;color:#1a0d05;background:#faf6f0}
+.title-page{height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;page-break-after:always;background:#0d0505;color:#d4a574;text-align:center;padding:4rem}
+.title-page h1{font-family:'Playfair Display',serif;font-size:38pt;font-style:italic;line-height:1.1;margin-bottom:1rem}
+.title-page .genre{font-size:10pt;letter-spacing:.25em;text-transform:uppercase;opacity:.4;margin-bottom:3rem}
+.chapter{page-break-before:always;padding:1em 0 2em}
+.chapter-num{font-size:9pt;letter-spacing:.35em;text-transform:uppercase;opacity:.4;margin-bottom:.75rem;text-align:center}
+.chapter-title{font-family:'Playfair Display',serif;font-size:20pt;font-style:italic;font-weight:700;text-align:center;color:#2d0a0a;margin-bottom:2.5rem}
+.chapter-body p{margin-bottom:1.1em;text-indent:2em}
+.chapter-body p:first-child{text-indent:0}
+.decision-divider{margin-top:2.5rem;text-align:center;padding:1rem 0;border-top:1px solid rgba(139,69,19,.2);border-bottom:1px solid rgba(139,69,19,.2)}
+.decision-text{font-style:italic;font-size:10pt;color:#5a2d0a;opacity:.75;letter-spacing:.05em}
+</style></head><body>
+<div class="title-page"><h1>${bookTitle}</h1><p class="genre">${genre} · Unwritten</p></div>
+${chaptersHtml}</body></html>`;
+
+  try {
+    const requireFrom = createRequire('file:///C:/Users/super/AppData/Local/Temp/puppeteer-test/');
+    const puppeteer = requireFrom('puppeteer');
+    const browser = await puppeteer.launch({
+      executablePath: 'C:/Users/super/.cache/puppeteer/chrome/win64-147.0.7727.56/chrome-win64/chrome.exe',
+      headless: true,
+    });
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+    const pdf = await page.pdf({ format: 'A5', margin: { top:'1cm', bottom:'1cm', left:'1.5cm', right:'1.5cm' }, printBackground: true });
+    await browser.close();
+
+    const safeName = bookTitle.replace(/[^a-zA-Z0-9 \-]/g, '').trim();
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${safeName}.pdf"`);
+    res.send(pdf);
+  } catch (err) {
+    console.error('PDF export error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ─── Start server ──────────────────────────────────────────────────────────

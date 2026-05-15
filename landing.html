@@ -224,9 +224,24 @@ blockquote.excerpt{
 .excerpt-link:hover{opacity:0.7;}
 
 /* ── Pricing ── */
-.pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:52px;}
-@media(max-width:860px){.pricing-grid{grid-template-columns:1fr;max-width:340px;margin-left:auto;margin-right:auto;}}
-@media(min-width:560px) and (max-width:860px){.pricing-grid{grid-template-columns:1fr 1fr;max-width:640px;}}
+.pricing-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;margin-top:52px;max-width:700px;margin-left:auto;margin-right:auto;}
+@media(max-width:640px){.pricing-grid{grid-template-columns:1fr;max-width:340px;}}
+
+.bundle-callout{
+  max-width:700px;margin:24px auto 0;
+  background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.22);
+  border-radius:4px;padding:20px 28px;
+  display:flex;align-items:center;gap:20px;flex-wrap:wrap;justify-content:center;
+}
+.bundle-callout-icon{font-size:1.6rem;flex-shrink:0;opacity:0.85;}
+.bundle-callout-body{text-align:left;}
+.bundle-callout-headline{
+  font-family:'Cormorant Garamond',serif;font-style:italic;
+  font-size:1.25rem;color:var(--gold);line-height:1.2;margin-bottom:4px;
+}
+.bundle-callout-detail{font-size:0.76rem;color:var(--muted);line-height:1.6;}
+.bundle-callout-detail strong{color:var(--text);}
+@media(max-width:540px){.bundle-callout{padding:16px 18px;}.bundle-callout-body{text-align:center;}}
 
 .price-card{
   background:var(--card);border:1px solid var(--border);border-radius:4px;
@@ -325,6 +340,7 @@ footer{
       <a class="cta-primary" href="login.html">Start Writing →</a>
       <a class="cta-outline" href="library.html">Browse the Library</a>
     </div>
+    <p style="margin-top:22px;font-size:0.76rem;color:var(--muted);">Looking for a gift? <a href="login.html" style="color:var(--gold);text-decoration:none;border-bottom:1px solid rgba(201,168,76,0.3);padding-bottom:1px;transition:border-color 0.2s;" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='rgba(201,168,76,0.3)'">Give story credits →</a></p>
   </div>
   <div class="hero-scroll-hint">scroll</div>
 </div>
@@ -443,18 +459,19 @@ footer{
         <div class="price-divider"></div>
         <a class="price-cta gold" href="pricing.html">See full details</a>
       </div>
-      <div class="price-card reveal" style="transition-delay:0.2s">
-        <div class="price-tier">Epic</div>
-        <div class="price-range">50–100 chapters</div>
-        <div class="price-amount"><sup>$</sup>8.99</div>
-        <div class="price-per">per story</div>
-        <div class="price-bundle">3 stories for $22.00</div>
-        <div class="price-savings">Save $4.97 with a bundle</div>
-        <div class="price-divider"></div>
-        <a class="price-cta" href="pricing.html">See full details</a>
+    </div>
+    <div class="bundle-callout reveal">
+      <div class="bundle-callout-icon">✦</div>
+      <div class="bundle-callout-body">
+        <div class="bundle-callout-headline">Buy 3, save up to $6</div>
+        <div class="bundle-callout-detail">
+          Bundles give you <strong>3 story credits at a discounted rate</strong> — use them on any stories, any time.
+          Compact bundles start at <strong>$15</strong>&thinsp;·&thinsp;Standard at <strong>$20</strong>.
+          Credits never expire.
+        </div>
       </div>
     </div>
-    <p class="reveal" style="text-align:center;margin-top:24px;font-size:0.76rem;color:var(--faint);">
+    <p class="reveal" style="text-align:center;margin-top:20px;font-size:0.76rem;color:var(--faint);">
       Public Library subscription — unlimited reading for the full community — coming soon. &nbsp;
       <a href="pricing.html" style="color:var(--gold);text-decoration:none;">Full pricing details →</a>
     </p>

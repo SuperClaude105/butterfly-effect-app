@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claim Your Gift — Unwritten</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Playfair+Display:ital,wght@0,700;1,400;1,700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --primary: #8B0000;
+  --accent:  #c4a264;
+  --bg:      #0a0505;
+  --surface: #130808;
+  --border:  rgba(255,255,255,0.1);
+  --text:    #e8d5b7;
+  --muted:   rgba(232,213,183,0.45);
+  --glow:    rgba(139,0,0,0.35);
+}
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'EB Garamond', Georgia, serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+body::before {
+  content:''; position:fixed; inset:0;
+  background:
+    radial-gradient(ellipse 55% 45% at 20% 30%, rgba(139,0,0,0.2) 0%, transparent 65%),
+    radial-gradient(ellipse 40% 55% at 80% 80%, rgba(80,0,0,0.15) 0%, transparent 60%);
+  pointer-events:none; z-index:0;
+}
+.card {
+  position: relative;
+  z-index: 1;
+  background: var(--surface);
+  border: 1px solid rgba(196,162,100,0.2);
+  border-radius: 4px;
+  padding: 3rem 3.5rem;
+  max-width: 460px;
+  width: 100%;
+  text-align: center;
+}
+.ornament {
+  font-size: 1rem;
+  letter-spacing: 1em;
+  opacity: 0.2;
+  margin-bottom: 1.5rem;
+}
+.wordmark {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.4rem;
+  font-style: italic;
+  color: var(--accent);
+  text-decoration: none;
+  display: block;
+  margin-bottom: 2rem;
+}
+.gift-icon {
+  font-size: 2.8rem;
+  margin-bottom: 1.2rem;
+  display: block;
+}
+h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 0.75rem;
+  line-height: 1.2;
+}
+.subtitle {
+  font-size: 1rem;
+  color: var(--muted);
+  line-height: 1.7;
+  margin-bottom: 2rem;
+}
+.credit-pill {
+  display: inline-block;
+  background: rgba(196,162,100,0.1);
+  border: 1px solid rgba(196,162,100,0.3);
+  border-radius: 2px;
+  padding: 0.5rem 1.4rem;
+  font-size: 1rem;
+  color: var(--accent);
+  margin-bottom: 2rem;
+  letter-spacing: 0.08em;
+}
+.btn {
+  display: block;
+  width: 100%;
+  font-family: 'EB Garamond', serif;
+  font-size: 0.95rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  padding: 1rem;
+  border: 1px solid var(--accent);
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: color 0.3s, box-shadow 0.3s;
+  text-decoration: none;
+  margin-bottom: 0.75rem;
+}
+.btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s cubic-bezier(0.22,1,0.36,1);
+}
+.btn:hover::before { transform: scaleX(1); }
+.btn:hover { color: var(--bg); box-shadow: 0 0 30px var(--glow); }
+.btn span { position: relative; z-index: 1; }
+.btn.secondary {
+  border-color: var(--border);
+  color: var(--muted);
+}
+.btn.secondary::before { background: rgba(255,255,255,0.06); }
+.btn.secondary:hover { color: var(--text); box-shadow: none; }
+.divider-text {
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+  opacity: 0.5;
+  margin-bottom: 0.75rem;
+}
+.status-msg {
+  font-size: 0.88rem;
+  color: var(--muted);
+  margin-top: 1rem;
+  line-height: 1.6;
+  min-height: 1.4em;
+}
+.status-msg.success { color: #8acd90; }
+.status-msg.error   { color: #c87a6a; }
+.loading { opacity: 0.4; font-style: italic; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <p class="ornament">⟡ ⟡ ⟡</p>
+  <a class="wordmark" href="/">Unwritten</a>
+
+  <span class="gift-icon">🎁</span>
+
+  <div id="view-loading">
+    <p class="loading" style="color:var(--muted);font-size:1rem;">Checking your gift…</p>
+  </div>
+
+  <div id="view-gift" style="display:none">
+    <h1>You've received a gift!</h1>
+    <p class="subtitle" id="gift-desc">Someone has gifted you story credits on Unwritten — your ticket to an AI-written novel, tailored entirely to you.</p>
+    <div class="credit-pill" id="credit-pill">— credits</div>
+    <div id="btn-claim-wrap">
+      <button class="btn" onclick="claimNow()"><span>Claim My Credits</span></button>
+    </div>
+    <div id="btn-login-wrap" style="display:none">
+      <p class="subtitle" style="font-size:0.88rem;margin-bottom:1.2rem;">Create a free account to claim your credits. Your gift will be waiting when you sign up.</p>
+      <a class="btn" href="/login.html" id="btn-login"><span>Log In to Claim</span></a>
+      <p class="divider-text" style="margin-top:0.75rem;">or</p>
+      <a class="btn secondary" href="/login.html" id="btn-signup"><span>Create Account</span></a>
+    </div>
+    <p class="status-msg" id="status-msg"></p>
+  </div>
+
+  <div id="view-invalid" style="display:none">
+    <h1 style="font-size:1.4rem;color:var(--muted);">Invalid or expired link</h1>
+    <p class="subtitle">This gift link has already been claimed or is no longer valid.</p>
+    <a class="btn" href="/"><span>Go to Unwritten</span></a>
+  </div>
+
+  <div id="view-success" style="display:none">
+    <h1 style="color:#8acd90;">Credits claimed!</h1>
+    <p class="subtitle" id="success-desc">Your credits have been added to your account. Head to your library to start writing.</p>
+    <a class="btn" href="/shelf.html"><span>Go to My Library</span></a>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+const _SB = supabase.createClient(
+  'https://puywhvrgixlhijxzircy.supabase.co',
+  'sb_publishable_ob7bw2JF-iSjqyjSXRu4-g_lLuFagj7'
+);
+
+const token = new URLSearchParams(location.search).get('token');
+
+function show(id) {
+  ['view-loading','view-gift','view-invalid','view-success'].forEach(v => {
+    document.getElementById(v).style.display = v === id ? '' : 'none';
+  });
+}
+
+async function claimNow() {
+  const btn = document.querySelector('#btn-claim-wrap .btn');
+  const statusEl = document.getElementById('status-msg');
+  btn.querySelector('span').textContent = 'Claiming…';
+  btn.style.opacity = '0.6';
+
+  const { data: { session } } = await _SB.auth.getSession();
+  if (!session) {
+    // Store token and redirect to login
+    localStorage.setItem('pendingGiftToken', token);
+    location.href = '/login.html';
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/accept-gift', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+      body: JSON.stringify({ token }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById('success-desc').textContent =
+        `${data.credits} credit${data.credits !== 1 ? 's' : ''} added to your account. Head to your library to start writing.`;
+      show('view-success');
+    } else {
+      statusEl.textContent = data.error || 'Could not claim — this link may have already been used.';
+      statusEl.className = 'status-msg error';
+      btn.querySelector('span').textContent = 'Claim My Credits';
+      btn.style.opacity = '1';
+    }
+  } catch (err) {
+    statusEl.textContent = 'Something went wrong. Please try again.';
+    statusEl.className = 'status-msg error';
+    btn.querySelector('span').textContent = 'Claim My Credits';
+    btn.style.opacity = '1';
+  }
+}
+
+(async function init() {
+  if (!token) { show('view-invalid'); return; }
+
+  // Validate the token via server (avoids RLS issues)
+  let gift;
+  try {
+    const resp = await fetch(`/api/gift-info/${encodeURIComponent(token)}`);
+    if (!resp.ok) { show('view-invalid'); return; }
+    gift = await resp.json();
+    if (!gift.valid) { show('view-invalid'); return; }
+  } catch (_) { show('view-invalid'); return; }
+
+  // Show gift info
+  const tierLabel = gift.tier === 'compact' ? 'Compact' : 'Standard';
+  document.getElementById('credit-pill').textContent =
+    `${gift.credits} ${gift.credits === 1 ? 'Story Credit' : 'Story Credits'} · ${tierLabel}`;
+  document.getElementById('gift-desc').textContent =
+    `Someone has gifted you ${gift.credits === 1 ? 'a story credit' : `${gift.credits} story credits`} on Unwritten — your ticket to an AI-written novel, tailored entirely to you.`;
+
+  show('view-gift');
+
+  // Check if already logged in
+  const { data: { session } } = await _SB.auth.getSession();
+  if (session) {
+    // Logged in — show claim button
+    document.getElementById('btn-claim-wrap').style.display = '';
+    document.getElementById('btn-login-wrap').style.display = 'none';
+  } else {
+    // Not logged in — show login CTAs
+    document.getElementById('btn-claim-wrap').style.display = 'none';
+    document.getElementById('btn-login-wrap').style.display = '';
+    // Pre-save token so shelf.html picks it up after login
+    localStorage.setItem('pendingGiftToken', token);
+  }
+})();
+</script>
+</body>
+</html>

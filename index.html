@@ -528,7 +528,16 @@ input[type=range]::-webkit-slider-thumb:hover { box-shadow:0 0 18px rgba(196,162
       <button onclick="closeBuyModal()" style="position:absolute;top:14px;right:16px;background:none;border:none;color:rgba(232,213,183,0.4);font-size:1.2rem;cursor:pointer;">✕</button>
       <p style="font-size:0.62rem;letter-spacing:0.3em;text-transform:uppercase;color:#c4a264;margin-bottom:8px;">Get Credits</p>
       <h2 style="font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:700;margin-bottom:6px;">Choose your story</h2>
-      <p style="font-size:0.82rem;color:rgba(232,213,183,0.5);margin-bottom:1.5rem;line-height:1.6;">Payment coming soon — during beta, generation is free. Click any option to continue.</p>
+      <p style="font-size:0.82rem;color:rgba(232,213,183,0.5);margin-bottom:1rem;line-height:1.6;">Payment coming soon — during beta, generation is free. Click any option to continue.</p>
+      <div id="discount-notice" style="display:none;background:rgba(196,162,100,0.08);border:1px solid rgba(196,162,100,0.25);border-radius:3px;padding:10px 14px;margin-bottom:1rem;font-size:0.78rem;color:#c4a264;">✦ Library contributor discount — $2 off applied</div>
+      <!-- Gift toggle -->
+      <label style="display:flex;align-items:center;gap:10px;margin-bottom:1rem;cursor:pointer;font-size:0.82rem;color:rgba(232,213,183,0.6);">
+        <input type="checkbox" id="gift-toggle" onchange="toggleGift()" style="width:14px;height:14px;accent-color:#c4a264;">
+        This is a gift
+      </label>
+      <div id="gift-email-wrap" style="display:none;margin-bottom:1rem;">
+        <input type="email" id="gift-email" placeholder="Recipient's email address" style="width:100%;padding:.7rem .9rem;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:3px;color:var(--text);font-family:'EB Garamond',Georgia,serif;font-size:1rem;outline:none;">
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.2rem;">
         <button onclick="buyCredits('compact',false)" class="buy-opt">
           <div style="font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;color:#c4a264;margin-bottom:4px;">Compact</div>
@@ -803,8 +812,8 @@ let _lib = {}, _stories = [], _session = null, _credits = 0, _isComped = false;
   _session = session;
 
   // Load library
-  const { data: rows } = await _SB.from('stories').select('id, data');
-  (rows||[]).forEach(r => { _lib[r.id] = r.data; });
+  const { data: rows } = await _SB.from('stories').select('id, data, is_public');
+  (rows||[]).forEach(r => { _lib[r.id] = { ...r.data, _isPublic: r.is_public }; });
   _stories = Object.values(_lib).sort((a,b)=>(b.lastReadAt||0)-(a.lastReadAt||0));
 
   if (_stories.length > 0) {
@@ -860,23 +869,43 @@ function updateCreditDisplay() {
 }
 
 function openBuyModal() {
+  const pubCount = Object.values(_lib).filter(s => s._isPublic).length;
+  const isGift = document.getElementById('gift-toggle').checked;
+  document.getElementById('discount-notice').style.display = (pubCount >= 3 && !isGift) ? '' : 'none';
   document.getElementById('buy-modal').style.display = 'flex';
 }
 function closeBuyModal() {
   document.getElementById('buy-modal').style.display = 'none';
 }
 
+function toggleGift() {
+  const on = document.getElementById('gift-toggle').checked;
+  document.getElementById('gift-email-wrap').style.display = on ? '' : 'none';
+  const pubCount = Object.values(_lib).filter(s => s._isPublic).length;
+  document.getElementById('discount-notice').style.display = (pubCount >= 3 && !on) ? '' : 'none';
+}
+
 async function buyCredits(tier, bundle) {
   if (!_session) return;
   const btn = event.currentTarget;
   const orig = btn.innerHTML;
-  btn.innerHTML = '<span style="opacity:0.5">Connecting…</span>';
 
+  const isGift = document.getElementById('gift-toggle').checked;
+  const giftEmail = isGift ? document.getElementById('gift-email').value.trim() : null;
+  if (isGift && !giftEmail) {
+    document.getElementById('gift-email').focus();
+    document.getElementById('gift-email').style.borderColor = 'rgba(196,162,100,0.6)';
+    return;
+  }
+
+  btn.innerHTML = '<span style="opacity:0.5">Connecting…</span>';
   try {
+    const body = { tier, bundle };
+    if (giftEmail) body.giftEmail = giftEmail;
     const res = await fetch('/api/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_session.access_token}` },
-      body: JSON.stringify({ tier, bundle }),
+      body: JSON.stringify(body),
     });
     const data = await res.json();
     if (data.url) {

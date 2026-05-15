@@ -1277,6 +1277,9 @@ body::before {
     </div>
   </div>
 
+  <!-- Discount progress -->
+  <div id="discount-progress" style="display:none;padding:0 0 18px;font-size:0.8rem;color:var(--muted);letter-spacing:0.02em;"></div>
+
   <!-- Filter bar -->
   <div class="filter-bar">
     <div class="filter-tabs" id="filter-tabs"></div>
@@ -1333,6 +1336,7 @@ body::before {
     <div class="panel-actions">
       <button class="panel-btn primary-action" id="panel-btn-continue" onclick="continueReading()">Continue Reading</button>
       <button class="panel-btn secondary-action" id="panel-btn-share" onclick="openShareModal()" style="display:none">Share Book</button>
+      <button class="panel-btn secondary-action" id="panel-btn-export" onclick="exportPDF()" style="display:none">Export PDF</button>
       <button class="panel-btn danger-action" id="panel-btn-delete" onclick="confirmDelete()">Delete</button>
     </div>
   </div>
@@ -1669,7 +1673,8 @@ function openPanel(id) {
     ? themes.map(th => `<span class="panel-theme-tag">${th}</span>`).join('')
     : '';
 
-  document.getElementById('panel-btn-share').style.display = finished ? '' : 'none';
+  document.getElementById('panel-btn-share').style.display  = finished ? '' : 'none';
+  document.getElementById('panel-btn-export').style.display = finished ? '' : 'none';
   document.getElementById('panel-btn-continue').textContent = ch === 0 ? 'Start Reading' : 'Continue Reading';
   document.getElementById('panel-btn-delete').textContent = 'Delete';
   document.getElementById('panel-btn-delete').classList.remove('confirming');
@@ -1695,6 +1700,30 @@ function heroAction(id) {
   sessionStorage.setItem('bea_story_id', id);
   sessionStorage.setItem('bea_config', JSON.stringify(s.config||{}));
   location.href = 'read.html';
+}
+
+async function exportPDF() {
+  const btn = document.getElementById('panel-btn-export');
+  const orig = btn.textContent;
+  btn.textContent = 'Generating…';
+  btn.disabled = true;
+  try {
+    const { data: { session } } = await _SB.auth.getSession();
+    const res = await fetch(`/api/export-pdf/${_selectedId}`, {
+      headers: { 'Authorization': `Bearer ${session.access_token}` }
+    });
+    if (!res.ok) throw new Error('Export failed');
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = 'story.pdf'; a.click();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    alert('PDF export failed: ' + err.message);
+  } finally {
+    btn.textContent = orig;
+    btn.disabled = false;
+  }
 }
 
 function continueReading() {
@@ -1810,6 +1839,20 @@ async function loadReadingBookmarks(userId) {
   document.getElementById('reading-section').style.display = '';
 }
 
+// ── Discount progress ─────────────────────────────────────
+function updateDiscountProgress() {
+  const publicCount = Object.values(_lib).filter(s => s._isPublic).length;
+  const el = document.getElementById('discount-progress');
+  if (!el) return;
+  if (publicCount >= 3) {
+    el.innerHTML = '✦ <span style="color:var(--gold)">Library discount active</span> — $2 off your next credit purchase';
+  } else {
+    const needed = 3 - publicCount;
+    el.innerHTML = `Add <strong style="color:var(--text)">${needed}</strong> more finished ${needed === 1 ? 'book' : 'books'} to the public library → unlock $2 off credits`;
+  }
+  el.style.display = '';
+}
+
 // ── Public Library toggle ─────────────────────────────────
 function updatePublicToggle(isPublic) {
   const btn = document.getElementById('panel-public-toggle');
@@ -1828,6 +1871,7 @@ async function togglePublic() {
     await _SB.from('stories').update({ is_public: next }).eq('id', _selectedId);
     _lib[_selectedId]._isPublic = next;
     updatePublicToggle(next);
+    updateDiscountProgress();
   } catch(e) {
     updatePublicToggle(current);
   } finally {
@@ -1851,6 +1895,7 @@ async function togglePublic() {
   _lib = {};
   (rows||[]).forEach(r => { _lib[r.id] = { ...r.data, _isPublic: r.is_public }; });
   render();
+  updateDiscountProgress();
   loadReadingBookmarks(session.user.id);
 
   // Load credit balance
@@ -1861,6 +1906,20 @@ async function togglePublic() {
     const el = document.getElementById('stat-credits');
     if (el) el.textContent = cr.is_comped ? '∞' : (cr.credits || 0);
   } catch (_) {}
+
+  // ── Handle pending gift claim (set by accept-gift.html) ───────
+  const pendingGift = localStorage.getItem('pendingGiftToken');
+  if (pendingGift) {
+    localStorage.removeItem('pendingGiftToken');
+    try {
+      const gr = await fetch('/api/accept-gift', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({ token: pendingGift }),
+      }).then(r => r.json());
+      if (gr.success) showToast(`Gift claimed — ${gr.credits} credit${gr.credits !== 1 ? 's' : ''} added to your account!`);
+    } catch (_) {}
+  }
 
   // ── Handle payment success redirect ───────────────────────────
   const params = new URLSearchParams(location.search);
