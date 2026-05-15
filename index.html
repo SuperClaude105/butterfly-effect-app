@@ -835,8 +835,8 @@ let _lib = {}, _stories = [], _session = null, _credits = 0, _isComped = false;
     }).then(r => r.json());
     _credits = cr.credits || 0;
     _isComped = cr.is_comped || false;
-    updateCreditDisplay();
   } catch (_) {}
+  updateCreditDisplay();
 
   // Handle cancelled payment
   if (new URLSearchParams(location.search).get('payment') === 'cancelled') {
