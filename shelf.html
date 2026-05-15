@@ -1270,6 +1270,11 @@ body::before {
       <span class="stat-num" id="stat-genres">0</span>
       <span class="stat-label">Genres</span>
     </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item" style="cursor:pointer;" onclick="location.href='index.html'" title="Buy more credits">
+      <span class="stat-num" id="stat-credits" style="color:var(--gold);">—</span>
+      <span class="stat-label">Credits <span style="font-size:0.6rem;opacity:0.6;">+ add</span></span>
+    </div>
   </div>
 
   <!-- Filter bar -->
@@ -1847,6 +1852,15 @@ async function togglePublic() {
   (rows||[]).forEach(r => { _lib[r.id] = { ...r.data, _isPublic: r.is_public }; });
   render();
   loadReadingBookmarks(session.user.id);
+
+  // Load credit balance
+  try {
+    const cr = await fetch('/api/credits', {
+      headers: { 'Authorization': `Bearer ${session.access_token}` }
+    }).then(r => r.json());
+    const el = document.getElementById('stat-credits');
+    if (el) el.textContent = cr.is_comped ? '∞' : (cr.credits || 0);
+  } catch (_) {}
 
   // ── Handle payment success redirect ───────────────────────────
   const params = new URLSearchParams(location.search);

@@ -383,6 +383,7 @@ input[type=range]::-webkit-slider-thumb:hover { box-shadow:0 0 18px rgba(196,162
     <p class="site-ornament">⟡ ⟡ ⟡</p>
     <h1 class="site-title">Un&#x200C;writ&#x200C;ten</h1>
     <p class="site-sub">Your&#x200C; story.&#x200C; Your&#x200C; choices.&#x200C; Your&#x200C; ending.</p>
+    <div id="credit-banner" style="margin-top:1.1rem;font-size:0.82rem;color:rgba(232,213,183,0.45);min-height:1.2em;"></div>
   </header>
 
   <!-- ── Genre ── -->
@@ -834,17 +835,28 @@ let _lib = {}, _stories = [], _session = null, _credits = 0, _isComped = false;
 })();
 
 function updateCreditDisplay() {
-  const el = document.getElementById('credit-display');
-  if (!el) return;
+  const bottom = document.getElementById('credit-display');
+  const banner = document.getElementById('credit-banner');
+
+  let bottomHtml = '', bannerHtml = '', bottomColor = '';
+
   if (_isComped) {
-    el.textContent = '✦ Complimentary access — unlimited generation';
-    el.style.color = 'rgba(196,162,100,0.7)';
+    bottomHtml  = '✦ Complimentary access — unlimited generation';
+    bannerHtml  = '✦ Complimentary access';
+    bottomColor = 'rgba(196,162,100,0.7)';
   } else if (_credits > 0) {
-    el.textContent = `You have ${_credits} credit${_credits !== 1 ? 's' : ''} remaining`;
-    el.style.color = 'rgba(232,213,183,0.5)';
+    const label = `${_credits} credit${_credits !== 1 ? 's' : ''} remaining`;
+    bottomHtml  = `${label} · <span style="color:#c4a264;cursor:pointer;text-decoration:underline;" onclick="openBuyModal()">add more</span>`;
+    bannerHtml  = `${label} · <span style="color:#c4a264;cursor:pointer;text-decoration:underline;" onclick="openBuyModal()">add more</span>`;
+    bottomColor = 'rgba(232,213,183,0.5)';
   } else {
-    el.innerHTML = 'No credits — <span style="color:#c4a264;cursor:pointer;text-decoration:underline;" onclick="openBuyModal()">buy credits to generate</span>';
+    bottomHtml = 'No credits — <span style="color:#c4a264;cursor:pointer;text-decoration:underline;" onclick="openBuyModal()">buy credits to generate</span>';
+    bannerHtml = 'No credits — <span style="color:#c4a264;cursor:pointer;text-decoration:underline;" onclick="openBuyModal()">buy credits to get started</span>';
+    bottomColor = 'rgba(232,213,183,0.45)';
   }
+
+  if (bottom) { bottom.innerHTML = bottomHtml; bottom.style.color = bottomColor; }
+  if (banner) { banner.innerHTML = bannerHtml; banner.style.color = bottomColor; }
 }
 
 function openBuyModal() {
