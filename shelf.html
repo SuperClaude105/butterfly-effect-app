@@ -816,6 +816,34 @@ body::before {
 .panel-btn.danger-action:hover { background: rgba(160,64,64,0.06); }
 .panel-btn.danger-action.confirming { color: #c05040; border-color: rgba(192,80,64,0.35); }
 
+.panel-public-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0 10px;
+}
+.panel-public-label {
+  font-size: 0.78rem;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+.panel-public-toggle {
+  font-size: 0.72rem;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 6px 14px;
+  border-radius: 2px;
+  cursor: pointer;
+  background: none;
+  border: 1px solid var(--border2);
+  color: var(--text);
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.panel-public-toggle:hover { background: rgba(201,168,76,0.08); border-color: var(--gold); color: var(--gold); }
+.panel-public-toggle.active { background: rgba(201,168,76,0.12); border-color: var(--gold); color: var(--gold); }
+
 .panel-close {
   position: absolute;
   top: 16px; right: 16px;
@@ -1045,6 +1073,108 @@ body::before {
   gap: 8px;
 }
 .mobile-drawer-email { font-size: 0.72rem; color: var(--muted); padding: 0 12px; }
+
+/* ══════════════════════
+   CURRENTLY READING
+══════════════════════ */
+.reading-section {
+  padding: 40px 60px 0;
+}
+@media(max-width:768px) { .reading-section { padding: 28px 20px 0; } }
+
+.reading-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+.reading-section-title {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.reading-browse-link {
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dim);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.reading-browse-link:hover { color: var(--gold); }
+
+.reading-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 220px));
+  gap: 12px;
+}
+
+.reading-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s, transform 0.18s;
+}
+.reading-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+
+.reading-card-bar {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--faint);
+  overflow: hidden;
+}
+.reading-card-fill {
+  height: 100%;
+  background: var(--gold);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+.reading-card-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 0.95rem;
+  color: var(--text);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.reading-card-meta { font-size: 0.68rem; color: var(--muted); letter-spacing: 0.05em; }
+.reading-card-cta {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-top: 2px;
+}
+
+.reading-empty-slot {
+  border: 1px dashed rgba(201,168,76,0.15);
+  border-radius: 4px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 96px;
+  text-decoration: none;
+  transition: border-color 0.15s;
+}
+.reading-empty-slot:hover { border-color: rgba(201,168,76,0.3); }
+.reading-empty-icon { font-size: 1rem; color: var(--faint); }
+.reading-empty-text { font-size: 0.66rem; color: var(--faint); letter-spacing: 0.1em; text-transform: uppercase; }
 </style>
 </head>
 <body>
@@ -1056,10 +1186,11 @@ body::before {
 
 <!-- Top nav -->
 <nav class="topnav">
-  <span class="nav-wordmark">Unwritten</span>
+  <span class="nav-wordmark">Un&#x200C;writ&#x200C;ten</span>
   <div class="nav-right">
     <button class="nav-btn" id="btn-install-pwa" style="display:none" onclick="triggerInstall()">Install App</button>
     <button class="nav-btn" onclick="location.href='storied.html'">Your Story</button>
+    <button class="nav-btn" onclick="location.href='library.html'">Public Library</button>
     <button class="nav-btn primary" onclick="location.href='index.html'">+ New Story</button>
     <div class="nav-avatar" id="nav-avatar">
       <span id="user-initial">U</span>
@@ -1077,11 +1208,12 @@ body::before {
 <!-- Mobile drawer -->
 <div class="mobile-drawer-overlay" id="mob-overlay" onclick="closeMobileDrawer()"></div>
 <div class="mobile-drawer" id="mob-drawer">
-  <div class="mobile-drawer-logo">Unwritten</div>
+  <div class="mobile-drawer-logo">Un&#x200C;writ&#x200C;ten</div>
   <nav class="mobile-drawer-nav">
     <button class="mobile-nav-item" onclick="location.href='index.html'">+ New Story</button>
     <button class="mobile-nav-item" onclick="closeMobileDrawer()">My Library</button>
     <button class="mobile-nav-item" onclick="location.href='storied.html'">Your Story</button>
+    <button class="mobile-nav-item" onclick="location.href='library.html'">Public Library</button>
     <button class="mobile-nav-item" onclick="location.href='legal.html'">Legal</button>
   </nav>
   <div class="mobile-drawer-footer">
@@ -1105,6 +1237,15 @@ body::before {
   </div>
   <div class="hero-progress-bar"><div class="hero-progress-fill" id="hero-progress-fill" style="width:0%"></div></div>
 </div>
+
+<!-- Currently Reading (public library bookmarks) -->
+<section class="reading-section" id="reading-section" style="display:none">
+  <div class="reading-header">
+    <div class="reading-section-title">Currently Reading</div>
+    <a href="library.html" class="reading-browse-link">Browse Public Library →</a>
+  </div>
+  <div class="reading-row" id="reading-row"></div>
+</section>
 
 <!-- Library -->
 <main class="library" id="main-library">
@@ -1177,6 +1318,13 @@ body::before {
     <div class="panel-divider"></div>
     <div class="panel-themes" id="panel-themes"></div>
     <div class="panel-divider"></div>
+    <div id="panel-public-section" style="display:none">
+      <div class="panel-public-row">
+        <span class="panel-public-label">Public Library</span>
+        <button class="panel-public-toggle" id="panel-public-toggle" onclick="togglePublic()">Add to Library</button>
+      </div>
+      <div class="panel-divider"></div>
+    </div>
     <div class="panel-actions">
       <button class="panel-btn primary-action" id="panel-btn-continue" onclick="continueReading()">Continue Reading</button>
       <button class="panel-btn secondary-action" id="panel-btn-share" onclick="openShareModal()" style="display:none">Share Book</button>
@@ -1521,6 +1669,10 @@ function openPanel(id) {
   document.getElementById('panel-btn-delete').textContent = 'Delete';
   document.getElementById('panel-btn-delete').classList.remove('confirming');
 
+  const pubSection = document.getElementById('panel-public-section');
+  pubSection.style.display = finished ? '' : 'none';
+  if (finished) updatePublicToggle(_lib[id]?._isPublic || false);
+
   document.getElementById('panel-overlay').classList.add('open');
   document.getElementById('panel').classList.add('open');
 }
@@ -1605,6 +1757,79 @@ async function submitShare() {
   }
 }
 
+// ── Currently Reading (bookmarks) ────────────────────────
+async function loadReadingBookmarks(userId) {
+  const { data: bookmarks } = await _SB
+    .from('reading_bookmarks')
+    .select('story_id, chapter_idx')
+    .eq('user_id', userId)
+    .order('updated_at', { ascending: false })
+    .limit(2);
+
+  if (!bookmarks || bookmarks.length === 0) return;
+
+  const ids = bookmarks.map(b => b.story_id);
+  const { data: stories } = await _SB
+    .from('stories')
+    .select('id, data')
+    .in('id', ids)
+    .eq('is_public', true)
+    .is('deleted_at', null);
+
+  if (!stories || stories.length === 0) return;
+
+  const cards = bookmarks.map(bm => {
+    const story = stories.find(s => s.id === bm.story_id);
+    if (!story) return null;
+    const d = story.data || {};
+    const title = d.bookTitle || 'Untitled';
+    const total = d.config?.targetChapters || 5;
+    const pct = total > 1 ? Math.round((bm.chapter_idx / (total - 1)) * 100) : 100;
+    const chDisplay = bm.chapter_idx + 1;
+    return `<a class="reading-card" href="public-read.html?id=${story.id}">
+      <div class="reading-card-bar"><div class="reading-card-fill" style="width:${pct}%"></div></div>
+      <div class="reading-card-title">${title}</div>
+      <div class="reading-card-meta">Chapter ${chDisplay} of ${total}</div>
+      <div class="reading-card-cta">Continue →</div>
+    </a>`;
+  }).filter(Boolean);
+
+  while (cards.length < 2) {
+    cards.push(`<a class="reading-empty-slot" href="library.html">
+      <div class="reading-empty-icon">+</div>
+      <div class="reading-empty-text">Add a book</div>
+    </a>`);
+  }
+
+  document.getElementById('reading-row').innerHTML = cards.join('');
+  document.getElementById('reading-section').style.display = '';
+}
+
+// ── Public Library toggle ─────────────────────────────────
+function updatePublicToggle(isPublic) {
+  const btn = document.getElementById('panel-public-toggle');
+  btn.textContent = isPublic ? '✓ In Library' : 'Add to Library';
+  btn.classList.toggle('active', isPublic);
+}
+
+async function togglePublic() {
+  if (!_selectedId) return;
+  const current = _lib[_selectedId]?._isPublic || false;
+  const next = !current;
+  const btn = document.getElementById('panel-public-toggle');
+  btn.disabled = true;
+  btn.textContent = next ? 'Adding…' : 'Removing…';
+  try {
+    await _SB.from('stories').update({ is_public: next }).eq('id', _selectedId);
+    _lib[_selectedId]._isPublic = next;
+    updatePublicToggle(next);
+  } catch(e) {
+    updatePublicToggle(current);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 // ── Init ──────────────────────────────────────────────────
 (async function() {
   const { data:{ session } } = await _SB.auth.getSession();
@@ -1617,10 +1842,11 @@ async function submitShare() {
   document.getElementById('btn-signout').onclick = () => _SB.auth.signOut().then(() => location.replace('/login.html'));
   document.getElementById('mob-signout').onclick = () => _SB.auth.signOut().then(() => location.replace('/login.html'));
 
-  const { data: rows } = await _SB.from('stories').select('id, data').is('deleted_at', null);
+  const { data: rows } = await _SB.from('stories').select('id, data, is_public').is('deleted_at', null);
   _lib = {};
-  (rows||[]).forEach(r => { _lib[r.id] = r.data; });
+  (rows||[]).forEach(r => { _lib[r.id] = { ...r.data, _isPublic: r.is_public }; });
   render();
+  loadReadingBookmarks(session.user.id);
 })();
 </script>
 </body>

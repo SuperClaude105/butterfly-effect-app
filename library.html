@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#080705">
+<title>Public Library — Unwritten</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --gold:    #c9a84c;
+  --gold2:   #e8d08a;
+  --dim:     #7a6040;
+  --bg:      #080705;
+  --bg2:     #0f0d0a;
+  --card:    #141109;
+  --border:  rgba(201,168,76,0.1);
+  --border2: rgba(201,168,76,0.2);
+  --text:    #ede0c8;
+  --muted:   #7a6a54;
+  --faint:   #2e2518;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+body::before {
+  content:'';
+  position:fixed;inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.028'/%3E%3C/svg%3E");
+  pointer-events:none;z-index:9999;
+}
+
+/* ── Nav ── */
+.topnav {
+  position:fixed;top:0;left:0;right:0;height:60px;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 32px;z-index:200;
+  background:linear-gradient(to bottom,rgba(8,7,5,0.98) 0%,rgba(8,7,5,0) 100%);
+  pointer-events:none;
+}
+.topnav>*{pointer-events:auto;}
+.nav-wordmark {
+  font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;
+  font-size:1.55rem;color:var(--gold);letter-spacing:0.04em;text-decoration:none;cursor:pointer;
+}
+.nav-right{display:flex;align-items:center;gap:20px;}
+.nav-btn {
+  background:none;border:1px solid var(--border2);color:var(--text);
+  font-family:'Inter',sans-serif;font-size:0.75rem;font-weight:500;
+  letter-spacing:0.08em;text-transform:uppercase;padding:7px 16px;
+  border-radius:2px;cursor:pointer;
+  transition:background 0.2s,border-color 0.2s,color 0.2s;
+}
+.nav-btn:hover{background:rgba(201,168,76,0.08);border-color:var(--gold);color:var(--gold);}
+.nav-btn:active{transform:scale(0.97);}
+.nav-btn.active{border-color:var(--gold);color:var(--gold);background:rgba(201,168,76,0.06);}
+.nav-btn.primary{background:var(--gold);border-color:var(--gold);color:#080705;font-weight:600;}
+.nav-btn.primary:hover{background:var(--gold2);border-color:var(--gold2);}
+
+/* ── Page header ── */
+.page-header {
+  padding: 120px 60px 48px;
+  position: relative;
+}
+@media(max-width:768px){.page-header{padding:100px 20px 32px;}}
+
+.page-eyebrow {
+  font-size:0.7rem;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;
+  color:var(--gold);margin-bottom:14px;
+}
+.page-title {
+  font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;
+  font-size:clamp(2rem,5vw,3.2rem);color:var(--text);letter-spacing:-0.01em;
+  margin-bottom:12px;
+}
+.page-desc {
+  font-size:0.88rem;color:var(--muted);line-height:1.65;max-width:520px;
+}
+
+/* ── Filter bar ── */
+.filter-bar {
+  padding:0 60px 32px;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+}
+@media(max-width:768px){.filter-bar{padding:0 20px 24px;}}
+
+.filter-tab {
+  background:none;border:1px solid var(--border);color:var(--muted);
+  font-family:'Inter',sans-serif;font-size:0.72rem;font-weight:500;
+  letter-spacing:0.08em;text-transform:uppercase;padding:6px 14px;
+  border-radius:2px;cursor:pointer;
+  transition:background 0.15s,border-color 0.15s,color 0.15s;
+}
+.filter-tab:hover{border-color:var(--border2);color:var(--text);}
+.filter-tab.active{border-color:var(--gold);color:var(--gold);background:rgba(201,168,76,0.06);}
+
+/* ── Book grid ── */
+.book-grid {
+  padding:0 60px 80px;
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+  gap:28px;
+}
+@media(max-width:768px){.book-grid{padding:0 20px 60px;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:16px;}}
+
+/* ── Book card ── */
+.book-card {
+  display:flex;flex-direction:column;gap:12px;cursor:pointer;
+  text-decoration:none;
+  transition:transform 0.2s;
+}
+.book-card:hover{transform:translateY(-3px);}
+.book-card:active{transform:translateY(0);}
+
+.cover-wrap {
+  aspect-ratio:2/3;border-radius:3px;overflow:hidden;
+  position:relative;
+  box-shadow:0 4px 20px rgba(0,0,0,0.5),0 1px 4px rgba(0,0,0,0.4);
+}
+.cover-bg {
+  position:absolute;inset:0;
+}
+.cover-overlay {
+  position:absolute;inset:0;
+  background:linear-gradient(to top,rgba(0,0,0,0.7) 0%,transparent 50%);
+}
+.cover-info {
+  position:absolute;bottom:0;left:0;right:0;padding:14px 12px 12px;
+}
+.cover-title {
+  font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:400;
+  font-size:0.95rem;color:#fff;line-height:1.3;
+}
+
+.book-meta {
+  display:flex;flex-direction:column;gap:4px;
+}
+.book-genre {
+  font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;
+  color:var(--dim);
+}
+.book-stars {
+  display:flex;gap:3px;align-items:center;
+}
+.star {
+  font-size:0.8rem;cursor:default;
+  color:var(--faint);
+  transition:color 0.1s;
+}
+.star.filled{color:var(--gold);}
+
+/* ── Empty state ── */
+.empty-state {
+  grid-column:1/-1;
+  padding:80px 0;text-align:center;
+}
+.empty-ornament{color:var(--faint);letter-spacing:0.3em;margin-bottom:24px;}
+.empty-text{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:1.3rem;color:var(--muted);margin-bottom:8px;}
+.empty-hint{font-size:0.8rem;color:var(--faint);}
+
+/* ── Loading ── */
+.loading-state {
+  grid-column:1/-1;
+  padding:80px 0;text-align:center;
+  color:var(--muted);font-size:0.82rem;letter-spacing:0.12em;text-transform:uppercase;
+}
+
+/* ── Ambient bg ── */
+.ambient {
+  position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(ellipse 60% 50% at 80% 10%,rgba(100,50,0,0.12) 0%,transparent 60%),
+    radial-gradient(ellipse 50% 40% at 20% 90%,rgba(50,30,0,0.08) 0%,transparent 55%);
+}
+</style>
+</head>
+<body>
+
+<div class="ambient"></div>
+
+<nav class="topnav">
+  <span class="nav-wordmark" onclick="location.href='shelf.html'">Un&#x200C;writ&#x200C;ten</span>
+  <div class="nav-right">
+    <button class="nav-btn active">Public Library</button>
+    <button class="nav-btn" onclick="location.href='shelf.html'">My Library</button>
+    <button class="nav-btn" onclick="location.href='storied.html'">Your Story</button>
+    <button class="nav-btn primary" onclick="location.href='index.html'">+ New Story</button>
+  </div>
+</nav>
+
+<div class="page-header">
+  <div class="page-eyebrow">Community</div>
+  <h1 class="page-title">Public Library</h1>
+  <p class="page-desc">Stories written by the Unwritten community — shared for anyone to read.</p>
+</div>
+
+<div class="filter-bar" id="filter-bar">
+  <button class="filter-tab active" onclick="filterGenre('all')" id="tab-all">All</button>
+</div>
+
+<div class="book-grid" id="book-grid">
+  <div class="loading-state">Loading stories…</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+const _SB = supabase.createClient(
+  'https://puywhvrgixlhijxzircy.supabase.co',
+  'sb_publishable_ob7bw2JF-iSjqyjSXRu4-g_lLuFagj7'
+);
+
+let _stories = [];
+let _currentGenre = 'all';
+let _ratings = {}; // story_id -> avg stars
+
+const GENRE_GRADIENTS = {
+  'Fantasy':       'linear-gradient(145deg,#1a0a2e 0%,#3d1a6e 50%,#6b2fa0 100%)',
+  'Romance':       'linear-gradient(145deg,#2e0a1a 0%,#6e1a3d 50%,#a02f6b 100%)',
+  'Mystery':       'linear-gradient(145deg,#0a0a1a 0%,#1a1a3d 50%,#2f2f6b 100%)',
+  'Thriller':      'linear-gradient(145deg,#1a0a0a 0%,#3d0a0a 50%,#6b0a0a 100%)',
+  'Sci-Fi':        'linear-gradient(145deg,#0a1a1a 0%,#0a3d3d 50%,#0a6b6b 100%)',
+  'Horror':        'linear-gradient(145deg,#0a0a0a 0%,#1a0a1a 50%,#2e0a2e 100%)',
+  'Adventure':     'linear-gradient(145deg,#0a1a0a 0%,#1a3d1a 50%,#2f6b2f 100%)',
+  'Historical':    'linear-gradient(145deg,#1a1208 0%,#3d2c0a 50%,#6b4d10 100%)',
+  'Literary':      'linear-gradient(145deg,#12120a 0%,#2e2e1a 50%,#4a4a2e 100%)',
+  'Your Story':    'linear-gradient(145deg,#0a1a2e 0%,#1a2e4a 50%,#2e4a6b 100%)',
+};
+
+function genreGradient(genre) {
+  return GENRE_GRADIENTS[genre] || 'linear-gradient(145deg,#141109 0%,#2a2010 50%,#3d2e18 100%)';
+}
+
+function renderStars(avg, count) {
+  const full = Math.round(avg);
+  let s = '';
+  for (let i = 1; i <= 5; i++) {
+    s += `<span class="star${i <= full ? ' filled' : ''}">${i <= full ? '★' : '☆'}</span>`;
+  }
+  if (count > 0) s += `<span style="font-size:0.68rem;color:var(--muted);margin-left:4px">(${count})</span>`;
+  return s;
+}
+
+function render() {
+  const filtered = _currentGenre === 'all'
+    ? _stories
+    : _stories.filter(s => (s.data?.config?.genre || 'Other') === _currentGenre);
+
+  const grid = document.getElementById('book-grid');
+
+  if (filtered.length === 0) {
+    grid.innerHTML = `<div class="empty-state">
+      <div class="empty-ornament">⟡ ⟡ ⟡</div>
+      <p class="empty-text">No stories here yet.</p>
+      <p class="empty-hint">Be the first to share one from your shelf.</p>
+    </div>`;
+    return;
+  }
+
+  grid.innerHTML = filtered.map(s => {
+    const d = s.data || {};
+    const title = d.bookTitle || d.config?.protagonistName || 'Untitled';
+    const genre = d.config?.genre || 'Fiction';
+    const r = _ratings[s.id] || { avg: 0, count: 0 };
+    return `<a class="book-card" href="public-read.html?id=${s.id}" style="color:inherit;">
+      <div class="cover-wrap">
+        <div class="cover-bg" style="background:${genreGradient(genre)}"></div>
+        ${d.coverSvg ? `<div style="position:absolute;inset:0;opacity:0.35">${d.coverSvg}</div>` : ''}
+        <div class="cover-overlay"></div>
+        <div class="cover-info">
+          <div class="cover-title">${title}</div>
+        </div>
+      </div>
+      <div class="book-meta">
+        <div class="book-genre">${genre}</div>
+        <div class="book-stars">${renderStars(r.avg, r.count)}</div>
+      </div>
+    </a>`;
+  }).join('');
+}
+
+function filterGenre(genre) {
+  _currentGenre = genre;
+  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+  const id = genre === 'all' ? 'tab-all' : `tab-${genre.replace(/\s/g,'_')}`;
+  const el = document.getElementById(id);
+  if (el) el.classList.add('active');
+  render();
+}
+
+async function load() {
+  const { data: stories, error } = await _SB
+    .from('stories')
+    .select('id, data')
+    .eq('is_public', true)
+    .is('deleted_at', null)
+    .order('updated_at', { ascending: false });
+
+  if (error || !stories) {
+    document.getElementById('book-grid').innerHTML = `<div class="loading-state">Could not load stories.</div>`;
+    return;
+  }
+
+  _stories = stories;
+
+  // Load ratings
+  if (stories.length > 0) {
+    const ids = stories.map(s => s.id);
+    const { data: ratings } = await _SB
+      .from('story_ratings')
+      .select('story_id, stars')
+      .in('story_id', ids);
+
+    if (ratings) {
+      const grouped = {};
+      ratings.forEach(r => {
+        if (!grouped[r.story_id]) grouped[r.story_id] = [];
+        grouped[r.story_id].push(r.stars);
+      });
+      Object.entries(grouped).forEach(([id, arr]) => {
+        const avg = arr.reduce((a,b) => a+b, 0) / arr.length;
+        _ratings[id] = { avg, count: arr.length };
+      });
+    }
+  }
+
+  // Build genre filter tabs
+  const genres = [...new Set(stories.map(s => s.data?.config?.genre || 'Other'))].sort();
+  const bar = document.getElementById('filter-bar');
+  bar.innerHTML = `<button class="filter-tab active" id="tab-all" onclick="filterGenre('all')">All (${stories.length})</button>`;
+  genres.forEach(g => {
+    const cnt = stories.filter(s => (s.data?.config?.genre || 'Other') === g).length;
+    bar.innerHTML += `<button class="filter-tab" id="tab-${g.replace(/\s/g,'_')}" onclick="filterGenre(${JSON.stringify(g)})">${g} (${cnt})</button>`;
+  });
+
+  render();
+}
+
+load();
+</script>
+</body>
+</html>

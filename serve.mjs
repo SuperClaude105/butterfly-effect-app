@@ -16,7 +16,8 @@ const mime = {
 };
 
 http.createServer((req, res) => {
-  let filePath = join(__dirname, req.url === '/' ? 'index.html' : req.url);
+  const pathname = new URL(req.url, 'http://localhost').pathname;
+  let filePath = join(__dirname, pathname === '/' ? 'index.html' : pathname);
   try {
     const stat = statSync(filePath);
     if (stat.isDirectory()) filePath = join(filePath, 'index.html');

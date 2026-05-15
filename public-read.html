@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0c0704">
+<title>Reading — Unwritten</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --gold:   #c9a84c;
+  --gold2:  #e8d08a;
+  --bg:     #080705;
+  --bg2:    #0f0d0a;
+  --text:   #ede0c8;
+  --muted:  #7a6a54;
+  --faint:  #2e2518;
+  --border: rgba(201,168,76,0.12);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+
+body {
+  font-family:'EB Garamond',Georgia,serif;
+  background:var(--bg);color:var(--text);
+  min-height:100vh;overflow-x:hidden;
+}
+
+body::after {
+  content:'';position:fixed;inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+  pointer-events:none;z-index:9999;opacity:0.6;
+}
+
+/* ── Nav ── */
+.topnav {
+  position:fixed;top:0;left:0;right:0;height:56px;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 32px;z-index:200;
+  background:linear-gradient(to bottom,rgba(8,7,5,0.97) 0%,rgba(8,7,5,0) 100%);
+  pointer-events:none;
+}
+.topnav>*{pointer-events:auto;}
+@media(max-width:600px){.topnav{padding:0 16px;}}
+
+.nav-back {
+  font-family:'Inter',sans-serif;font-size:0.72rem;font-weight:500;
+  letter-spacing:0.1em;text-transform:uppercase;
+  color:var(--muted);background:none;border:none;cursor:pointer;
+  display:flex;align-items:center;gap:6px;
+  transition:color 0.15s;padding:4px 0;
+}
+.nav-back:hover{color:var(--gold);}
+.nav-back svg{width:14px;height:14px;flex-shrink:0;}
+
+.nav-wordmark {
+  font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;
+  font-size:1.3rem;color:var(--gold);letter-spacing:0.04em;
+  text-decoration:none;cursor:pointer;
+}
+
+/* ── Progress bar ── */
+#progress-bar {
+  position:fixed;top:0;left:0;height:2px;
+  background:var(--gold);z-index:300;
+  width:0%;transition:width 0.4s ease;
+}
+
+/* ── App shell ── */
+.app{position:relative;z-index:10;min-height:100vh;}
+
+/* ── Screens ── */
+.screen{display:none;}
+.screen.active{display:block;}
+
+/* Welcome / loading */
+#s-loading {
+  align-items:center;justify-content:center;
+  min-height:100vh;
+  font-family:'Inter',sans-serif;font-size:0.8rem;letter-spacing:0.15em;
+  text-transform:uppercase;color:var(--muted);
+}
+#s-loading.active{display:flex;}
+
+#s-error {
+  align-items:center;justify-content:center;
+  min-height:100vh;flex-direction:column;gap:16px;text-align:center;
+  padding:40px;
+}
+#s-error.active{display:flex;}
+.error-title{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:1.6rem;color:var(--muted);}
+.error-hint{font-family:'Inter',sans-serif;font-size:0.8rem;color:var(--faint);}
+
+/* Reading screen */
+#s-reading{padding:0;}
+
+.ch-header {
+  padding:100px 0 36px;
+  text-align:center;
+  opacity:0;transform:translateY(10px);
+  transition:opacity 0.6s ease,transform 0.6s ease;
+}
+.ch-header.in{opacity:1;transform:none;}
+
+.ch-num {
+  font-family:'Inter',sans-serif;font-size:0.68rem;font-weight:600;
+  letter-spacing:0.2em;text-transform:uppercase;color:var(--gold);
+  margin-bottom:10px;
+}
+.ch-title {
+  font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;
+  font-size:clamp(1.5rem,4vw,2.2rem);color:var(--text);
+  letter-spacing:-0.01em;
+}
+
+.story-body {
+  max-width:640px;margin:0 auto;padding:0 32px 60px;
+  opacity:0;transform:translateY(8px);
+  transition:opacity 0.7s ease 0.15s,transform 0.7s ease 0.15s;
+}
+.story-body.in{opacity:1;transform:none;}
+@media(max-width:600px){.story-body{padding:0 20px 48px;}}
+
+.story-body p {
+  font-size:1.12rem;line-height:1.82;color:var(--text);
+  margin-bottom:1.4em;
+  font-feature-settings:"liga","kern";
+}
+.story-body p:first-child::first-letter {
+  float:left;font-size:3.2em;line-height:0.75;
+  margin:0.08em 0.08em 0 0;
+  font-family:'Cormorant Garamond',serif;color:var(--gold);
+  font-style:italic;font-weight:400;
+}
+
+/* Chapter nav */
+.ch-nav {
+  max-width:640px;margin:0 auto 80px;
+  padding:0 32px;
+  display:flex;justify-content:space-between;align-items:center;
+  gap:16px;
+}
+@media(max-width:600px){.ch-nav{padding:0 20px;}}
+
+.ch-nav-btn {
+  font-family:'Inter',sans-serif;font-size:0.72rem;font-weight:600;
+  letter-spacing:0.1em;text-transform:uppercase;
+  padding:12px 24px;border-radius:2px;cursor:pointer;
+  transition:background 0.15s,border-color 0.15s,color 0.15s,opacity 0.15s;
+  border:1px solid var(--border);
+  background:none;color:var(--muted);
+}
+.ch-nav-btn:hover:not(:disabled){border-color:var(--gold);color:var(--gold);background:rgba(201,168,76,0.06);}
+.ch-nav-btn:disabled{opacity:0.25;cursor:default;}
+.ch-nav-btn.primary{
+  background:var(--gold);border-color:var(--gold);color:#080705;
+  font-weight:700;
+}
+.ch-nav-btn.primary:hover:not(:disabled){background:var(--gold2);border-color:var(--gold2);}
+
+.ch-counter {
+  font-family:'Inter',sans-serif;font-size:0.72rem;
+  letter-spacing:0.08em;color:var(--muted);
+  white-space:nowrap;
+}
+
+/* ── Rating section (shown at last chapter) ── */
+.rating-section {
+  max-width:640px;margin:0 auto 40px;
+  padding:32px;
+  border:1px solid var(--border);
+  border-radius:4px;
+  background:rgba(201,168,76,0.02);
+  text-align:center;
+  display:none;
+}
+.rating-section.visible{display:block;}
+.rating-title {
+  font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;
+  font-size:1.2rem;color:var(--text);margin-bottom:6px;
+}
+.rating-hint {
+  font-family:'Inter',sans-serif;font-size:0.75rem;color:var(--muted);
+  margin-bottom:20px;
+}
+.rating-stars {
+  display:flex;justify-content:center;gap:10px;margin-bottom:16px;
+}
+.rating-star {
+  font-size:1.8rem;cursor:pointer;color:var(--faint);
+  transition:color 0.12s,transform 0.12s;
+  line-height:1;border:none;background:none;
+}
+.rating-star:hover,.rating-star.hovered,.rating-star.selected{color:var(--gold);}
+.rating-star:hover{transform:scale(1.15);}
+.rating-msg {
+  font-family:'Inter',sans-serif;font-size:0.78rem;
+  color:var(--muted);min-height:20px;
+}
+.rating-msg.success{color:#7ac880;}
+
+/* ── Book end ── */
+.book-end {
+  max-width:640px;margin:0 auto 80px;
+  padding:0 32px;text-align:center;display:none;
+}
+.book-end.visible{display:block;}
+.end-ornament{color:var(--faint);letter-spacing:0.4em;font-size:0.9rem;margin-bottom:24px;}
+.end-text {
+  font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;
+  font-size:1.4rem;color:var(--muted);margin-bottom:24px;
+}
+.end-btn {
+  font-family:'Inter',sans-serif;font-size:0.72rem;font-weight:600;
+  letter-spacing:0.1em;text-transform:uppercase;
+  padding:12px 28px;border-radius:2px;cursor:pointer;
+  background:none;border:1px solid var(--border);color:var(--muted);
+  transition:background 0.15s,border-color 0.15s,color 0.15s;text-decoration:none;display:inline-block;
+}
+.end-btn:hover{border-color:var(--gold);color:var(--gold);background:rgba(201,168,76,0.06);}
+
+/* ── Save button ── */
+.nav-save {
+  font-family:'Inter',sans-serif;font-size:0.7rem;font-weight:600;
+  letter-spacing:0.1em;text-transform:uppercase;
+  padding:6px 14px;border-radius:2px;cursor:pointer;
+  background:none;border:1px solid rgba(201,168,76,0.25);color:var(--muted);
+  transition:background 0.15s,border-color 0.15s,color 0.15s;
+  white-space:nowrap;
+}
+.nav-save:hover{border-color:var(--gold);color:var(--gold);background:rgba(201,168,76,0.06);}
+.nav-save.saved{border-color:var(--gold);color:var(--gold);background:rgba(201,168,76,0.08);}
+
+/* ── Swap modal ── */
+.swap-backdrop {
+  display:none;position:fixed;inset:0;z-index:500;
+  background:rgba(0,0,0,0.75);
+  align-items:center;justify-content:center;
+  padding:24px;
+}
+.swap-backdrop.open{display:flex;}
+.swap-box {
+  background:#141109;border:1px solid rgba(201,168,76,0.2);
+  border-radius:6px;padding:32px;max-width:420px;width:100%;
+}
+.swap-title {
+  font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;
+  font-size:1.3rem;color:var(--text);margin-bottom:6px;
+}
+.swap-hint {
+  font-family:'Inter',sans-serif;font-size:0.78rem;color:var(--muted);
+  margin-bottom:24px;line-height:1.5;
+}
+.swap-options{display:flex;flex-direction:column;gap:10px;margin-bottom:20px;}
+.swap-option {
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 16px;border:1px solid rgba(201,168,76,0.15);border-radius:3px;
+  cursor:pointer;background:none;width:100%;text-align:left;
+  transition:border-color 0.15s,background 0.15s;
+  font-family:'Inter',sans-serif;
+}
+.swap-option:hover{border-color:rgba(201,168,76,0.4);background:rgba(201,168,76,0.04);}
+.swap-option-title{font-size:0.85rem;color:var(--text);}
+.swap-option-meta{font-size:0.7rem;color:var(--muted);}
+.swap-option-replace{font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:#c06050;}
+.swap-cancel {
+  font-family:'Inter',sans-serif;font-size:0.72rem;color:var(--muted);
+  background:none;border:none;cursor:pointer;padding:4px;
+  transition:color 0.15s;
+}
+.swap-cancel:hover{color:var(--text);}
+
+/* ── Ambient ── */
+#ambient{position:fixed;inset:0;pointer-events:none;z-index:0;}
+</style>
+</head>
+<body>
+
+<div id="ambient"></div>
+<div id="progress-bar"></div>
+
+<nav class="topnav">
+  <button class="nav-back" onclick="history.back()">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M10 3L5 8l5 5"/>
+    </svg>
+    Library
+  </button>
+  <span class="nav-wordmark" onclick="location.href='library.html'">Un&#x200C;writ&#x200C;ten</span>
+  <button class="nav-save" id="btn-save" onclick="handleSave()" style="display:none">+ Reading List</button>
+</nav>
+
+<!-- Swap modal -->
+<div class="swap-backdrop" id="swap-backdrop">
+  <div class="swap-box">
+    <div class="swap-title">Your reading list is full</div>
+    <div class="swap-hint">You have 2 saved books. Choose one to replace with <span id="swap-new-title" style="color:var(--text)"></span>.</div>
+    <div class="swap-options" id="swap-options"></div>
+    <button class="swap-cancel" onclick="closeSwap()">Cancel</button>
+  </div>
+</div>
+
+<div class="app">
+  <div id="s-loading" class="screen active">Loading story…</div>
+  <div id="s-error" class="screen">
+    <div class="error-title">Story not found</div>
+    <div class="error-hint">This story may have been removed from the public library.</div>
+    <a href="library.html" class="end-btn" style="margin-top:8px;">Back to Library</a>
+  </div>
+  <div id="s-reading" class="screen">
+    <div class="ch-header" id="ch-header">
+      <div class="ch-num" id="ch-num">Chapter One</div>
+      <div class="ch-title" id="ch-title"></div>
+    </div>
+    <div class="story-body" id="story-body"></div>
+    <div class="ch-nav" id="ch-nav">
+      <button class="ch-nav-btn" id="btn-prev" onclick="prevChapter()" disabled>← Prev</button>
+      <span class="ch-counter" id="ch-counter">1 / 1</span>
+      <button class="ch-nav-btn primary" id="btn-next" onclick="nextChapter()">Next →</button>
+    </div>
+    <div class="rating-section" id="rating-section">
+      <div class="rating-title">How was this story?</div>
+      <div class="rating-hint">Sign in to leave a rating.</div>
+      <div class="rating-stars" id="rating-stars">
+        <button class="rating-star" data-star="1" onclick="rate(1)">★</button>
+        <button class="rating-star" data-star="2" onclick="rate(2)">★</button>
+        <button class="rating-star" data-star="3" onclick="rate(3)">★</button>
+        <button class="rating-star" data-star="4" onclick="rate(4)">★</button>
+        <button class="rating-star" data-star="5" onclick="rate(5)">★</button>
+      </div>
+      <div class="rating-msg" id="rating-msg"></div>
+    </div>
+    <div class="book-end" id="book-end">
+      <div class="end-ornament">— fin —</div>
+      <div class="end-text">The story has ended.</div>
+      <a href="library.html" class="end-btn">Back to Library</a>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+const _SB = supabase.createClient(
+  'https://puywhvrgixlhijxzircy.supabase.co',
+  'sb_publishable_ob7bw2JF-iSjqyjSXRu4-g_lLuFagj7'
+);
+
+const ORDINALS = ['One','Two','Three','Four','Five','Six','Seven','Eight',
+  'Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen',
+  'Seventeen','Eighteen','Nineteen','Twenty','Twenty-One','Twenty-Two',
+  'Twenty-Three','Twenty-Four','Twenty-Five'];
+
+function ordinal(n){ return ORDINALS[n-1] || String(n); }
+
+const params = new URLSearchParams(location.search);
+const STORY_ID = params.get('id');
+
+let _chapters   = [];
+let _titles     = [];
+let _idx        = 0;
+let _session    = null;
+let _userRating = 0;
+let _isBookmarked = false;
+let _storyTitle   = '';
+
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function updateProgress() {
+  const pct = _chapters.length > 1 ? ((_idx + 1) / _chapters.length) * 100 : 100;
+  document.getElementById('progress-bar').style.width = pct + '%';
+}
+
+async function showChapter(idx) {
+  _idx = idx;
+  const isLast = idx === _chapters.length - 1;
+  const isFirst = idx === 0;
+
+  // Reset animations
+  const header = document.getElementById('ch-header');
+  const body   = document.getElementById('story-body');
+  header.classList.remove('in');
+  body.classList.remove('in');
+  body.innerHTML = '';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  await delay(80);
+
+  // Chapter header
+  document.getElementById('ch-num').textContent = `Chapter ${ordinal(idx + 1)}`;
+  document.getElementById('ch-title').textContent = _titles[idx] || '';
+
+  // Chapter body
+  body.innerHTML = (_chapters[idx] || '').split(/\n\n+/).filter(Boolean)
+    .map(p => `<p>${p.trim()}</p>`).join('');
+
+  await delay(100);
+  header.classList.add('in');
+  body.classList.add('in');
+
+  // Nav buttons
+  document.getElementById('btn-prev').disabled = isFirst;
+  document.getElementById('btn-next').disabled = isLast;
+  document.getElementById('btn-next').textContent = isLast ? 'Last chapter' : 'Next →';
+  document.getElementById('btn-next').classList.toggle('primary', !isLast);
+  document.getElementById('ch-counter').textContent = `${idx + 1} / ${_chapters.length}`;
+
+  // Rating + end on last chapter
+  document.getElementById('rating-section').classList.toggle('visible', isLast);
+  document.getElementById('book-end').classList.toggle('visible', isLast);
+
+  updateProgress();
+  if (_isBookmarked && _session) saveChapterPosition(_idx);
+}
+
+function prevChapter() { if (_idx > 0) showChapter(_idx - 1); }
+function nextChapter()  { if (_idx < _chapters.length - 1) showChapter(_idx + 1); }
+
+function delay(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+// ── Bookmark / Reading List ──────────────────────────────────
+async function saveChapterPosition(idx) {
+  if (!_session || !STORY_ID) return;
+  await _SB.from('reading_bookmarks').upsert({
+    user_id: _session.user.id,
+    story_id: STORY_ID,
+    chapter_idx: idx,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: 'user_id,story_id' });
+}
+
+async function removeBookmark() {
+  if (!_session || !STORY_ID) return;
+  await _SB.from('reading_bookmarks')
+    .delete()
+    .eq('user_id', _session.user.id)
+    .eq('story_id', STORY_ID);
+}
+
+function updateSaveBtn() {
+  const btn = document.getElementById('btn-save');
+  if (!btn) return;
+  btn.textContent = _isBookmarked ? '✕ Remove from List' : '+ Reading List';
+  btn.classList.toggle('saved', _isBookmarked);
+}
+
+async function handleSave() {
+  if (!_session) {
+    location.href = `login.html?next=${encodeURIComponent(location.href)}`;
+    return;
+  }
+  if (_isBookmarked) {
+    // Remove bookmark
+    await removeBookmark();
+    _isBookmarked = false;
+    updateSaveBtn();
+    return;
+  }
+  // Check current slot count
+  const { data: existing } = await _SB
+    .from('reading_bookmarks')
+    .select('story_id')
+    .eq('user_id', _session.user.id);
+
+  const slots = existing || [];
+  if (slots.length < 2) {
+    await saveChapterPosition(_idx);
+    _isBookmarked = true;
+    updateSaveBtn();
+  } else {
+    openSwap(slots.map(s => s.story_id));
+  }
+}
+
+async function openSwap(occupiedIds) {
+  document.getElementById('swap-new-title').textContent = `"${_storyTitle}"`;
+  const { data: stories } = await _SB
+    .from('stories')
+    .select('id, data')
+    .in('id', occupiedIds);
+
+  const opts = document.getElementById('swap-options');
+  opts.innerHTML = (stories || []).map(s => {
+    const title = s.data?.bookTitle || 'Untitled';
+    const ch = s.data?.progress?.chapter || 0;
+    const total = s.data?.config?.targetChapters || 5;
+    return `<button class="swap-option" onclick="doSwap('${s.id}')">
+      <div>
+        <div class="swap-option-title">${title}</div>
+        <div class="swap-option-meta">Chapter ${ch} of ${total}</div>
+      </div>
+      <div class="swap-option-replace">Replace</div>
+    </button>`;
+  }).join('');
+
+  document.getElementById('swap-backdrop').classList.add('open');
+}
+
+async function doSwap(removeId) {
+  if (!_session) return;
+  await _SB.from('reading_bookmarks')
+    .delete()
+    .eq('user_id', _session.user.id)
+    .eq('story_id', removeId);
+  await saveChapterPosition(_idx);
+  _isBookmarked = true;
+  updateSaveBtn();
+  closeSwap();
+}
+
+function closeSwap() {
+  document.getElementById('swap-backdrop').classList.remove('open');
+}
+
+async function setupBookmark() {
+  if (!_session || !STORY_ID) return;
+  const { data } = await _SB
+    .from('reading_bookmarks')
+    .select('chapter_idx')
+    .eq('user_id', _session.user.id)
+    .eq('story_id', STORY_ID)
+    .maybeSingle();
+
+  document.getElementById('btn-save').style.display = '';
+
+  if (data) {
+    _isBookmarked = true;
+    updateSaveBtn();
+    // Resume from saved chapter
+    if (data.chapter_idx > 0 && data.chapter_idx < _chapters.length) {
+      showChapter(data.chapter_idx);
+    }
+  } else {
+    updateSaveBtn();
+  }
+}
+
+// ── Rating ──────────────────────────────────────────────────
+async function setupRating() {
+  const hint = document.querySelector('.rating-hint');
+  const starsEl = document.getElementById('rating-stars');
+
+  if (!session) {
+    hint.innerHTML = `<a href="login.html?next=${encodeURIComponent(location.href)}" style="color:var(--gold);text-decoration:none;">Sign in</a> to leave a rating.`;
+    starsEl.style.opacity = '0.35';
+    starsEl.style.pointerEvents = 'none';
+    return;
+  }
+
+  hint.textContent = 'Tap to rate this story.';
+
+  // Load existing rating
+  const { data: existing } = await _SB.from('story_ratings')
+    .select('stars')
+    .eq('story_id', STORY_ID)
+    .eq('user_id', session.user.id)
+    .maybeSingle();
+
+  if (existing) {
+    _userRating = existing.stars;
+    highlightStars(existing.stars);
+    document.getElementById('rating-msg').textContent = 'You rated this story.';
+  }
+
+  // Hover effects
+  document.querySelectorAll('.rating-star').forEach(btn => {
+    btn.addEventListener('mouseenter', () => {
+      if (_userRating) return;
+      highlightStars(parseInt(btn.dataset.star));
+    });
+    btn.addEventListener('mouseleave', () => {
+      if (_userRating) return;
+      highlightStars(0);
+    });
+  });
+}
+
+function highlightStars(n) {
+  document.querySelectorAll('.rating-star').forEach(btn => {
+    const s = parseInt(btn.dataset.star);
+    btn.classList.toggle('selected', s <= n);
+  });
+}
+
+async function rate(stars) {
+  if (!_session) return;
+  if (_userRating === stars) return;
+
+  _userRating = stars;
+  highlightStars(stars);
+
+  const msg = document.getElementById('rating-msg');
+  msg.textContent = 'Saving…';
+  msg.className = 'rating-msg';
+
+  const { error } = await _SB.from('story_ratings').upsert({
+    story_id: STORY_ID,
+    user_id:  _session.user.id,
+    stars,
+  }, { onConflict: 'story_id,user_id' });
+
+  if (error) {
+    msg.textContent = 'Could not save rating.';
+  } else {
+    msg.textContent = 'Thanks for rating!';
+    msg.className = 'rating-msg success';
+  }
+}
+
+// ── Ambient theme ────────────────────────────────────────────
+const GENRE_COLORS = {
+  'Fantasy':    ['#3d1a6e','#6b2fa0'],
+  'Romance':    ['#6e1a3d','#a02f6b'],
+  'Mystery':    ['#1a1a3d','#2f2f6b'],
+  'Thriller':   ['#3d0a0a','#6b0a0a'],
+  'Sci-Fi':     ['#0a3d3d','#0a6b6b'],
+  'Horror':     ['#1a0a1a','#2e0a2e'],
+  'Adventure':  ['#1a3d1a','#2f6b2f'],
+  'Historical': ['#3d2c0a','#6b4d10'],
+};
+
+function applyTheme(genre) {
+  const cols = GENRE_COLORS[genre] || ['#2a2010','#3d2e18'];
+  document.getElementById('ambient').style.background =
+    `radial-gradient(ellipse 60% 50% at 20% 30%, ${cols[0]}40 0%, transparent 60%),
+     radial-gradient(ellipse 40% 60% at 80% 70%, ${cols[1]}20 0%, transparent 55%)`;
+}
+
+// ── Init ─────────────────────────────────────────────────────
+(async function init() {
+  if (!STORY_ID) { show('s-error'); return; }
+
+  const { data: row, error } = await _SB
+    .from('stories')
+    .select('id, data')
+    .eq('id', STORY_ID)
+    .eq('is_public', true)
+    .is('deleted_at', null)
+    .maybeSingle();
+
+  if (error || !row) { show('s-error'); return; }
+
+  const d = row.data || {};
+  const title = d.bookTitle || d.config?.protagonistName || 'Untitled Story';
+  const genre = d.config?.genre || '';
+
+  document.title = `${title} — Unwritten`;
+  _storyTitle = title;
+  applyTheme(genre);
+
+  _chapters = d.progress?.chapters || [];
+  _titles   = d.progress?.titles   || [];
+
+  if (_chapters.length === 0) { show('s-error'); return; }
+
+  show('s-reading');
+  await showChapter(0);
+
+  const { data: { session } } = await _SB.auth.getSession();
+  _session = session;
+
+  await setupBookmark();
+  await setupRating();
+})();
+</script>
+</body>
+</html>
