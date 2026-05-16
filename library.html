@@ -417,7 +417,7 @@ async function load() {
   genres.forEach(g => {
     const cnt = stories.filter(s => (s.data?.config?.genre || 'Other') === g).length;
     const safeId = g.replace(/[\s\/]/g,'_');
-    tabs.innerHTML += `<button class="filter-tab" id="tab-${safeId}" onclick="filterGenre(${JSON.stringify(g)})">${g} (${cnt})</button>`;
+    tabs.innerHTML += `<button class="filter-tab" id="tab-${safeId}" onclick="filterGenre('${g}')">${g} (${cnt})</button>`;
   });
 
   render();
