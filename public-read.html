@@ -452,6 +452,7 @@ let _session    = null;
 let _userRating = 0;
 let _isBookmarked = false;
 let _storyTitle   = '';
+let _borrowed     = false;
 
 function show(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -509,6 +510,7 @@ async function showChapter(idx) {
 function prevChapter() { if (_idx > 0) showChapter(_idx - 1); }
 function nextChapter() {
   if (!_session && _idx === 0) { openReadGate(); return; }
+  if (_session && !_borrowed && _idx === 0) { openBorrowGate(); return; }
   if (_idx < _chapters.length - 1) showChapter(_idx + 1);
 }
 
@@ -763,6 +765,62 @@ function applyTheme(genre) {
      radial-gradient(ellipse 40% 60% at 80% 70%, ${cols[1]}20 0%, transparent 55%)`;
 }
 
+// ── Borrow gate ──────────────────────────────────────────────
+let _slotsData = null;
+
+function openBorrowGate() {
+  if (!_slotsData) return;
+  const list = document.getElementById('bg-borrow-list');
+  list.innerHTML = _slotsData.activeBorrows.map(b => {
+    const photoUrl = b.coverImage || `https://picsum.photos/seed/${b.story_id}/80/120`;
+    return `<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
+      <img src="${photoUrl}" style="width:44px;height:64px;object-fit:cover;border-radius:2px;flex-shrink:0;" onerror="this.style.display='none'">
+      <div style="flex:1;min-width:0;">
+        <div style="font-family:'Cormorant Garamond',serif;font-size:1rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${b.bookTitle}</div>
+        <div style="font-size:0.72rem;color:var(--muted);margin-top:2px;">${b.genre}</div>
+      </div>
+      <button onclick="returnAndBorrow('${b.story_id}')" style="flex-shrink:0;padding:7px 14px;background:none;border:1px solid rgba(201,168,76,0.3);color:var(--gold);border-radius:2px;font-size:0.75rem;cursor:pointer;transition:border-color 0.2s;">Return</button>
+    </div>`;
+  }).join('');
+  document.getElementById('borrow-gate').classList.add('open');
+}
+
+async function returnAndBorrow(returnStoryId) {
+  const btn = event.target;
+  btn.textContent = '…';
+  btn.disabled = true;
+  const { data: { session } } = await _SB.auth.getSession();
+  if (!session) return;
+  await fetch('/api/library/return', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+    body: JSON.stringify({ storyId: returnStoryId }),
+  });
+  // Now borrow current book
+  const res = await fetch('/api/library/borrow', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+    body: JSON.stringify({ storyId: STORY_ID }),
+  });
+  if (res.ok) {
+    _borrowed = true;
+    document.getElementById('borrow-gate').classList.remove('open');
+    showChapter(_idx + 1);
+  }
+}
+
+async function buyLibraryPass() {
+  const { data: { session } } = await _SB.auth.getSession();
+  if (!session) { location.href = 'login.html'; return; }
+  const res = await fetch('/api/checkout', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+    body: JSON.stringify({ type: 'library_pass' }),
+  });
+  const d = await res.json();
+  if (d.url) location.href = d.url;
+}
+
 // ── Init ─────────────────────────────────────────────────────
 (async function init() {
   if (!STORY_ID) { show('s-error'); return; }
@@ -796,9 +854,38 @@ function applyTheme(genre) {
   const { data: { session } } = await _SB.auth.getSession();
   _session = session;
 
+  if (_session) {
+    const borrowRes = await fetch('/api/library/borrow', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_session.access_token}` },
+      body: JSON.stringify({ storyId: STORY_ID }),
+    });
+    if (borrowRes.ok) {
+      _borrowed = true;
+    } else if (borrowRes.status === 402) {
+      _slotsData = await borrowRes.json();
+    }
+  }
+
   await setupBookmark();
   await setupRating();
 })();
 </script>
+
+<!-- Borrow-gate modal: slots full -->
+<div id="borrow-gate" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(6px);z-index:500;align-items:center;justify-content:center;padding:20px;">
+  <div style="width:100%;max-width:420px;background:#141109;border:1px solid rgba(201,168,76,0.2);border-radius:4px;padding:36px 32px 32px;box-shadow:0 24px 80px rgba(0,0,0,0.8);">
+    <div style="font-size:0.68rem;letter-spacing:0.18em;text-transform:uppercase;color:#c9a84c;margin-bottom:10px;">Library Full</div>
+    <h2 style="font-family:'Cormorant Garamond',serif;font-size:1.6rem;font-weight:300;color:#ede0c8;margin-bottom:8px;">Your library slots are full</h2>
+    <p style="font-size:0.82rem;color:#7a6a54;line-height:1.65;margin-bottom:24px;">Return one of your current books to borrow this one — you'll lose your reading progress on the returned book.</p>
+    <div id="bg-borrow-list" style="margin-bottom:24px;"></div>
+    <div style="border-top:1px solid rgba(201,168,76,0.1);padding-top:20px;">
+      <p style="font-size:0.78rem;color:#7a6a54;margin-bottom:12px;">Or upgrade to <strong style="color:#c9a84c;">Library Pass</strong> — hold up to 3 books at once for a one-time $4.99.</p>
+      <button onclick="buyLibraryPass()" style="width:100%;padding:13px;background:linear-gradient(135deg,#c9a84c 0%,#b8962e 100%);color:#080705;font-weight:600;font-size:0.88rem;border:none;border-radius:3px;cursor:pointer;margin-bottom:10px;">Upgrade Library Pass — $4.99</button>
+      <button onclick="document.getElementById('borrow-gate').classList.remove('open')" style="width:100%;padding:11px;background:none;border:1px solid rgba(201,168,76,0.15);color:#7a6a54;font-size:0.82rem;border-radius:3px;cursor:pointer;">Maybe Later</button>
+    </div>
+  </div>
+</div>
+<style>#borrow-gate.open{display:flex;}</style>
 </body>
 </html>

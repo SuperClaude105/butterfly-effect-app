@@ -1283,6 +1283,15 @@ body::before {
   <!-- Discount progress -->
   <div id="discount-progress" style="display:none;padding:0 0 18px;font-size:0.8rem;color:var(--muted);letter-spacing:0.02em;"></div>
 
+  <!-- Active Library Borrows -->
+  <div id="active-borrows-section" style="display:none;margin-bottom:36px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div style="font-size:0.68rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--gold);">Currently Borrowing</div>
+      <button onclick="openLibraryCard()" style="font-size:0.72rem;color:var(--muted);background:none;border:none;cursor:pointer;letter-spacing:0.06em;text-decoration:underline;text-decoration-color:rgba(122,106,84,0.3);">View Library Card</button>
+    </div>
+    <div id="active-borrows-list" style="display:flex;flex-wrap:wrap;gap:12px;"></div>
+  </div>
+
   <!-- Filter bar -->
   <div class="filter-bar">
     <div class="filter-tabs" id="filter-tabs"></div>
@@ -1989,6 +1998,126 @@ function showToast(msg) {
   t.style.cssText = 'position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:#1a1206;border:1px solid rgba(196,162,100,0.35);color:#e8d5b7;padding:12px 22px;border-radius:3px;font-size:0.82rem;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.5);white-space:nowrap;';
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 5000);
+}
+
+// ── Library Borrows ───────────────────────────────────────────────────────────
+async function loadActiveBorrows() {
+  const { data: { session } } = await _SB.auth.getSession();
+  if (!session) return;
+  try {
+    const res = await fetch('/api/library/active', { headers: { 'Authorization': `Bearer ${session.access_token}` } });
+    if (!res.ok) return;
+    const { borrows } = await res.json();
+    if (!borrows?.length) return;
+    const section = document.getElementById('active-borrows-section');
+    const list    = document.getElementById('active-borrows-list');
+    section.style.display = 'block';
+    list.innerHTML = borrows.map(b => {
+      const photo   = b.coverImage || `https://picsum.photos/seed/${b.story_id}/160/240`;
+      const chLabel = b.chapterIdx !== null ? `Ch. ${b.chapterIdx + 1} of ${b.totalChapters}` : `${b.totalChapters} chapters`;
+      return `<div style="display:flex;gap:12px;align-items:flex-start;background:var(--card);border:1px solid var(--border);border-radius:3px;padding:12px;width:260px;flex-shrink:0;">
+        <img src="${photo}" style="width:44px;height:64px;object-fit:cover;border-radius:2px;flex-shrink:0;" onerror="this.style.display='none'">
+        <div style="flex:1;min-width:0;">
+          <div style="font-family:'Cormorant Garamond',serif;font-size:0.95rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${b.bookTitle}</div>
+          <div style="font-size:0.68rem;color:var(--muted);margin:3px 0 8px;">${b.genre} · ${chLabel}</div>
+          <div style="display:flex;gap:6px;">
+            <a href="public-read.html?id=${b.story_id}" style="padding:5px 10px;background:var(--gold);color:#080705;border-radius:2px;font-size:0.72rem;font-weight:600;text-decoration:none;">Continue</a>
+            <button onclick="returnBook('${b.story_id}',this)" style="padding:5px 10px;background:none;border:1px solid var(--border2);color:var(--muted);border-radius:2px;font-size:0.72rem;cursor:pointer;">Return</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch (_) {}
+}
+
+async function returnBook(storyId, btn) {
+  if (!confirm('Return this book? Your reading progress will be lost.')) return;
+  btn.disabled = true; btn.textContent = '…';
+  const { data: { session } } = await _SB.auth.getSession();
+  if (!session) return;
+  await fetch('/api/library/return', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+    body: JSON.stringify({ storyId }),
+  });
+  btn.closest('div[style*="260px"]').remove();
+  const list = document.getElementById('active-borrows-list');
+  if (!list.children.length) document.getElementById('active-borrows-section').style.display = 'none';
+  showToast('Book returned.');
+}
+
+// ── Library Card modal ────────────────────────────────────────────────────────
+async function openLibraryCard() {
+  const { data: { session } } = await _SB.auth.getSession();
+  if (!session) return;
+  const modal = document.getElementById('lc-modal');
+  modal.style.display = 'flex';
+  document.getElementById('lc-body').innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);font-size:0.82rem;letter-spacing:0.1em;">Loading…</div>';
+  try {
+    const res = await fetch('/api/library/card', { headers: { 'Authorization': `Bearer ${session.access_token}` } });
+    const { borrows, slots } = await res.json();
+    document.getElementById('lc-slots').textContent = slots >= 999 ? 'Unlimited' : `${slots} slot${slots !== 1 ? 's' : ''}`;
+    if (!borrows?.length) {
+      document.getElementById('lc-body').innerHTML = '<p style="text-align:center;padding:40px;color:var(--muted);font-style:italic;">No borrowing history yet.</p>';
+      return;
+    }
+    document.getElementById('lc-body').innerHTML = borrows.map(b => {
+      const photo    = b.coverImage || `https://picsum.photos/seed/${b.story_id}/60/90`;
+      const active   = !b.returned_at;
+      const dateStr  = new Date(b.borrowed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const retStr   = b.returned_at ? new Date(b.returned_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : null;
+      const progress = b.chapterIdx !== null ? `Ch. ${b.chapterIdx + 1}/${b.totalChapters}` : (b.totalChapters ? `${b.totalChapters} ch.` : '');
+      return `<div style="display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid rgba(201,168,76,0.07);">
+        <img src="${photo}" style="width:36px;height:54px;object-fit:cover;border-radius:2px;flex-shrink:0;" onerror="this.style.background:'#1a140a';this.style.display='block'">
+        <div style="flex:1;min-width:0;">
+          <div style="font-family:'Cormorant Garamond',serif;font-size:1rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${b.bookTitle}</div>
+          <div style="font-size:0.7rem;color:var(--muted);margin-top:2px;">${b.genre}${progress ? ' · ' + progress : ''}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;">
+          ${active ? `<span style="font-size:0.68rem;color:var(--gold);letter-spacing:0.06em;">ACTIVE</span>` : `<span style="font-size:0.68rem;color:var(--muted);">Returned ${retStr}</span>`}
+          <div style="font-size:0.68rem;color:rgba(122,106,84,0.5);margin-top:2px;">Borrowed ${dateStr}</div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch (_) {
+    document.getElementById('lc-body').innerHTML = '<p style="text-align:center;padding:40px;color:var(--muted);">Could not load history.</p>';
+  }
+}
+
+loadActiveBorrows();
+</script>
+
+<!-- Library Card modal -->
+<div id="lc-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.78);backdrop-filter:blur(6px);z-index:500;align-items:center;justify-content:center;padding:20px;" onclick="if(event.target===this)this.style.display='none'">
+  <div style="width:100%;max-width:480px;max-height:85vh;background:var(--card);border:1px solid var(--border2);border-radius:4px;display:flex;flex-direction:column;box-shadow:0 24px 80px rgba(0,0,0,0.8);">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:24px 28px 16px;border-bottom:1px solid var(--border);">
+      <div>
+        <div style="font-size:0.66rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--gold);margin-bottom:4px;">Unwritten</div>
+        <h2 style="font-family:'Cormorant Garamond',serif;font-size:1.5rem;font-weight:300;color:var(--text);">Library Card</h2>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:0.7rem;color:var(--muted);">Slots</div>
+        <div id="lc-slots" style="font-size:1rem;color:var(--gold);font-weight:600;">—</div>
+      </div>
+    </div>
+    <div id="lc-body" style="flex:1;overflow-y:auto;padding:8px 28px 24px;"></div>
+    <div style="padding:16px 28px;border-top:1px solid var(--border);display:flex;gap:10px;">
+      <button onclick="buyLibraryPassFromShelf()" style="flex:1;padding:11px;background:linear-gradient(135deg,var(--gold) 0%,#b8962e 100%);color:#080705;font-weight:600;font-size:0.82rem;border:none;border-radius:3px;cursor:pointer;">Upgrade to 3 Slots — $4.99</button>
+      <button onclick="document.getElementById('lc-modal').style.display='none'" style="padding:11px 20px;background:none;border:1px solid var(--border2);color:var(--muted);border-radius:3px;cursor:pointer;font-size:0.82rem;">Close</button>
+    </div>
+  </div>
+</div>
+<script>
+async function buyLibraryPassFromShelf() {
+  const { data: { session } } = await _SB.auth.getSession();
+  if (!session) { location.href = 'login.html'; return; }
+  const res = await fetch('/api/checkout', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+    body: JSON.stringify({ type: 'library_pass' }),
+  });
+  const d = await res.json();
+  if (d.url) location.href = d.url;
 }
 </script>
 </body>

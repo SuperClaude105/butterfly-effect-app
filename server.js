@@ -51,6 +51,23 @@ app.post('/api/checkout', async (req, res) => {
     }
   }
 
+  // Library Pass purchase
+  if (type === 'library_pass') {
+    try {
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [{ price_data: { currency: 'usd', product_data: { name: 'Unwritten — Library Pass (3 simultaneous borrows)' }, unit_amount: 499 }, quantity: 1 }],
+        mode: 'payment',
+        success_url: `${process.env.APP_URL}/shelf.html?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url:  `${process.env.APP_URL}/shelf.html`,
+        metadata: { userId: user.id, librarySlots: '3' },
+      });
+      return res.json({ url: session.url });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
   // Share credit bundle purchase
   if (type === 'share_credits') {
     const price = SHARE_PRICING[shareBundle];
@@ -136,9 +153,16 @@ app.post('/api/payment/confirm', async (req, res) => {
     const credits        = parseInt(session.metadata.credits) || 0;
     const shareCredits   = parseInt(session.metadata.shareCredits) || 0;
     const storiedCredits = parseInt(session.metadata.storiedCredits) || 0;
+    const librarySlots   = parseInt(session.metadata.librarySlots) || 0;
     const giftEmail      = session.metadata.giftEmail || '';
     const giftFrom       = session.metadata.giftFrom  || '';
     const giftMessage    = session.metadata.giftMessage || '';
+
+    if (librarySlots) {
+      await supabaseAdmin.rpc('add_library_slots', { p_user_id: user.id, p_slots: librarySlots });
+      await supabaseAdmin.from('processed_payments').insert({ session_id: sessionId, user_id: user.id, credits: 0 });
+      return res.json({ success: true, librarySlots });
+    }
 
     if (storiedCredits) {
       await supabaseAdmin.rpc('add_storied_credits', { p_user_id: user.id, p_credits: storiedCredits });
@@ -261,6 +285,114 @@ app.get('/api/gift-info/:token', async (req, res) => {
   res.json({ valid: true, credits: gift.credits, tier: gift.tier });
 });
 
+// ─── POST /api/library/borrow ─────────────────────────────────────────────────
+app.post('/api/library/borrow', async (req, res) => {
+  const { storyId } = req.body;
+  const user = await getUserFromToken(req.headers.authorization);
+  if (!user || !storyId) return res.status(401).json({ error: 'Unauthorized' });
+
+  const { data: existing } = await supabaseAdmin
+    .from('library_borrows').select('id')
+    .eq('user_id', user.id).eq('story_id', storyId).is('returned_at', null).maybeSingle();
+  if (existing) return res.json({ success: true, alreadyBorrowed: true });
+
+  const profile  = await getProfile(user.id);
+  const maxSlots = profile.is_comped ? 999 : (profile.library_slots || 1);
+
+  const { data: active } = await supabaseAdmin
+    .from('library_borrows').select('id, story_id, borrowed_at')
+    .eq('user_id', user.id).is('returned_at', null);
+
+  if ((active?.length || 0) >= maxSlots) {
+    const enriched = await Promise.all((active || []).map(async b => {
+      const { data: s } = await supabaseAdmin.from('stories').select('data').eq('id', b.story_id).maybeSingle();
+      const d = s?.data || {};
+      return { ...b, bookTitle: d.bookTitle || d.config?.protagonistName || 'Untitled', genre: d.config?.genre || 'Fiction', coverImage: d.coverImage || null };
+    }));
+    return res.status(402).json({ error: 'Library slots full', slots: maxSlots, activeBorrows: enriched });
+  }
+
+  await supabaseAdmin.from('library_borrows').insert({ user_id: user.id, story_id: storyId });
+  res.json({ success: true, alreadyBorrowed: false });
+});
+
+// ─── POST /api/library/return ─────────────────────────────────────────────────
+app.post('/api/library/return', async (req, res) => {
+  const { storyId } = req.body;
+  const user = await getUserFromToken(req.headers.authorization);
+  if (!user || !storyId) return res.status(401).json({ error: 'Unauthorized' });
+
+  await supabaseAdmin.from('library_borrows')
+    .update({ returned_at: new Date().toISOString() })
+    .eq('user_id', user.id).eq('story_id', storyId).is('returned_at', null);
+
+  await supabaseAdmin.from('reading_bookmarks')
+    .delete().eq('user_id', user.id).eq('story_id', storyId);
+
+  res.json({ success: true });
+});
+
+// ─── GET /api/library/card ─────────────────────────────────────────────────────
+app.get('/api/library/card', async (req, res) => {
+  const user = await getUserFromToken(req.headers.authorization);
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+  const { data: borrows } = await supabaseAdmin
+    .from('library_borrows').select('id, story_id, borrowed_at, returned_at')
+    .eq('user_id', user.id).order('borrowed_at', { ascending: false }).limit(50);
+
+  if (!borrows?.length) return res.json({ borrows: [] });
+
+  const enriched = await Promise.all(borrows.map(async b => {
+    const [sr, br] = await Promise.all([
+      supabaseAdmin.from('stories').select('data').eq('id', b.story_id).maybeSingle(),
+      supabaseAdmin.from('reading_bookmarks').select('chapter_idx').eq('user_id', user.id).eq('story_id', b.story_id).maybeSingle(),
+    ]);
+    const d = sr?.data?.data || {};
+    return {
+      ...b,
+      bookTitle:     d.bookTitle || d.config?.protagonistName || 'Untitled',
+      genre:         d.config?.genre || 'Fiction',
+      coverImage:    d.coverImage || null,
+      totalChapters: (d.progress?.chapters || []).length,
+      chapterIdx:    br?.data?.chapter_idx ?? null,
+    };
+  }));
+
+  const profile = await getProfile(user.id);
+  res.json({ borrows: enriched, slots: profile.is_comped ? 999 : (profile.library_slots || 1) });
+});
+
+// ─── GET /api/library/active ───────────────────────────────────────────────────
+app.get('/api/library/active', async (req, res) => {
+  const user = await getUserFromToken(req.headers.authorization);
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+  const { data: active } = await supabaseAdmin
+    .from('library_borrows').select('id, story_id, borrowed_at')
+    .eq('user_id', user.id).is('returned_at', null);
+
+  if (!active?.length) return res.json({ borrows: [] });
+
+  const enriched = await Promise.all(active.map(async b => {
+    const [sr, br] = await Promise.all([
+      supabaseAdmin.from('stories').select('data').eq('id', b.story_id).maybeSingle(),
+      supabaseAdmin.from('reading_bookmarks').select('chapter_idx').eq('user_id', user.id).eq('story_id', b.story_id).maybeSingle(),
+    ]);
+    const d = sr?.data?.data || {};
+    return {
+      ...b,
+      bookTitle:     d.bookTitle || d.config?.protagonistName || 'Untitled',
+      genre:         d.config?.genre || 'Fiction',
+      coverImage:    d.coverImage || null,
+      totalChapters: (d.progress?.chapters || []).length,
+      chapterIdx:    br?.data?.chapter_idx ?? null,
+    };
+  }));
+
+  res.json({ borrows: enriched });
+});
+
 // ─── GET /api/gift-session-info — lightweight success-screen info ─────────────
 app.get('/api/gift-session-info', async (req, res) => {
   const { session_id } = req.query;
@@ -321,7 +453,7 @@ app.post('/api/webhook', async (req, res) => {
       const { data: existing } = await supabaseAdmin
         .from('processed_payments').select('id').eq('session_id', session.id).maybeSingle();
       if (!existing) {
-        const { userId, credits, shareCredits, storiedCredits, isGuestGift, giftEmail, giftFrom, giftMessage } = session.metadata || {};
+        const { userId, credits, shareCredits, storiedCredits, librarySlots, isGuestGift, giftEmail, giftFrom, giftMessage } = session.metadata || {};
 
         if (isGuestGift === 'true') {
           // ── Guest gift — no Unwritten account required ───────────────────
@@ -377,6 +509,9 @@ app.post('/api/webhook', async (req, res) => {
               }).catch(() => {});
             }
           }
+        } else if (userId && librarySlots) {
+          await supabaseAdmin.rpc('add_library_slots', { p_user_id: userId, p_slots: parseInt(librarySlots) });
+          await supabaseAdmin.from('processed_payments').insert({ session_id: session.id, user_id: userId, credits: 0 });
         } else if (userId && storiedCredits) {
           await supabaseAdmin.rpc('add_storied_credits', { p_user_id: userId, p_credits: parseInt(storiedCredits) });
           await supabaseAdmin.rpc('add_share_credits', { p_user_id: userId, p_credits: parseInt(storiedCredits) * 2 });
@@ -435,10 +570,10 @@ async function getUserFromToken(authHeader) {
 async function getProfile(userId) {
   const { data } = await supabaseAdmin
     .from('profiles')
-    .select('credits, is_comped, share_credits, storied_credits')
+    .select('credits, is_comped, share_credits, storied_credits, library_slots')
     .eq('user_id', userId)
     .maybeSingle();
-  return data || { credits: 0, is_comped: false, share_credits: 0, storied_credits: 0 };
+  return data || { credits: 0, is_comped: false, share_credits: 0, storied_credits: 0, library_slots: 1 };
 }
 
 // ─── Dynamic system prompt builder ────────────────────────────────────────
