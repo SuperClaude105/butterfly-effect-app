@@ -1344,11 +1344,20 @@ body::before {
 <div class="modal-backdrop" id="share-modal">
   <div class="modal-box">
     <div class="modal-title">Share this book</div>
-    <div>
+    <div style="margin-bottom:8px;">
       <div class="modal-label">Recipient email</div>
       <input class="modal-input" type="email" id="share-email" placeholder="friend@example.com">
     </div>
+    <div id="share-credit-info" style="font-size:0.75rem;color:var(--muted);line-height:1.5;margin-bottom:4px;">
+      Free if they're new to Unwritten · Costs 1 share credit if they already have an account
+    </div>
+    <div id="share-credit-balance" style="font-size:0.75rem;margin-bottom:8px;"></div>
     <div class="modal-status" id="share-status"></div>
+    <div id="share-buy-cta" style="display:none;margin-bottom:10px;">
+      <div style="font-size:0.8rem;color:#c87a60;margin-bottom:8px;">You're out of share credits.</div>
+      <button class="modal-btn" style="width:100%;background:rgba(201,168,76,0.1);border-color:var(--gold);color:var(--gold);font-size:0.78rem;" onclick="buyShareCredits('share_3')">Buy 3 credits — $5</button>
+      <button class="modal-btn" style="width:100%;margin-top:6px;background:none;border-color:var(--border2);color:var(--muted);font-size:0.78rem;" onclick="buyShareCredits('share_10')">Buy 10 credits — $15</button>
+    </div>
     <div class="modal-actions">
       <button class="modal-btn cancel" onclick="closeShareModal()">Cancel</button>
       <button class="modal-btn submit" id="share-submit" onclick="submitShare()">Send</button>
@@ -1731,14 +1740,29 @@ async function deleteStory(id) {
 }
 
 // ── Share ─────────────────────────────────────────────────
-function openShareModal() {
+let _shareCredits = 0;
+
+async function openShareModal() {
   document.getElementById('share-email').value = '';
   document.getElementById('share-status').textContent = '';
   document.getElementById('share-submit').textContent = 'Send';
   document.getElementById('share-submit').disabled = false;
+  document.getElementById('share-buy-cta').style.display = 'none';
+  document.getElementById('share-credit-balance').textContent = '';
   document.getElementById('share-modal').style.display = 'flex';
   setTimeout(() => document.getElementById('share-email').focus(), 50);
+
+  try {
+    const { data: { session } } = await _SB.auth.getSession();
+    const resp = await fetch('/api/share-credits', { headers: { Authorization: `Bearer ${session.access_token}` } });
+    const json = await resp.json();
+    _shareCredits = json.share_credits || 0;
+    const balEl = document.getElementById('share-credit-balance');
+    balEl.textContent = `Share credits: ${_shareCredits}`;
+    balEl.style.color = _shareCredits > 0 ? 'var(--gold)' : '#c87a60';
+  } catch (_) {}
 }
+
 function closeShareModal() { document.getElementById('share-modal').style.display = 'none'; }
 
 async function submitShare() {
@@ -1747,14 +1771,21 @@ async function submitShare() {
   if (!email) { status.textContent = 'Please enter an email.'; status.style.color = '#c87a60'; return; }
   const btn = document.getElementById('share-submit');
   btn.textContent = 'Sending…'; btn.disabled = true; status.textContent = '';
+  document.getElementById('share-buy-cta').style.display = 'none';
   try {
-    const { data:{ session } } = await _SB.auth.getSession();
+    const { data: { session } } = await _SB.auth.getSession();
     const resp = await fetch('/api/share', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ storyId: _selectedId, toEmail: email, authToken: session.access_token })
     });
     const json = await resp.json();
+    if (resp.status === 402) {
+      status.textContent = '';
+      document.getElementById('share-buy-cta').style.display = 'block';
+      btn.textContent = 'Send'; btn.disabled = false;
+      return;
+    }
     if (!resp.ok) throw new Error(json.error || 'Something went wrong');
     status.style.color = '#7ac880';
     status.textContent = json.existing ? `Book added to ${email}'s library!` : `Invitation sent to ${email}.`;
@@ -1765,6 +1796,17 @@ async function submitShare() {
     status.style.color = '#c87a60';
     btn.textContent = 'Send'; btn.disabled = false;
   }
+}
+
+async function buyShareCredits(bundle) {
+  const { data: { session } } = await _SB.auth.getSession();
+  const resp = await fetch('/api/checkout', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+    body: JSON.stringify({ type: 'share_credits', shareBundle: bundle })
+  });
+  const json = await resp.json();
+  if (json.url) window.location.href = json.url;
 }
 
 // ── Currently Reading (bookmarks) ────────────────────────

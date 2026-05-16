@@ -14,16 +14,43 @@ app.use(express.static(path.join(__dirname)));
 // ─── GET /api/credits ──────────────────────────────────────────────────────
 app.get('/api/credits', async (req, res) => {
   const user = await getUserFromToken(req.headers.authorization);
-  if (!user) return res.json({ credits: 0, is_comped: false });
+  if (!user) return res.json({ credits: 0, is_comped: false, share_credits: 0 });
   const profile = await getProfile(user.id);
   res.json(profile);
 });
 
-// ─── POST /api/checkout ────────────────────────────────────────────────────
-app.post('/api/checkout', async (req, res) => {
-  const { tier, bundle, giftEmail, giftFrom, giftMessage } = req.body;
+// ─── GET /api/share-credits ────────────────────────────────────────────────
+app.get('/api/share-credits', async (req, res) => {
   const user = await getUserFromToken(req.headers.authorization);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
+  const profile = await getProfile(user.id);
+  res.json({ share_credits: profile.share_credits || 0 });
+});
+
+// ─── POST /api/checkout ────────────────────────────────────────────────────
+app.post('/api/checkout', async (req, res) => {
+  const { tier, bundle, giftEmail, giftFrom, giftMessage, type, shareBundle } = req.body;
+  const user = await getUserFromToken(req.headers.authorization);
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+  // Share credit bundle purchase
+  if (type === 'share_credits') {
+    const price = SHARE_PRICING[shareBundle];
+    if (!price) return res.status(400).json({ error: 'Invalid share bundle' });
+    try {
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [{ price_data: { currency: 'usd', product_data: { name: `Unwritten — ${price.label}` }, unit_amount: price.amount }, quantity: 1 }],
+        mode: 'payment',
+        success_url: `${process.env.APP_URL}/shelf.html?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url:  `${process.env.APP_URL}/shelf.html`,
+        metadata: { userId: user.id, shareCredits: String(price.shareCredits) },
+      });
+      return res.json({ url: session.url });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  }
 
   const key = `${tier}_${bundle ? 'bundle' : 'single'}`;
   const price = TIER_PRICING[key];
@@ -88,10 +115,17 @@ app.post('/api/payment/confirm', async (req, res) => {
     if (session.payment_status !== 'paid') return res.status(400).json({ error: 'Not paid' });
     if (session.metadata.userId !== user.id) return res.status(403).json({ error: 'Forbidden' });
 
-    const credits   = parseInt(session.metadata.credits);
-    const giftEmail = session.metadata.giftEmail || '';
-    const giftFrom    = session.metadata.giftFrom    || '';
-    const giftMessage = session.metadata.giftMessage || '';
+    const credits      = parseInt(session.metadata.credits) || 0;
+    const shareCredits = parseInt(session.metadata.shareCredits) || 0;
+    const giftEmail    = session.metadata.giftEmail || '';
+    const giftFrom     = session.metadata.giftFrom  || '';
+    const giftMessage  = session.metadata.giftMessage || '';
+
+    if (shareCredits) {
+      await supabaseAdmin.rpc('add_share_credits', { p_user_id: user.id, p_credits: shareCredits });
+      await supabaseAdmin.from('processed_payments').insert({ session_id: sessionId, user_id: user.id, credits: 0 });
+      return res.json({ success: true, shareCredits });
+    }
 
     if (giftEmail) {
       // Gift flow — find recipient
@@ -211,8 +245,11 @@ app.post('/api/webhook', async (req, res) => {
       const { data: existing } = await supabaseAdmin
         .from('processed_payments').select('id').eq('session_id', session.id).maybeSingle();
       if (!existing) {
-        const { userId, credits } = session.metadata || {};
-        if (userId && credits) {
+        const { userId, credits, shareCredits } = session.metadata || {};
+        if (userId && shareCredits) {
+          await supabaseAdmin.rpc('add_share_credits', { p_user_id: userId, p_credits: parseInt(shareCredits) });
+          await supabaseAdmin.from('processed_payments').insert({ session_id: session.id, user_id: userId, credits: 0 });
+        } else if (userId && credits) {
           await supabaseAdmin.rpc('add_credits', { p_user_id: userId, p_credits: parseInt(credits) });
           await supabaseAdmin.from('processed_payments').insert({ session_id: session.id, user_id: userId, credits: parseInt(credits) });
         }
@@ -242,6 +279,11 @@ const TIER_PRICING = {
   standard_bundle: { amount: 2000, credits: 3, label: 'Standard Bundle — 3 credits (25–50 chapters each)' },
 };
 
+const SHARE_PRICING = {
+  share_3:  { amount: 500,  shareCredits: 3,  label: '3 Share Credits' },
+  share_10: { amount: 1500, shareCredits: 10, label: '10 Share Credits' },
+};
+
 // ─── Auth helpers ──────────────────────────────────────────────────────────
 async function getUserFromToken(authHeader) {
   if (!authHeader) return null;
@@ -253,10 +295,10 @@ async function getUserFromToken(authHeader) {
 async function getProfile(userId) {
   const { data } = await supabaseAdmin
     .from('profiles')
-    .select('credits, is_comped')
+    .select('credits, is_comped, share_credits')
     .eq('user_id', userId)
     .maybeSingle();
-  return data || { credits: 0, is_comped: false };
+  return data || { credits: 0, is_comped: false, share_credits: 0 };
 }
 
 // ─── Dynamic system prompt builder ────────────────────────────────────────
@@ -1040,6 +1082,10 @@ app.post('/api/share', async (req, res) => {
   const recipient = (users || []).find(u => u.email === toEmail);
 
   if (recipient) {
+    // Costs 1 share credit for existing users
+    const { data: deducted } = await supabaseAdmin.rpc('deduct_share_credit', { p_user_id: user.id });
+    if (!deducted) return res.status(402).json({ error: 'No share credits remaining.', needsCredits: true });
+
     const { error: insertErr } = await supabaseAdmin.from('stories').insert({
       id: crypto.randomUUID(), user_id: recipient.id,
       data: story.data, created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
