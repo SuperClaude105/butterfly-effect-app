@@ -158,17 +158,8 @@ hr { margin:2rem 0 1.25rem; border:none; border-top:1px solid var(--border); }
     <a href="/pricing">View Plans</a>
   </div>
 
-  <!-- Gate (access password) -->
-  <div id="gateSection">
-    <form id="gateForm" autocomplete="off">
-      <input type="password" id="gate-pass" placeholder="Enter access password" autofocus>
-      <p class="msg error" id="gate-msg"></p>
-      <button type="submit" id="gate-btn">Continue</button>
-    </form>
-  </div>
-
-  <!-- Auth forms (hidden until gate is passed) -->
-  <div id="authSection" style="display:none">
+  <!-- Auth forms -->
+  <div id="authSection">
     <div class="tabs">
       <button class="tab active" data-tab="signin">Sign In</button>
       <button class="tab" data-tab="register">Create Account</button>
@@ -216,7 +207,7 @@ hr { margin:2rem 0 1.25rem; border:none; border-top:1px solid var(--border); }
   </div>
 
   <hr>
-  <p class="footer-note">Private access · Unwritten</p>
+  <p class="footer-note">Unwritten</p>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -231,28 +222,6 @@ _SB.auth.getSession().then(({ data: { session } }) => {
   if (session) location.replace('/shelf.html');
 });
 
-// ── Gate ──────────────────────────────────────────────────────────
-function showAuth() {
-  document.getElementById('gateSection').style.display = 'none';
-  document.getElementById('authSection').style.display = '';
-  document.getElementById('si-email').focus();
-}
-
-if (sessionStorage.getItem('gate_passed') === 'true') showAuth();
-
-document.getElementById('gateForm').addEventListener('submit', e => {
-  e.preventDefault();
-  const val = document.getElementById('gate-pass').value;
-  const msg = document.getElementById('gate-msg');
-  if (val === 'Unwritten105') {
-    sessionStorage.setItem('gate_passed', 'true');
-    showAuth();
-  } else {
-    msg.textContent = 'Incorrect password.';
-    document.getElementById('gate-pass').value = '';
-    document.getElementById('gate-pass').focus();
-  }
-});
 
 // ── Tabs ──────────────────────────────────────────────────────────
 document.querySelectorAll('.tab').forEach(btn => {
@@ -293,8 +262,6 @@ document.getElementById('signinForm').addEventListener('submit', async e => {
 // ── Detect password recovery hash ────────────────────────────────
 _SB.auth.onAuthStateChange((event) => {
   if (event === 'PASSWORD_RECOVERY') {
-    document.getElementById('gateSection').style.display = 'none';
-    document.getElementById('authSection').style.display = '';
     document.querySelectorAll('.tabs, #signinForm, #registerForm, #forgotForm').forEach(el => el.style.display = 'none');
     document.getElementById('resetForm').style.display = '';
   }
