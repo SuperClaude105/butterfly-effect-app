@@ -537,7 +537,8 @@ input[type=range]::-webkit-slider-thumb:hover { box-shadow:0 0 18px rgba(196,162
       </label>
       <div id="gift-email-wrap" style="display:none;margin-bottom:1rem;">
         <input type="email" id="gift-email" placeholder="Recipient's email address" style="width:100%;padding:.7rem .9rem;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:3px;color:var(--text);font-family:'EB Garamond',Georgia,serif;font-size:1rem;outline:none;margin-bottom:8px;">
-        <input type="text" id="gift-from" placeholder="Your name (shown to recipient)" style="width:100%;padding:.7rem .9rem;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:3px;color:var(--text);font-family:'EB Garamond',Georgia,serif;font-size:1rem;outline:none;">
+        <input type="text" id="gift-from" placeholder="Your name (shown to recipient)" style="width:100%;padding:.7rem .9rem;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:3px;color:var(--text);font-family:'EB Garamond',Georgia,serif;font-size:1rem;outline:none;margin-bottom:8px;">
+        <textarea id="gift-message" placeholder="Personal message (optional) — Happy Birthday, enjoy your story…" rows="3" style="width:100%;padding:.7rem .9rem;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:3px;color:var(--text);font-family:'EB Garamond',Georgia,serif;font-size:1rem;outline:none;resize:none;line-height:1.5;"></textarea>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.2rem;">
         <button onclick="buyCredits('compact',false)" class="buy-opt">
@@ -893,7 +894,8 @@ async function buyCredits(tier, bundle) {
 
   const isGift = document.getElementById('gift-toggle').checked;
   const giftEmail = isGift ? document.getElementById('gift-email').value.trim() : null;
-  const giftFrom  = isGift ? (document.getElementById('gift-from').value.trim() || null) : null;
+  const giftFrom    = isGift ? (document.getElementById('gift-from').value.trim() || null) : null;
+  const giftMessage = isGift ? (document.getElementById('gift-message').value.trim() || null) : null;
   if (isGift && !giftEmail) {
     document.getElementById('gift-email').focus();
     document.getElementById('gift-email').style.borderColor = 'rgba(196,162,100,0.6)';
@@ -904,7 +906,8 @@ async function buyCredits(tier, bundle) {
   try {
     const body = { tier, bundle };
     if (giftEmail) body.giftEmail = giftEmail;
-    if (giftFrom)  body.giftFrom  = giftFrom;
+    if (giftFrom)    body.giftFrom    = giftFrom;
+    if (giftMessage) body.giftMessage = giftMessage;
     const res = await fetch('/api/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_session.access_token}` },

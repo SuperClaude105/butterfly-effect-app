@@ -21,7 +21,7 @@ app.get('/api/credits', async (req, res) => {
 
 // ─── POST /api/checkout ────────────────────────────────────────────────────
 app.post('/api/checkout', async (req, res) => {
-  const { tier, bundle, giftEmail, giftFrom } = req.body;
+  const { tier, bundle, giftEmail, giftFrom, giftMessage } = req.body;
   const user = await getUserFromToken(req.headers.authorization);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -58,7 +58,8 @@ app.post('/api/checkout', async (req, res) => {
         userId:    user.id,
         credits:   String(price.credits),
         giftEmail: giftEmail || '',
-        giftFrom:  giftFrom  || '',
+        giftFrom:    giftFrom    || '',
+        giftMessage: giftMessage || '',
       },
     });
     res.json({ url: session.url, discount });
@@ -89,7 +90,8 @@ app.post('/api/payment/confirm', async (req, res) => {
 
     const credits   = parseInt(session.metadata.credits);
     const giftEmail = session.metadata.giftEmail || '';
-    const giftFrom  = session.metadata.giftFrom  || '';
+    const giftFrom    = session.metadata.giftFrom    || '';
+    const giftMessage = session.metadata.giftMessage || '';
 
     if (giftEmail) {
       // Gift flow — find recipient
@@ -110,9 +112,10 @@ app.post('/api/payment/confirm', async (req, res) => {
               <h1 style="font-size:26px;color:#c8a96e;margin-bottom:4px;">Unwritten</h1>
               <p style="color:#7a6a58;font-size:13px;margin-bottom:36px;">A gift has been sent your way</p>
               <h2 style="font-size:22px;color:#f0e8d0;margin-bottom:14px;">${credits} Story Credit${credits !== 1 ? 's' : ''}</h2>
-              <p style="font-size:16px;line-height:1.75;color:#c0a880;margin-bottom:32px;">
+              <p style="font-size:16px;line-height:1.75;color:#c0a880;margin-bottom:${giftMessage ? '20px' : '32px'};">
                 ${fromEmail} sent you ${credits} credit${credits !== 1 ? 's' : ''} on Unwritten — ${credits === 1 ? 'it has' : "they've"} been added to your account automatically. Log in anytime to use ${credits === 1 ? 'it' : 'them'}.
               </p>
+              ${giftMessage ? `<blockquote style="margin:0 0 28px;padding:16px 20px;background:rgba(255,255,255,0.04);border-left:3px solid #c8a96e;border-radius:2px;font-style:italic;font-size:15px;color:#e8d5b0;line-height:1.7;">${giftMessage}</blockquote>` : ''}
               <a href="${process.env.APP_URL}/shelf.html" style="display:inline-block;padding:13px 30px;background:#c8a96e;color:#0d0a07;text-decoration:none;font-size:15px;font-weight:bold;border-radius:3px;">
                 Go to My Library →
               </a>
@@ -137,9 +140,10 @@ app.post('/api/payment/confirm', async (req, res) => {
               <h1 style="font-size:26px;color:#c8a96e;margin-bottom:4px;">Unwritten</h1>
               <p style="color:#7a6a58;font-size:13px;margin-bottom:36px;">A gift has been sent your way</p>
               <h2 style="font-size:22px;color:#f0e8d0;margin-bottom:14px;">${credits} Story Credit${credits !== 1 ? 's' : ''}</h2>
-              <p style="font-size:16px;line-height:1.75;color:#c0a880;margin-bottom:32px;">
+              <p style="font-size:16px;line-height:1.75;color:#c0a880;margin-bottom:${giftMessage ? '20px' : '32px'};">
                 ${fromEmail} sent you ${credits} credit${credits !== 1 ? 's' : ''} on Unwritten — use ${credits === 1 ? 'it' : 'them'} to generate your own AI-written novel, personalized to your characters and choices.
               </p>
+              ${giftMessage ? `<blockquote style="margin:0 0 28px;padding:16px 20px;background:rgba(255,255,255,0.04);border-left:3px solid #c8a96e;border-radius:2px;font-style:italic;font-size:15px;color:#e8d5b0;line-height:1.7;">${giftMessage}</blockquote>` : ''}
               <a href="${claimUrl}" style="display:inline-block;padding:13px 30px;background:#c8a96e;color:#0d0a07;text-decoration:none;font-size:15px;font-weight:bold;border-radius:3px;">
                 Claim Your Credits →
               </a>
