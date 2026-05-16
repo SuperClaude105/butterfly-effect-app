@@ -1544,7 +1544,7 @@ function render() {
   tabsEl.innerHTML = `<button class="filter-tab ${_currentGenre==='all'?'active':''}" onclick="filterGenre('all')">All (${all.length})</button>`;
   allGenres.forEach(g => {
     const cnt = all.filter(s => (s.config?.genre||'Other')===g).length;
-    tabsEl.innerHTML += `<button class="filter-tab ${_currentGenre===g?'active':''}" onclick="filterGenre(${JSON.stringify(g)})">${g} (${cnt})</button>`;
+    tabsEl.innerHTML += `<button class="filter-tab ${_currentGenre===g?'active':''}" onclick="filterGenre('${g}')">${g} (${cnt})</button>`;
   });
 
   // Grid
