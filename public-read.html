@@ -261,6 +261,45 @@ body::after {
   color:var(--faint);margin-bottom:22px;letter-spacing:0.06em;
 }
 
+/* ── Read gate overlay ── */
+.read-gate {
+  display:none;position:fixed;inset:0;z-index:600;
+  background:rgba(8,7,5,0.88);
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  align-items:center;justify-content:center;padding:24px;
+}
+.read-gate.open{display:flex;}
+.read-gate-box {
+  background:#141109;border:1px solid rgba(201,168,76,0.22);
+  border-radius:6px;padding:44px 36px;max-width:400px;width:100%;
+  text-align:center;
+}
+.read-gate-eyebrow {
+  font-size:0.62rem;letter-spacing:0.28em;text-transform:uppercase;
+  color:var(--gold);margin-bottom:18px;opacity:0.75;
+}
+.read-gate-title {
+  font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;
+  font-size:2rem;color:var(--text);margin-bottom:12px;line-height:1.15;
+}
+.read-gate-sub {
+  font-size:0.82rem;color:var(--muted);line-height:1.65;margin-bottom:32px;
+}
+.read-gate-btns{display:flex;flex-direction:column;gap:10px;}
+.read-gate-primary {
+  display:block;padding:13px 24px;background:var(--gold);color:#080705;
+  border-radius:2px;text-decoration:none;font-size:0.72rem;font-weight:600;
+  letter-spacing:0.12em;text-transform:uppercase;transition:opacity 0.2s;border:none;cursor:pointer;
+}
+.read-gate-primary:hover{opacity:0.85;}
+.read-gate-secondary {
+  display:block;padding:12px 24px;border:1px solid rgba(201,168,76,0.25);
+  color:var(--muted);border-radius:2px;text-decoration:none;
+  font-size:0.72rem;letter-spacing:0.1em;text-transform:uppercase;
+  transition:border-color 0.2s,color 0.2s;
+}
+.read-gate-secondary:hover{border-color:var(--gold);color:var(--text);}
+
 /* ── Swap modal ── */
 .swap-backdrop {
   display:none;position:fixed;inset:0;z-index:500;
@@ -330,6 +369,19 @@ body::after {
     <div class="swap-hint">Your reading slot is full. Replace your current book with <span id="swap-new-title" style="color:var(--text)"></span>?</div>
     <div class="swap-options" id="swap-options"></div>
     <button class="swap-cancel" onclick="closeSwap()">Cancel</button>
+  </div>
+</div>
+
+<!-- Read gate -->
+<div class="read-gate" id="read-gate">
+  <div class="read-gate-box">
+    <div class="read-gate-eyebrow">Free preview</div>
+    <div class="read-gate-title">Continue reading?</div>
+    <div class="read-gate-sub">Create a free account to keep reading — and write your own story in minutes.</div>
+    <div class="read-gate-btns">
+      <a class="read-gate-primary" id="gate-signup-btn" href="login.html">Create Free Account</a>
+      <a class="read-gate-secondary" id="gate-signin-btn" href="login.html">Sign In</a>
+    </div>
   </div>
 </div>
 
@@ -455,7 +507,22 @@ async function showChapter(idx) {
 }
 
 function prevChapter() { if (_idx > 0) showChapter(_idx - 1); }
-function nextChapter()  { if (_idx < _chapters.length - 1) showChapter(_idx + 1); }
+function nextChapter() {
+  if (!_session && _idx === 0) { openReadGate(); return; }
+  if (_idx < _chapters.length - 1) showChapter(_idx + 1);
+}
+
+function openReadGate() {
+  const next = encodeURIComponent(location.href);
+  document.getElementById('gate-signup-btn').href = `login.html?next=${next}`;
+  document.getElementById('gate-signin-btn').href  = `login.html?next=${next}`;
+  document.getElementById('read-gate').classList.add('open');
+}
+
+document.getElementById('read-gate').addEventListener('click', e => {
+  if (e.target === document.getElementById('read-gate'))
+    document.getElementById('read-gate').classList.remove('open');
+});
 
 function delay(ms){ return new Promise(r => setTimeout(r, ms)); }
 
