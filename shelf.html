@@ -451,11 +451,8 @@ body::before {
 .cover-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    to bottom,
-    rgba(0,0,0,0) 40%,
-    rgba(0,0,0,0.75) 100%
-  );
+  background:
+    linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.15) 55%, rgba(0,0,0,0.3) 100%);
 }
 .cover-badge {
   position: absolute;
@@ -1469,31 +1466,11 @@ function coverHTML(s, small) {
   const t = s.config?.targetChapters || 20;
   const pct = Math.round((ch/t)*100);
   const finished = ch >= t;
-
-  if (s.coverSvg) {
-    return `
-      <div class="cover-bg" style="background:${grad}"></div>
-      <div class="cover-svg-wrap">${s.coverSvg}</div>
-      <div class="cover-spine"></div>
-      <div class="cover-overlay"></div>
-      ${finished ? '<div class="cover-badge">Complete</div>' : ''}
-      <div class="cover-progress"><div class="cover-progress-fill" style="width:${pct}%"></div></div>
-      <div class="cover-title">${s.bookTitle||''}</div>`;
-  }
-
-  // Gradient cover with decorative lines
-  const c = GENRE_COLORS[genre] || ['#1a1208','#3a2a18'];
+  const photoUrl = s.coverImage || `https://picsum.photos/seed/${s.id}/400/600`;
+  const coverBg = `background:url('${photoUrl}') center top / cover no-repeat, ${grad}`;
   return `
-    <div class="cover-bg" style="background:${grad}"></div>
+    <div class="cover-bg" style="${coverBg}"></div>
     <div class="cover-spine"></div>
-    <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px;gap:6px;">
-      <div style="width:60%;height:1px;background:rgba(201,168,76,0.25);"></div>
-      <div style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:${small?'0.62':'0.72'}rem;color:rgba(201,168,76,0.7);text-align:center;line-height:1.3;padding:4px 6px;">
-        ${s.bookTitle || (s.config?.protagonistName ? s.config.protagonistName : '—')}
-      </div>
-      <div style="width:60%;height:1px;background:rgba(201,168,76,0.25);"></div>
-      <div style="font-size:${small?'0.52':'0.6'}rem;color:rgba(201,168,76,0.35);letter-spacing:0.14em;text-transform:uppercase;margin-top:4px;">${genre||''}</div>
-    </div>
     <div class="cover-overlay"></div>
     ${finished ? '<div class="cover-badge">Complete</div>' : ''}
     <div class="cover-progress"><div class="cover-progress-fill" style="width:${pct}%"></div></div>
@@ -1527,7 +1504,8 @@ function render() {
     const ch = heroBook.progress?.chapter||0, t = heroBook.config?.targetChapters||20;
     const pct = Math.round((ch/t)*100);
     const finished = ch >= t;
-    document.getElementById('hero-cover-art').style.background = genreGradient(heroBook.config?.genre||'');
+    const heroPhoto = heroBook.coverImage || `https://picsum.photos/seed/${heroBook.id}/400/600`;
+    document.getElementById('hero-cover-art').style.background = `url('${heroPhoto}') center top / cover no-repeat, ${genreGradient(heroBook.config?.genre||'')}`;
     document.getElementById('hero-progress-fill').style.width = pct + '%';
     document.getElementById('hero-content').innerHTML = `
       <div class="hero-eyebrow">${finished ? 'Completed' : 'Continue reading'}</div>
@@ -1592,7 +1570,7 @@ function render() {
     const row = document.createElement('div');
     row.className = 'list-row';
     row.innerHTML = `
-      <div class="list-thumb" style="background:${genreGradient(s.config?.genre||'')};">${s.coverSvg?`<div style="width:100%;height:100%">${s.coverSvg}</div>`:''}</div>
+      <div class="list-thumb" style="background:url('${s.coverImage||`https://picsum.photos/seed/${s.id}/400/600`}') center top / cover no-repeat, ${genreGradient(s.config?.genre||'')}"></div>
       <div class="list-title-block">
         <div class="list-title">${s.bookTitle||s.config?.protagonistName||'Untitled'}</div>
         <div class="list-subtitle">${(s.config?.themes||[]).slice(0,2).join(', ')}</div>
@@ -1641,12 +1619,9 @@ function openPanel(id) {
 
   // Cover bg
   const bg = document.getElementById('panel-cover-bg');
-  bg.style.background = genreGradient(genre);
-  if (s.coverSvg) {
-    bg.innerHTML = `<div style="position:absolute;inset:0;opacity:0.4">${s.coverSvg}</div>`;
-  } else {
-    bg.innerHTML = '';
-  }
+  const panelPhoto = s.coverImage || `https://picsum.photos/seed/${s.id}/400/600`;
+  bg.style.background = `url('${panelPhoto}') center top / cover no-repeat, ${genreGradient(genre)}`;
+  bg.innerHTML = '';
 
   document.getElementById('panel-genre').textContent = genre;
   document.getElementById('panel-title').textContent = title;
