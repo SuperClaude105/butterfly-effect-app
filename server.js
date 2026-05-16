@@ -33,6 +33,24 @@ app.post('/api/checkout', async (req, res) => {
   const user = await getUserFromToken(req.headers.authorization);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
+  // Your Story purchase
+  if (type === 'storied') {
+    const sp = STORIED_PRICING[req.body.storiedBundle] || STORIED_PRICING['storied_1'];
+    try {
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [{ price_data: { currency: 'usd', product_data: { name: `Unwritten — ${sp.label}` }, unit_amount: sp.amount }, quantity: 1 }],
+        mode: 'payment',
+        success_url: `${process.env.APP_URL}/storied.html?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url:  `${process.env.APP_URL}/storied.html`,
+        metadata: { userId: user.id, storiedCredits: String(sp.storiedCredits) },
+      });
+      return res.json({ url: session.url });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
   // Share credit bundle purchase
   if (type === 'share_credits') {
     const price = SHARE_PRICING[shareBundle];
@@ -115,11 +133,19 @@ app.post('/api/payment/confirm', async (req, res) => {
     if (session.payment_status !== 'paid') return res.status(400).json({ error: 'Not paid' });
     if (session.metadata.userId !== user.id) return res.status(403).json({ error: 'Forbidden' });
 
-    const credits      = parseInt(session.metadata.credits) || 0;
-    const shareCredits = parseInt(session.metadata.shareCredits) || 0;
-    const giftEmail    = session.metadata.giftEmail || '';
-    const giftFrom     = session.metadata.giftFrom  || '';
-    const giftMessage  = session.metadata.giftMessage || '';
+    const credits        = parseInt(session.metadata.credits) || 0;
+    const shareCredits   = parseInt(session.metadata.shareCredits) || 0;
+    const storiedCredits = parseInt(session.metadata.storiedCredits) || 0;
+    const giftEmail      = session.metadata.giftEmail || '';
+    const giftFrom       = session.metadata.giftFrom  || '';
+    const giftMessage    = session.metadata.giftMessage || '';
+
+    if (storiedCredits) {
+      await supabaseAdmin.rpc('add_storied_credits', { p_user_id: user.id, p_credits: storiedCredits });
+      await supabaseAdmin.rpc('add_share_credits', { p_user_id: user.id, p_credits: storiedCredits * 2 });
+      await supabaseAdmin.from('processed_payments').insert({ session_id: sessionId, user_id: user.id, credits: 0 });
+      return res.json({ success: true, storiedCredits });
+    }
 
     if (shareCredits) {
       await supabaseAdmin.rpc('add_share_credits', { p_user_id: user.id, p_credits: shareCredits });
@@ -245,8 +271,12 @@ app.post('/api/webhook', async (req, res) => {
       const { data: existing } = await supabaseAdmin
         .from('processed_payments').select('id').eq('session_id', session.id).maybeSingle();
       if (!existing) {
-        const { userId, credits, shareCredits } = session.metadata || {};
-        if (userId && shareCredits) {
+        const { userId, credits, shareCredits, storiedCredits } = session.metadata || {};
+        if (userId && storiedCredits) {
+          await supabaseAdmin.rpc('add_storied_credits', { p_user_id: userId, p_credits: parseInt(storiedCredits) });
+          await supabaseAdmin.rpc('add_share_credits', { p_user_id: userId, p_credits: parseInt(storiedCredits) * 2 });
+          await supabaseAdmin.from('processed_payments').insert({ session_id: session.id, user_id: userId, credits: 0 });
+        } else if (userId && shareCredits) {
           await supabaseAdmin.rpc('add_share_credits', { p_user_id: userId, p_credits: parseInt(shareCredits) });
           await supabaseAdmin.from('processed_payments').insert({ session_id: session.id, user_id: userId, credits: 0 });
         } else if (userId && credits) {
@@ -284,6 +314,11 @@ const SHARE_PRICING = {
   share_10: { amount: 1500, shareCredits: 10, label: '10 Share Credits' },
 };
 
+const STORIED_PRICING = {
+  storied_1: { amount: 2999, storiedCredits: 1, label: 'Your Story — 1 personalized memoir' },
+  storied_2: { amount: 4999, storiedCredits: 2, label: 'Your Story — 2 personalized memoirs' },
+};
+
 // ─── Auth helpers ──────────────────────────────────────────────────────────
 async function getUserFromToken(authHeader) {
   if (!authHeader) return null;
@@ -295,10 +330,10 @@ async function getUserFromToken(authHeader) {
 async function getProfile(userId) {
   const { data } = await supabaseAdmin
     .from('profiles')
-    .select('credits, is_comped, share_credits')
+    .select('credits, is_comped, share_credits, storied_credits')
     .eq('user_id', userId)
     .maybeSingle();
-  return data || { credits: 0, is_comped: false, share_credits: 0 };
+  return data || { credits: 0, is_comped: false, share_credits: 0, storied_credits: 0 };
 }
 
 // ─── Dynamic system prompt builder ────────────────────────────────────────
@@ -1007,7 +1042,16 @@ async function generateStoryForJob(jobId) {
 }
 
 // POST /api/storied/queue — start a generation job
-app.post('/api/storied/queue', (req, res) => {
+app.post('/api/storied/queue', async (req, res) => {
+  const user = await getUserFromToken(req.headers.authorization);
+  if (!user) return res.status(401).json({ error: 'Login required to generate Your Story.' });
+
+  const profile = await getProfile(user.id);
+  if (!profile.is_comped) {
+    const { data: deducted } = await supabaseAdmin.rpc('deduct_storied_credit', { p_user_id: user.id });
+    if (!deducted) return res.status(402).json({ error: 'No Your Story credits.', needsCredits: true });
+  }
+
   const jobId = crypto.randomUUID();
   storiedJobs.set(jobId, {
     data: req.body,

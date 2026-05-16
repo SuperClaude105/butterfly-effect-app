@@ -298,6 +298,18 @@ header {
 .complete-restart { background:none; border:none; cursor:pointer; font-family:'EB Garamond',serif; font-size:0.9rem; color:rgba(232,213,183,0.3); text-decoration:underline; transition:color 0.2s; }
 .complete-restart:hover { color:rgba(232,213,183,0.6); }
 </style>
+<!-- Paywall overlay -->
+<div id="storied-paywall" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(8,5,2,0.92);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:2rem;">
+  <div style="background:#120a04;border:1px solid rgba(196,162,100,0.25);border-radius:4px;padding:3rem 3.5rem;max-width:460px;width:100%;text-align:center;position:relative;">
+    <button onclick="hideStoriedPaywall()" style="position:absolute;top:1rem;right:1.2rem;background:none;border:none;color:rgba(232,213,183,0.3);font-size:1.2rem;cursor:pointer;">✕</button>
+    <div style="font-size:0.72rem;letter-spacing:0.3em;text-transform:uppercase;color:var(--accent);opacity:0.7;margin-bottom:0.75rem;">Your Story</div>
+    <div style="font-family:'Playfair Display',serif;font-size:1.8rem;font-style:italic;color:var(--text);margin-bottom:0.75rem;">A memoir worth keeping</div>
+    <p style="font-size:0.95rem;color:rgba(232,213,183,0.55);line-height:1.7;margin-bottom:2rem;">A fully personalized, print-ready memoir — written by AI, shaped by you. Includes <strong style="color:var(--accent);">2 free share credits</strong> to send your story to a loved one.</p>
+    <button onclick="buyStoried('storied_1')" style="display:block;width:100%;font-family:'EB Garamond',serif;font-size:0.9rem;letter-spacing:0.22em;text-transform:uppercase;padding:1rem;border:1px solid var(--accent);background:rgba(196,162,100,0.08);color:var(--accent);cursor:pointer;margin-bottom:0.75rem;transition:background 0.2s;" onmouseover="this.style.background='rgba(196,162,100,0.18)'" onmouseout="this.style.background='rgba(196,162,100,0.08)'">One Memoir — $29.99</button>
+    <button onclick="buyStoried('storied_2')" style="display:block;width:100%;font-family:'EB Garamond',serif;font-size:0.9rem;letter-spacing:0.22em;text-transform:uppercase;padding:1rem;border:1px solid rgba(196,162,100,0.3);background:none;color:rgba(232,213,183,0.5);cursor:pointer;transition:color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='rgba(232,213,183,0.5)'">Two Memoirs — $49.99 <span style="font-size:0.72rem;opacity:0.6;">(save $10)</span></button>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>const _SB = supabase.createClient('https://puywhvrgixlhijxzircy.supabase.co','sb_publishable_ob7bw2JF-iSjqyjSXRu4-g_lLuFagj7');</script>
 </head>
@@ -863,11 +875,24 @@ async function startGeneration() {
   // Queue the job
   let jobId;
   try {
+    const { data: { session } } = await _SB.auth.getSession();
+    if (!session) { location.href = '/login.html'; return; }
+
     const res = await fetch('/api/storied/queue', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
       body: JSON.stringify(data),
     });
+
+    if (res.status === 401) { location.href = '/login.html'; return; }
+    if (res.status === 402) {
+      document.getElementById('mainForm').style.display = 'flex';
+      genScreen.classList.remove('active');
+      localStorage.setItem('storied_pending_form', JSON.stringify(data));
+      showStoriedPaywall();
+      return;
+    }
+
     const json = await res.json();
     jobId = json.jobId;
     _currentJobId = jobId;
@@ -1031,6 +1056,25 @@ async function saveToShelf() {
   }
 }
 
+// ── Paywall ────────────────────────────────────────────────────────────────
+function showStoriedPaywall() {
+  document.getElementById('storied-paywall').style.display = 'flex';
+}
+function hideStoriedPaywall() {
+  document.getElementById('storied-paywall').style.display = 'none';
+}
+async function buyStoried(bundle) {
+  const { data: { session } } = await _SB.auth.getSession();
+  if (!session) { location.href = '/login.html'; return; }
+  const resp = await fetch('/api/checkout', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+    body: JSON.stringify({ type: 'storied', storiedBundle: bundle }),
+  });
+  const json = await resp.json();
+  if (json.url) window.location.href = json.url;
+}
+
 // ── Init ───────────────────────────────────────────────────────────────────
 (async () => {
   // Check auth — redirect to login if not signed in
@@ -1042,8 +1086,35 @@ async function saveToShelf() {
     return;
   }
 
-  // Check for shelf resume (?id=xxx in URL)
   const params = new URLSearchParams(location.search);
+
+  // Handle return from Stripe payment
+  if (params.get('payment') === 'success') {
+    const sessionId = params.get('session_id');
+    if (sessionId) {
+      try {
+        await fetch('/api/payment/confirm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+          body: JSON.stringify({ sessionId }),
+        });
+      } catch(_) {}
+    }
+    // Restore pending form and auto-generate
+    const pending = localStorage.getItem('storied_pending_form');
+    if (pending) {
+      localStorage.removeItem('storied_pending_form');
+      try {
+        applyFormData(JSON.parse(pending));
+        history.replaceState({}, '', '/storied.html');
+        await startGeneration();
+        return;
+      } catch(_) {}
+    }
+    history.replaceState({}, '', '/storied.html');
+  }
+
+  // Check for shelf resume (?id=xxx in URL)
   const resumeId = params.get('id');
   if (resumeId) {
     _shelfStoryId = resumeId;
