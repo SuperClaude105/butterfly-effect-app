@@ -889,7 +889,7 @@ function updateStoryPlaceholder(genre) {
 // ═══════════════════════════════════════════════════════════════
 // LIBRARY + CREDITS
 // ═══════════════════════════════════════════════════════════════
-let _lib = {}, _stories = [], _session = null, _credits = 0, _isComped = false, _freeChapterUsed = false;
+let _lib = {}, _pubLib = {}, _stories = [], _session = null, _credits = 0, _isComped = false, _freeChapterUsed = false;
 (async () => {
   const { data: { session } } = await _SB.auth.getSession();
   if (!session) { location.replace('/login.html'); return; }
@@ -900,16 +900,43 @@ let _lib = {}, _stories = [], _session = null, _credits = 0, _isComped = false, 
   (rows||[]).forEach(r => { _lib[r.id] = { ...r.data, _isPublic: r.is_public }; });
   _stories = Object.values(_lib).sort((a,b)=>(b.lastReadAt||0)-(a.lastReadAt||0));
 
+  const sel = document.getElementById('parent-book-select');
+
   if (_stories.length > 0) {
     document.getElementById('shelf-link').style.display = 'block';
-    const sel = document.getElementById('parent-book-select');
+    const myGroup = document.createElement('optgroup');
+    myGroup.label = 'My Stories';
     _stories.forEach(s => {
       const title = s.bookTitle || s.config?.bookTitleInput || s.config?.protagonistName || s.config?.genre || 'Untitled';
       const opt = document.createElement('option');
       opt.value = s.id; opt.textContent = title;
-      sel.appendChild(opt);
+      myGroup.appendChild(opt);
     });
+    sel.appendChild(myGroup);
   }
+
+  // Also load public library books for sequel selection
+  try {
+    const { data: pubRows } = await _SB.from('stories')
+      .select('id, data')
+      .eq('is_public', true)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false });
+    const myIds = new Set((rows||[]).map(r => r.id));
+    const pubBooks = (pubRows||[]).filter(r => !myIds.has(r.id));
+    if (pubBooks.length > 0) {
+      const libGroup = document.createElement('optgroup');
+      libGroup.label = 'Public Library';
+      pubBooks.forEach(r => {
+        _pubLib[r.id] = r.data;
+        const title = r.data?.bookTitle || r.data?.config?.bookTitleInput || r.data?.config?.genre || 'Untitled';
+        const opt = document.createElement('option');
+        opt.value = r.id; opt.textContent = title;
+        libGroup.appendChild(opt);
+      });
+      sel.appendChild(libGroup);
+    }
+  } catch (_) {}
 
   // Load credits
   try {
@@ -1095,7 +1122,7 @@ function toggleSequel(cb) {
 document.getElementById('parent-book-select').addEventListener('change', function() {
   const note = document.getElementById('parent-book-note');
   if (!this.value) { note.style.display='none'; return; }
-  const story = _lib[this.value];
+  const story = _lib[this.value] || _pubLib[this.value];
   if (!story) return;
   const title = story.bookTitle || story.config?.bookTitleInput || 'the previous book';
   note.textContent = `Claude will be given the world bible from "${title}" to maintain continuity.`;
@@ -1151,8 +1178,8 @@ async function beginStory() {
 
   const parentId = document.getElementById('parent-book-select').value;
   let parentBookTitle = null, parentBookBible = null;
-  if (isSequel && parentId && _lib[parentId]) {
-    const parent = _lib[parentId];
+  if (isSequel && parentId && (_lib[parentId] || _pubLib[parentId])) {
+    const parent = _lib[parentId] || _pubLib[parentId];
     parentBookTitle = parent.bookTitle || parent.config?.bookTitleInput || 'the previous book';
     parentBookBible = parent.progress?.bible || '';
   }
