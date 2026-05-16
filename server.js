@@ -931,20 +931,34 @@ SVG REQUIREMENTS — follow exactly:
 
 Return ONLY the raw SVG code. Start with <svg. End with </svg>. No markdown. No explanation.`;
 
-  try {
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 2000,
-      messages: [{ role: 'user', content: prompt }],
-    });
+  const summaryPrompt = `Write a 2-3 sentence back-cover blurb for this novel.
+Genre: ${genre || 'Fiction'}. Title: "${safeTitle}". Protagonist: ${protagonistName || 'the protagonist'}. Love interest: ${loveInterestName || 'the love interest'}. Themes: ${themeStr}.${storyIdea ? ` Premise: ${storyIdea.slice(0, 200)}` : ''}
 
-    let svg = response.content[0].text.trim()
+Write in third person, present tense. Hook the reader with the core conflict and emotional stakes. No spoilers. Do NOT mention the title. Return ONLY the blurb text — no labels, no quotes, no explanation.`;
+
+  try {
+    const [spineResponse, summaryResponse] = await Promise.all([
+      anthropic.messages.create({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 2000,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+      anthropic.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 300,
+        messages: [{ role: 'user', content: summaryPrompt }],
+      }),
+    ]);
+
+    let svg = spineResponse.content[0].text.trim()
       .replace(/^```(?:svg|xml)?\n?/i, '')
       .replace(/\n?```$/i, '')
       .trim();
 
+    const summary = summaryResponse.content[0].text.trim();
+
     if (!svg.startsWith('<svg')) return res.status(422).json({ error: 'Invalid SVG' });
-    res.json({ success: true, svg });
+    res.json({ success: true, svg, summary });
   } catch (err) {
     console.error('Spine generation error:', err.message);
     res.status(500).json({ error: err.message });

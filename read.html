@@ -957,6 +957,7 @@ const S = {
   mood: null,
   typing: false,
   bookTitle: STORY_CONFIG?.bookTitleInput || null,
+  summary: null,
 };
 
 const LOAD_MSGS = [
@@ -1003,6 +1004,7 @@ async function saveProgress() {
     id: STORY_ID,
     config: STORY_CONFIG,
     bookTitle: S.bookTitle,
+    summary: S.summary || existing.summary || null,
     progress: {
       chapter: S.chapter, bible: S.bible, chapters: S.chapters,
       titles: S.titles, decisions: S.decisions, decisionHistory: S.decisionHistory,
@@ -1465,7 +1467,9 @@ async function generateSpine() {
     });
     const data = await res.json();
     if (!data.success || !data.svg) return;
-    // Save SVG into the library entry
+    // Save SVG and summary into the story record
+    if (data.summary) S.summary = data.summary;
+    await saveProgress();
     if (_storyCache) {
       _storyCache.spineSvg = data.svg;
       const uid = await _ensureUser();

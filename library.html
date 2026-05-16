@@ -409,6 +409,10 @@ function renderStars(avg, count) {
 }
 
 function getBlurb(d) {
+  if (d?.summary) {
+    const s = d.summary.replace(/\n+/g, ' ').trim();
+    return s.length > 130 ? s.slice(0, 130) + '…' : s;
+  }
   const ch = (d?.progress?.chapters?.[0] || '').replace(/\n+/g, ' ').trim();
   if (!ch) return '';
   return ch.length > 130 ? ch.slice(0, 130) + '…' : ch;
@@ -531,9 +535,9 @@ async function load() {
 
 // ── Book detail modal ────────────────────────────────────────────────────────
 function getLongBlurb(d) {
+  if (d?.summary) return d.summary;
   const ch = (d?.progress?.chapters?.[0] || '').replace(/\n+/g, ' ').trim();
   if (!ch) return '';
-  // Try to grab 3 complete sentences
   const sents = ch.match(/[^.!?]+[.!?]+/g) || [];
   if (sents.length >= 3) return sents.slice(0, 3).join(' ').trim();
   return ch.length > 320 ? ch.slice(0, 320) + '…' : ch;
