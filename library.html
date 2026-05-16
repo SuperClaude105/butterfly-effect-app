@@ -172,7 +172,8 @@ body::before {
 }
 .cover-overlay {
   position:absolute;inset:0;
-  background:linear-gradient(to top,rgba(0,0,0,0.72) 0%,transparent 55%);
+  background:
+    linear-gradient(to top,rgba(0,0,0,0.82) 0%,rgba(0,0,0,0.15) 55%,rgba(0,0,0,0.3) 100%);
 }
 .cover-info {
   position:absolute;bottom:0;left:0;right:0;padding:14px 12px 12px;
@@ -339,10 +340,11 @@ function render() {
     const genre = d.config?.genre || 'Fiction';
     const r = _ratings[s.id] || { avg: 0, count: 0 };
     const blurb = getBlurb(d);
+    const photoUrl = d.coverImage || `https://picsum.photos/seed/${s.id}/400/600`;
+    const coverBg = `background:url('${photoUrl}') center top / cover no-repeat, ${genreGradient(genre)}`;
     return `<a class="book-card" href="public-read.html?id=${s.id}" style="color:inherit;">
       <div class="cover-wrap">
-        <div class="cover-bg" style="background:${genreGradient(genre)}"></div>
-        ${d.coverSvg ? `<div style="position:absolute;inset:0;opacity:0.35">${d.coverSvg}</div>` : ''}
+        <div class="cover-bg" style="${coverBg}"></div>
         <div class="cover-overlay"></div>
         <div class="cover-info">
           <div class="cover-title">${title}</div>
