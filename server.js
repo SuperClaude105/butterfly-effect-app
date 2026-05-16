@@ -524,6 +524,9 @@ app.post('/api/start', async (req, res) => {
 
 // ─── API: Next chapter ─────────────────────────────────────────────────────
 app.post('/api/chapter', async (req, res) => {
+  const user = await getUserFromToken(req.headers.authorization);
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
   const { storyBible, decision, chapterNumber, storyConfig, isFinalChapter } = req.body;
   const systemPrompt = storyConfig ? buildSystemPrompt(storyConfig) : EMBERS_PROMPT;
   const protagonist  = storyConfig?.protagonistName || 'the protagonist';
@@ -571,6 +574,9 @@ app.post('/api/chapter', async (req, res) => {
 
 // ─── API: Generate spine SVG ──────────────────────────────────────────────
 app.post('/api/generate-spine', async (req, res) => {
+  const user = await getUserFromToken(req.headers.authorization);
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
   const { title, genre, themes, protagonistName, loveInterestName, storyIdea } = req.body;
   const themeStr = (themes || []).slice(0, 4).join(', ') || genre;
   const safeTitle = (title || 'Untitled').replace(/"/g, "'");
