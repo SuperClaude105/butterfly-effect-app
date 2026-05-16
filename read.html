@@ -749,6 +749,17 @@ body::after {
 /* ── Quote card ── */
 #q-canvas-wrap { display: flex; flex-direction: column; align-items: center; gap: 1rem; }
 #q-canvas { width: 100%; max-width: 420px; border: 1px solid rgba(196,162,100,0.15); }
+#q-text-edit {
+  width: 100%; max-width: 420px; min-height: 72px; resize: vertical;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(196,162,100,0.2);
+  color: var(--text); font-family: Georgia, serif; font-size: 0.88rem;
+  line-height: 1.65; padding: 10px 14px; outline: none; border-radius: 2px;
+  transition: border-color 0.2s;
+}
+#q-text-edit:focus { border-color: rgba(196,162,100,0.5); }
+#q-text-edit::placeholder { color: rgba(196,162,100,0.3); }
+.q-hint { font-size: 0.7rem; color: rgba(196,162,100,0.4); text-align: center; }
+.q-btn-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 .btn-dl-quote {
   font-family: 'EB Garamond', serif; font-size: 0.78rem; letter-spacing: 0.22em;
   text-transform: uppercase; padding: 0.6rem 1.6rem;
@@ -756,6 +767,10 @@ body::after {
   cursor: pointer; transition: background 0.3s, color 0.3s;
 }
 .btn-dl-quote:hover { background: var(--accent); color: var(--bg); }
+.btn-fb-share {
+  border-color: #1877f2; color: #1877f2;
+}
+.btn-fb-share:hover { background: #1877f2; color: #fff; }
 </style>
 </head>
 <body>
@@ -791,7 +806,7 @@ body::after {
     <p class="ornament">⟡ ⟡ ⟡</p>
     <h1 class="book-title" id="welcome-title">Your Story</h1>
     <p class="book-genre" id="welcome-genre">An Interactive Story</p>
-    <p class="book-blurb">
+    <p class="book-blurb" id="welcome-blurb">
       Every decision you make rewrites what comes next.
       This is not just a story — it is yours.
     </p>
@@ -818,6 +833,9 @@ body::after {
     <div id="decision-panel">
       <p class="decision-prompt" id="d-prompt"></p>
       <div class="choices" id="d-choices"></div>
+    </div>
+    <div id="linear-continue" style="display:none;text-align:center;padding:3rem 2rem 5rem;border-top:1px solid rgba(255,255,255,0.07);">
+      <button class="btn-primary" onclick="linearContinue()"><span>Next Chapter →</span></button>
     </div>
   </div>
 
@@ -880,7 +898,12 @@ body::after {
   <div class="m-body">
     <div id="q-canvas-wrap">
       <canvas id="q-canvas" width="420" height="260"></canvas>
-      <button class="btn-dl-quote" onclick="downloadQuote()">&#8595; Download Image</button>
+      <textarea id="q-text-edit" placeholder="Edit your quote here…" oninput="onQuoteEdit(this)"></textarea>
+      <p class="q-hint">Tip: select any text in the chapter first to use it as the quote</p>
+      <div class="q-btn-row">
+        <button class="btn-dl-quote" onclick="downloadQuote()">&#8595; Download Image</button>
+        <button class="btn-dl-quote btn-fb-share" onclick="shareToFacebook()">&#x1F426; Share to Facebook</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1204,10 +1227,11 @@ async function loadChapter(decision, chapterNum, isFirst = false, isFinal = fals
   // Stop any narration between chapters
   narrator.stop();
 
-  // Hide decision panel and scroll to top for new chapter
+  // Hide decision panel and linear-continue, scroll to top for new chapter
   const dp = document.getElementById('decision-panel');
   dp.classList.remove('open');
   dp.querySelector('#d-choices').innerHTML = '';
+  document.getElementById('linear-continue').style.display = 'none';
   window.scrollTo({ top: 0, behavior: 'smooth' });
 
   // Reset reading area
@@ -1268,11 +1292,17 @@ async function showReading(data, animate, isFinal = false) {
 
   const atLimit = S.chapter >= (STORY_CONFIG?.targetChapters || 20);
 
-  // Queue decisions to appear after a fixed delay — independent of typewrite length
-  if (!isFinal && !atLimit && decisions && decisions.length > 0) {
-    S.pendingDecisions = decisions;
-    saveProgress();
-    setTimeout(() => openDecisions(decisions), narrator.active ? 1200 : 4000);
+  // Queue decisions or linear continue after chapter finishes
+  if (!isFinal && !atLimit) {
+    if (STORY_CONFIG?.noDecisions) {
+      S.pendingDecisions = null;
+      saveProgress();
+      setTimeout(() => showLinearContinue(), narrator.active ? 1200 : 4000);
+    } else if (decisions && decisions.length > 0) {
+      S.pendingDecisions = decisions;
+      saveProgress();
+      setTimeout(() => openDecisions(decisions), narrator.active ? 1200 : 4000);
+    }
   } else if (isFinal || atLimit) {
     S.pendingDecisions = null;
     saveProgress();
@@ -1777,15 +1807,27 @@ function extractBestQuote(text) {
 
 function openQuoteCard() {
   closeTools();
-  const quote = extractBestQuote(S.chapters[S.chapters.length - 1] || '');
-  if (!quote) {
-    document.getElementById('qc-content')?.insertAdjacentHTML('afterbegin',
-      '<p style="color:var(--text-dim);text-align:center;padding:1rem">Read at least one chapter first.</p>');
-  } else {
-    renderQuoteCanvas(quote);
-  }
+  // Prefer highlighted text; fall back to auto-extracted best quote
+  const sel = window.getSelection();
+  const selectedText = sel ? sel.toString().trim() : '';
+  const quote = selectedText || extractBestQuote(S.chapters[S.chapters.length - 1] || '');
+  const editEl = document.getElementById('q-text-edit');
+  editEl.value = quote;
+  if (quote) renderQuoteCanvas(quote);
   document.getElementById('qc-overlay').classList.add('open');
   document.getElementById('qc-modal').classList.add('open');
+}
+
+function onQuoteEdit(el) {
+  const txt = el.value.trim();
+  if (txt) renderQuoteCanvas(txt);
+}
+
+function shareToFacebook() {
+  const quote = document.getElementById('q-text-edit').value.trim();
+  const siteUrl = encodeURIComponent('https://entertheunwritten.com');
+  const text    = encodeURIComponent(quote ? `"${quote}" — Unwritten` : 'Check out Unwritten — AI stories personalized to you.');
+  window.open(`https://www.facebook.com/sharer/sharer.php?u=${siteUrl}&quote=${text}`, '_blank', 'width=620,height=500,noopener');
 }
 
 function renderQuoteCanvas(quote) {
@@ -1882,6 +1924,18 @@ function closeQuoteCard() {
   document.getElementById('qc-modal').classList.remove('open');
 }
 
+// ── Linear (no-decisions) continue ──────────────────────────────────────────
+function showLinearContinue() {
+  const el = document.getElementById('linear-continue');
+  el.style.display = 'block';
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function linearContinue() {
+  document.getElementById('linear-continue').style.display = 'none';
+  choose('');
+}
+
 // ═══════════════════════════════════════════════════════════════
 // REPLAY MODE — re-read from chapter 1 using saved chapter texts
 // ═══════════════════════════════════════════════════════════════
@@ -1959,6 +2013,10 @@ function replayFromBeginning() {
       }
       const themes = (STORY_CONFIG.themes || []).slice(0,2).join(' · ');
       genreEl.textContent = [STORY_CONFIG.genre, themes].filter(Boolean).join(' — ');
+      if (STORY_CONFIG.noDecisions) {
+        document.getElementById('welcome-blurb').textContent =
+          'Sit back and let the story unfold. Each chapter flows directly into the next — your novel, written for you.';
+      }
     }
 
     const saved = loadProgress();

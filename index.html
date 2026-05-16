@@ -469,6 +469,14 @@ input[type=range]::-webkit-slider-thumb:hover { box-shadow:0 0 18px rgba(196,162
           <div class="arc-hint">The new story will be set in the same world, aware of the characters and events from your previous book.</div>
         </div>
       </label>
+      <label class="arc-toggle">
+        <input type="checkbox" id="interactive-decisions" checked>
+        <span class="arc-check"></span>
+        <div>
+          <div class="arc-title">Interactive chapter decisions <span style="font-size:0.72rem;font-weight:400;color:var(--accent-dim);margin-left:6px;">(recommended)</span></div>
+          <div class="arc-hint">After each chapter you'll be given choices that shape the story. Uncheck to generate a fully pre-written, linear novel with no prompts.</div>
+        </div>
+      </label>
       <div id="sequel-picker" style="display:none;padding-left:2rem">
         <div class="field-label" style="margin-bottom:0.5rem">Select the book this continues from</div>
         <select id="parent-book-select" class="parent-select">
@@ -1060,6 +1068,7 @@ async function beginStory() {
   const triggerAvoid     = [...document.querySelectorAll('.trigger-chip.selected')].map(c => c.dataset.trigger);
   const isSeries         = document.getElementById('is-series').checked;
   const isSequel         = document.getElementById('is-sequel').checked;
+  const noDecisions      = !document.getElementById('interactive-decisions').checked;
   const isRomance        = GENRE_DATA[genre]?.isRomance ?? true;
 
   const usedNames = [];
@@ -1080,7 +1089,7 @@ async function beginStory() {
   const config = {
     genre, storyIdea, bookTitleInput, protagonistName, loveInterestName, victimName, victimDescription,
     ageRange, themes, targetChapters, triggerAvoid,
-    isSeries, isSequel, isRomance,
+    isSeries, isSequel, noDecisions, isRomance,
     parentBookId: parentId || null, parentBookTitle, parentBookBible,
     usedNames: [...new Set(usedNames)],
   };

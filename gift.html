@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gift Story Credits — Unwritten</title>
+<meta name="description" content="Give the gift of a personalized AI story. No account needed.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --gold:   #c9a84c;
+  --gold2:  #e8d08a;
+  --dim:    #7a6040;
+  --bg:     #080705;
+  --bg2:    #0f0d0a;
+  --card:   #141109;
+  --border: rgba(201,168,76,0.12);
+  --text:   #ede0c8;
+  --muted:  #7a6a54;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;}
+
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.028'/%3E%3C/svg%3E");
+  pointer-events:none;z-index:9999;
+}
+
+/* ── Radial glow ── */
+.glow{
+  position:fixed;top:-20%;left:50%;transform:translateX(-50%);
+  width:700px;height:500px;border-radius:50%;
+  background:radial-gradient(ellipse at center,rgba(201,168,76,0.07) 0%,transparent 70%);
+  pointer-events:none;
+}
+
+/* ── Nav ── */
+nav{
+  position:fixed;top:0;left:0;right:0;height:64px;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 40px;z-index:200;
+  background:linear-gradient(to bottom,rgba(8,7,5,0.98) 0%,rgba(8,7,5,0) 100%);
+}
+.nav-logo{font-family:'Cormorant Garamond',serif;font-size:1.4rem;font-weight:300;letter-spacing:0.06em;color:var(--gold);text-decoration:none;}
+.nav-back{font-size:0.8rem;color:var(--muted);text-decoration:none;transition:color 0.2s;}
+.nav-back:hover{color:var(--text);}
+
+/* ── Main ── */
+main{
+  flex:1;display:flex;align-items:center;justify-content:center;
+  padding:100px 20px 60px;
+}
+
+.gift-card{
+  width:100%;max-width:500px;
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:4px;
+  padding:48px 40px 44px;
+  box-shadow:0 24px 80px rgba(0,0,0,0.7),0 0 0 1px rgba(201,168,76,0.06);
+}
+
+.gift-eyebrow{
+  font-size:0.68rem;letter-spacing:0.18em;text-transform:uppercase;
+  color:var(--gold);margin-bottom:10px;
+}
+.gift-title{
+  font-family:'Cormorant Garamond',serif;font-size:2rem;font-weight:300;
+  color:var(--text);line-height:1.2;margin-bottom:8px;
+}
+.gift-title em{font-style:italic;color:var(--gold2);}
+.gift-sub{font-size:0.82rem;color:var(--muted);line-height:1.65;margin-bottom:32px;}
+
+/* ── Tier selector ── */
+.tier-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:28px;}
+.tier-btn{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:4px;padding:18px 10px;
+  background:rgba(255,255,255,0.02);
+  border:1.5px solid rgba(201,168,76,0.15);
+  border-radius:3px;cursor:pointer;
+  transition:border-color 0.2s,background 0.2s;
+  color:var(--text);
+}
+.tier-btn:hover{border-color:rgba(201,168,76,0.4);background:rgba(201,168,76,0.04);}
+.tier-btn.active{border-color:var(--gold);background:rgba(201,168,76,0.08);}
+.tier-btn .tier-credits{font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-weight:600;color:var(--gold);}
+.tier-btn .tier-price{font-size:0.75rem;color:var(--muted);}
+.tier-btn .tier-desc{font-size:0.7rem;color:rgba(122,106,84,0.7);margin-top:2px;}
+
+/* ── Form ── */
+.field{margin-bottom:18px;}
+label{display:block;font-size:0.72rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+label span{text-transform:none;letter-spacing:0;font-size:0.7rem;color:rgba(122,106,84,0.6);}
+input,textarea{
+  width:100%;background:rgba(255,255,255,0.03);
+  border:1px solid rgba(201,168,76,0.15);
+  border-radius:3px;padding:11px 14px;
+  color:var(--text);font-family:'Inter',sans-serif;font-size:0.88rem;
+  outline:none;transition:border-color 0.2s;
+}
+input:focus,textarea:focus{border-color:rgba(201,168,76,0.45);}
+input::placeholder,textarea::placeholder{color:rgba(122,106,84,0.5);}
+textarea{resize:vertical;min-height:80px;line-height:1.6;}
+
+.char-count{text-align:right;font-size:0.68rem;color:rgba(122,106,84,0.5);margin-top:4px;}
+
+/* ── CTA ── */
+.gift-btn{
+  width:100%;padding:15px;margin-top:8px;
+  background:linear-gradient(135deg,var(--gold) 0%,#b8962e 100%);
+  color:#080705;font-family:'Inter',sans-serif;font-size:0.9rem;font-weight:600;
+  letter-spacing:0.04em;border:none;border-radius:3px;cursor:pointer;
+  transition:opacity 0.2s,transform 0.15s;
+}
+.gift-btn:hover{opacity:0.9;}
+.gift-btn:active{transform:scale(0.99);}
+.gift-btn:disabled{opacity:0.5;cursor:not-allowed;}
+
+.gift-note{
+  margin-top:16px;text-align:center;
+  font-size:0.72rem;color:rgba(122,106,84,0.55);line-height:1.6;
+}
+
+/* ── Error ── */
+.error-msg{
+  display:none;margin-top:14px;padding:12px 16px;
+  background:rgba(160,30,30,0.12);border:1px solid rgba(160,30,30,0.25);
+  border-radius:3px;font-size:0.82rem;color:#e88a8a;
+}
+
+/* ── Success state ── */
+.success-screen{
+  display:none;text-align:center;padding:20px 0;
+}
+.success-icon{font-size:2.4rem;margin-bottom:16px;}
+.success-title{
+  font-family:'Cormorant Garamond',serif;font-size:1.8rem;font-weight:300;
+  color:var(--gold2);margin-bottom:10px;
+}
+.success-sub{font-size:0.85rem;color:var(--muted);line-height:1.7;margin-bottom:28px;}
+.success-back{
+  display:inline-block;padding:11px 28px;
+  border:1px solid rgba(201,168,76,0.3);border-radius:3px;
+  color:var(--gold);font-size:0.82rem;text-decoration:none;
+  transition:border-color 0.2s,color 0.2s;
+}
+.success-back:hover{border-color:var(--gold);color:var(--gold2);}
+
+@media(max-width:520px){
+  .gift-card{padding:36px 24px 32px;}
+  .gift-title{font-size:1.7rem;}
+}
+</style>
+</head>
+<body>
+<div class="glow"></div>
+
+<nav>
+  <a class="nav-logo" href="landing.html">Unwritten</a>
+  <a class="nav-back" href="landing.html">← Back</a>
+</nav>
+
+<main>
+  <div class="gift-card">
+
+    <!-- Form view -->
+    <div id="form-view">
+      <div class="gift-eyebrow">Give a Gift</div>
+      <h1 class="gift-title">Give the gift<br>of <em>their story.</em></h1>
+      <p class="gift-sub">No account needed. Credits land directly in the recipient's Unwritten library — or we'll send them an invite if they're not signed up yet.</p>
+
+      <!-- Tier selection -->
+      <div class="tier-row">
+        <button class="tier-btn active" id="tier-1" onclick="selectTier(1)">
+          <span class="tier-credits">1 Credit</span>
+          <span class="tier-price">$7.99</span>
+          <span class="tier-desc">1 story</span>
+        </button>
+        <button class="tier-btn" id="tier-3" onclick="selectTier(3)">
+          <span class="tier-credits">3 Credits</span>
+          <span class="tier-price">$20.00</span>
+          <span class="tier-desc">Save $3.97</span>
+        </button>
+      </div>
+
+      <div class="field">
+        <label>Recipient's email <span>(required)</span></label>
+        <input type="email" id="gift-email" placeholder="their@email.com" required>
+      </div>
+
+      <div class="field">
+        <label>Your name <span>(optional)</span></label>
+        <input type="text" id="gift-from" placeholder="Shows as 'Someone special' if blank" maxlength="80">
+      </div>
+
+      <div class="field">
+        <label>Personal message <span>(optional)</span></label>
+        <textarea id="gift-message" placeholder="Write a note to include with the gift…" maxlength="300" oninput="updateCount(this)"></textarea>
+        <div class="char-count"><span id="char-count">0</span>/300</div>
+      </div>
+
+      <button class="gift-btn" id="gift-btn" onclick="sendGift()">Send Gift →</button>
+
+      <div class="error-msg" id="error-msg"></div>
+
+      <p class="gift-note">You'll be taken to Stripe's secure checkout. Credits are delivered instantly after payment — no account required on your end.</p>
+    </div>
+
+    <!-- Success view -->
+    <div class="success-screen" id="success-view">
+      <div class="success-icon">✦</div>
+      <div class="success-title">Gift sent.</div>
+      <p class="success-sub" id="success-sub">
+        Your story credits are on their way. We've sent an email to let them know.
+      </p>
+      <a class="success-back" href="landing.html">Back to Unwritten →</a>
+    </div>
+
+  </div>
+</main>
+
+<script>
+let selectedCredits = 1;
+
+function selectTier(n) {
+  selectedCredits = n;
+  document.querySelectorAll('.tier-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tier-' + n).classList.add('active');
+}
+
+function updateCount(el) {
+  document.getElementById('char-count').textContent = el.value.length;
+}
+
+async function sendGift() {
+  const email   = document.getElementById('gift-email').value.trim();
+  const from    = document.getElementById('gift-from').value.trim();
+  const message = document.getElementById('gift-message').value.trim();
+  const btn     = document.getElementById('gift-btn');
+  const errEl   = document.getElementById('error-msg');
+
+  errEl.style.display = 'none';
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    errEl.textContent = 'Please enter a valid recipient email address.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Redirecting to checkout…';
+
+  try {
+    const res = await fetch('/api/gift-checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ credits: selectedCredits, giftEmail: email, giftFrom: from, giftMessage: message }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Something went wrong');
+    window.location.href = data.url;
+  } catch (err) {
+    errEl.textContent = err.message;
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Send Gift →';
+  }
+}
+
+// Handle return from Stripe
+const params = new URLSearchParams(location.search);
+if (params.get('payment') === 'success') {
+  document.getElementById('form-view').style.display = 'none';
+  document.getElementById('success-view').style.display = 'block';
+  // Retrieve session info for a friendlier message
+  const sessionId = params.get('session_id');
+  if (sessionId) {
+    fetch('/api/gift-session-info?session_id=' + sessionId)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d?.giftEmail) {
+          document.getElementById('success-sub').textContent =
+            `Your story credit${d.credits !== 1 ? 's' : ''} ${d.credits !== 1 ? 'have' : 'has'} been sent to ${d.giftEmail}. We've emailed them a note.`;
+        }
+      })
+      .catch(() => {});
+  }
+}
+</script>
+</body>
+</html>

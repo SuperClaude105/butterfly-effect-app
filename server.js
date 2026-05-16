@@ -261,6 +261,56 @@ app.get('/api/gift-info/:token', async (req, res) => {
   res.json({ valid: true, credits: gift.credits, tier: gift.tier });
 });
 
+// ─── GET /api/gift-session-info — lightweight success-screen info ─────────────
+app.get('/api/gift-session-info', async (req, res) => {
+  const { session_id } = req.query;
+  if (!session_id) return res.status(400).json({ error: 'Missing session_id' });
+  try {
+    const session = await stripe.checkout.sessions.retrieve(session_id);
+    if (session.metadata?.isGuestGift !== 'true') return res.status(403).json({ error: 'Not a gift session' });
+    res.json({ giftEmail: session.metadata.giftEmail, credits: parseInt(session.metadata.credits) || 0 });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── POST /api/gift-checkout — guest gift purchase (no auth required) ────────
+app.post('/api/gift-checkout', async (req, res) => {
+  const { credits, giftEmail, giftFrom, giftMessage } = req.body;
+  if (!giftEmail || !credits) return res.status(400).json({ error: 'Missing required fields' });
+  const creditsNum = parseInt(credits);
+  const giftTiers = { 1: 799, 3: 2000 };
+  const amount = giftTiers[creditsNum];
+  if (!amount) return res.status(400).json({ error: 'Invalid credit amount. Choose 1 or 3.' });
+  try {
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [{
+        price_data: {
+          currency: 'usd',
+          product_data: { name: `Unwritten — ${creditsNum} Story Credit${creditsNum !== 1 ? 's' : ''} (Gift)` },
+          unit_amount: amount,
+        },
+        quantity: 1,
+      }],
+      mode: 'payment',
+      success_url: `${process.env.APP_URL}/gift.html?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url:  `${process.env.APP_URL}/gift.html`,
+      metadata: {
+        isGuestGift:  'true',
+        credits:      String(creditsNum),
+        giftEmail:    giftEmail.trim().toLowerCase(),
+        giftFrom:     (giftFrom    || '').trim(),
+        giftMessage:  (giftMessage || '').trim(),
+      },
+    });
+    res.json({ url: session.url });
+  } catch (err) {
+    console.error('Gift checkout error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── POST /api/webhook — Stripe webhook (backup for missed redirects) ───────
 // TODO: enable signature verification when STRIPE_WEBHOOK_SECRET is set in prod
 app.post('/api/webhook', async (req, res) => {
@@ -271,8 +321,63 @@ app.post('/api/webhook', async (req, res) => {
       const { data: existing } = await supabaseAdmin
         .from('processed_payments').select('id').eq('session_id', session.id).maybeSingle();
       if (!existing) {
-        const { userId, credits, shareCredits, storiedCredits } = session.metadata || {};
-        if (userId && storiedCredits) {
+        const { userId, credits, shareCredits, storiedCredits, isGuestGift, giftEmail, giftFrom, giftMessage } = session.metadata || {};
+
+        if (isGuestGift === 'true') {
+          // ── Guest gift — no Unwritten account required ───────────────────
+          const creditsNum = parseInt(credits) || 0;
+          if (creditsNum && giftEmail) {
+            const { data: { users } } = await supabaseAdmin.auth.admin.listUsers();
+            const recipient = (users || []).find(u => u.email?.toLowerCase() === giftEmail.toLowerCase());
+            const fromName   = giftFrom || 'Someone special';
+            const creditWord = creditsNum !== 1 ? 'credits' : 'credit';
+
+            if (recipient) {
+              await supabaseAdmin.rpc('add_credits', { p_user_id: recipient.id, p_credits: creditsNum });
+              await supabaseAdmin.from('processed_payments').insert({ session_id: session.id, user_id: recipient.id, credits: creditsNum });
+              await resend.emails.send({
+                from: 'Unwritten <noreply@entertheunwritten.com>',
+                to:   giftEmail,
+                subject: `You've received ${creditsNum} Unwritten story ${creditWord}`,
+                html: `
+                  <div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;padding:40px 24px;background:#0d0a07;color:#e8d5b0;">
+                    <h1 style="font-size:26px;color:#c8a96e;margin-bottom:4px;">Unwritten</h1>
+                    <p style="color:#7a6a58;font-size:13px;margin-bottom:36px;">A gift has been sent your way</p>
+                    <h2 style="font-size:22px;color:#f0e8d0;margin-bottom:14px;">${creditsNum} Story ${creditsNum !== 1 ? 'Credits' : 'Credit'}</h2>
+                    <p style="font-size:16px;line-height:1.75;color:#c0a880;margin-bottom:${giftMessage ? '20px' : '32px'};">
+                      ${fromName} sent you ${creditsNum} story ${creditWord} on Unwritten — ${creditsNum === 1 ? 'it has' : "they've"} been added to your account. Log in anytime to start your story.
+                    </p>
+                    ${giftMessage ? `<blockquote style="margin:0 0 28px;padding:16px 20px;background:rgba(255,255,255,0.04);border-left:3px solid #c8a96e;border-radius:2px;font-style:italic;font-size:15px;color:#e8d5b0;line-height:1.7;">${giftMessage}</blockquote>` : ''}
+                    <a href="${process.env.APP_URL}/shelf.html" style="display:inline-block;padding:13px 30px;background:#c8a96e;color:#0d0a07;text-decoration:none;font-size:15px;font-weight:bold;border-radius:3px;">Go to My Library →</a>
+                  </div>`,
+              }).catch(() => {});
+            } else {
+              const { data: gift } = await supabaseAdmin
+                .from('pending_gift_credits')
+                .insert({ from_user_id: null, to_email: giftEmail, credits: creditsNum, tier: 'gift' })
+                .select().single();
+              const claimUrl = `${process.env.APP_URL}/accept-gift.html?token=${gift.token}`;
+              await supabaseAdmin.from('processed_payments').insert({ session_id: session.id, user_id: null, credits: creditsNum });
+              await resend.emails.send({
+                from: 'Unwritten <noreply@entertheunwritten.com>',
+                to:   giftEmail,
+                subject: `You've received ${creditsNum} Unwritten story ${creditWord}`,
+                html: `
+                  <div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;padding:40px 24px;background:#0d0a07;color:#e8d5b0;">
+                    <h1 style="font-size:26px;color:#c8a96e;margin-bottom:4px;">Unwritten</h1>
+                    <p style="color:#7a6a58;font-size:13px;margin-bottom:36px;">A gift has been sent your way</p>
+                    <h2 style="font-size:22px;color:#f0e8d0;margin-bottom:14px;">${creditsNum} Story ${creditsNum !== 1 ? 'Credits' : 'Credit'}</h2>
+                    <p style="font-size:16px;line-height:1.75;color:#c0a880;margin-bottom:${giftMessage ? '20px' : '32px'};">
+                      ${fromName} sent you ${creditsNum} story ${creditWord} on Unwritten — use ${creditsNum === 1 ? 'it' : 'them'} to generate your own AI-written novel, personalized to your characters and world.
+                    </p>
+                    ${giftMessage ? `<blockquote style="margin:0 0 28px;padding:16px 20px;background:rgba(255,255,255,0.04);border-left:3px solid #c8a96e;border-radius:2px;font-style:italic;font-size:15px;color:#e8d5b0;line-height:1.7;">${giftMessage}</blockquote>` : ''}
+                    <a href="${claimUrl}" style="display:inline-block;padding:13px 30px;background:#c8a96e;color:#0d0a07;text-decoration:none;font-size:15px;font-weight:bold;border-radius:3px;">Claim Your Credits →</a>
+                    <p style="margin-top:40px;font-size:12px;color:#3a2e1e;">This link can only be used once. Create a free account to claim it.</p>
+                  </div>`,
+              }).catch(() => {});
+            }
+          }
+        } else if (userId && storiedCredits) {
           await supabaseAdmin.rpc('add_storied_credits', { p_user_id: userId, p_credits: parseInt(storiedCredits) });
           await supabaseAdmin.rpc('add_share_credits', { p_user_id: userId, p_credits: parseInt(storiedCredits) * 2 });
           await supabaseAdmin.from('processed_payments').insert({ session_id: session.id, user_id: userId, credits: 0 });
@@ -346,6 +451,7 @@ function buildSystemPrompt(config = {}) {
   const storyIdea    = config.storyIdea       || '';
   const avoid        = config.triggerAvoid    || [];
   const chapters     = config.targetChapters  || 20;
+  const noDecisions  = config.noDecisions     || false;
 
   const avoidBlock = avoid.length
     ? `\n\nSTRICT CONTENT RULES — never include, reference, or imply the following: ${avoid.join(', ')}. This is non-negotiable.`
@@ -481,14 +587,17 @@ MOOD OPTIONS (pick the one that best fits THIS chapter's emotional core):
 }
 </mood>
 
-<decisions>
+${noDecisions
+  ? `<decisions>[]</decisions>
+IMPORTANT: This is a LINEAR story with no reader choices — always return an empty decisions array ([]). Do NOT write choice-soliciting cliffhangers, "what should she do?" prompts, or any language inviting the reader to decide. End each chapter as a standard novel chapter — a scene close, a revelation, or forward narrative momentum.`
+  : `<decisions>
 [
   {
     "prompt": "A question framing the protagonist's choice (one sentence)",
     "options": ["Option A (3–6 words)", "Option B (3–6 words)", "Option C (3–6 words)"]
   }
 ]
-</decisions>
+</decisions>`}
 
 <bible>
 STORY BIBLE — update after every chapter. Be specific. This is the continuity record.
