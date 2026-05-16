@@ -8,8 +8,8 @@ const { createRequire } = require('module');
 
 const app = express();
 app.use(express.json({ limit: '50mb' }));
-app.use(express.static(path.join(__dirname)));
 app.get('/', (_req, res) => res.redirect('/landing.html'));
+app.use(express.static(path.join(__dirname)));
 
 // ─── GET /api/credits ──────────────────────────────────────────────────────
 app.get('/api/credits', async (req, res) => {
