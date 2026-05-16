@@ -1754,12 +1754,18 @@ async function openShareModal() {
 
   try {
     const { data: { session } } = await _SB.auth.getSession();
-    const resp = await fetch('/api/share-credits', { headers: { Authorization: `Bearer ${session.access_token}` } });
+    const resp = await fetch('/api/credits', { headers: { Authorization: `Bearer ${session.access_token}` } });
     const json = await resp.json();
-    _shareCredits = json.share_credits || 0;
     const balEl = document.getElementById('share-credit-balance');
-    balEl.textContent = `Share credits: ${_shareCredits}`;
-    balEl.style.color = _shareCredits > 0 ? 'var(--gold)' : '#c87a60';
+    if (json.is_comped) {
+      _shareCredits = Infinity;
+      balEl.textContent = 'Share credits: Unlimited';
+      balEl.style.color = 'var(--gold)';
+    } else {
+      _shareCredits = json.share_credits || 0;
+      balEl.textContent = `Share credits: ${_shareCredits}`;
+      balEl.style.color = _shareCredits > 0 ? 'var(--gold)' : '#c87a60';
+    }
   } catch (_) {}
 }
 

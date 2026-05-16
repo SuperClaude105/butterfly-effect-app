@@ -1082,9 +1082,12 @@ app.post('/api/share', async (req, res) => {
   const recipient = (users || []).find(u => u.email === toEmail);
 
   if (recipient) {
-    // Costs 1 share credit for existing users
-    const { data: deducted } = await supabaseAdmin.rpc('deduct_share_credit', { p_user_id: user.id });
-    if (!deducted) return res.status(402).json({ error: 'No share credits remaining.', needsCredits: true });
+    // Comped users share for free; others spend 1 share credit
+    const profile = await getProfile(user.id);
+    if (!profile.is_comped) {
+      const { data: deducted } = await supabaseAdmin.rpc('deduct_share_credit', { p_user_id: user.id });
+      if (!deducted) return res.status(402).json({ error: 'No share credits remaining.', needsCredits: true });
+    }
 
     const { error: insertErr } = await supabaseAdmin.from('stories').insert({
       id: crypto.randomUUID(), user_id: recipient.id,
