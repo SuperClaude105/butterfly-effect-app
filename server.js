@@ -518,7 +518,11 @@ app.post('/api/start', async (req, res) => {
     res.json({ success: true, ...parsed, chapterNumber: 1 });
   } catch (err) {
     console.error('Error generating chapter 1:', err.message);
-    res.status(500).json({ error: err.message });
+    // Refund the credit — generation failed, user shouldn't be charged
+    if (!profile.is_comped) {
+      await supabaseAdmin.rpc('add_credits', { p_user_id: user.id, p_credits: 1 }).catch(() => {});
+    }
+    res.status(500).json({ error: 'Generation failed — your credit has been refunded.', refunded: true });
   }
 });
 
@@ -1169,6 +1173,9 @@ ${chaptersHtml}</body></html>`;
     res.status(500).json({ error: err.message });
   }
 });
+
+// ─── 404 handler ───────────────────────────────────────────────────────────
+app.use((_req, res) => res.status(404).sendFile(path.join(__dirname, '404.html')));
 
 // ─── Start server ──────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3001;

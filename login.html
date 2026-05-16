@@ -6,7 +6,17 @@
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#0c0704">
 <link rel="apple-touch-icon" href="/icons/icon-192.png">
-<title>Unwritten</title>
+<title>Sign In — Unwritten</title>
+<meta name="description" content="Sign in to Unwritten to access your AI-generated novels and library.">
+<meta property="og:type"        content="website">
+<meta property="og:url"         content="https://entertheunwritten.com/login.html">
+<meta property="og:title"       content="Unwritten — AI Storytelling">
+<meta property="og:description" content="Every story you've imagined, written. Sign in to your library.">
+<meta property="og:image"       content="https://entertheunwritten.com/icons/icon-512.png">
+<meta name="twitter:card"        content="summary">
+<meta name="twitter:title"       content="Unwritten — AI Storytelling">
+<meta name="twitter:description" content="Every story you've imagined, written.">
+<meta name="twitter:image"       content="https://entertheunwritten.com/icons/icon-512.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Playfair+Display:ital,wght@0,700;0,900;1,400;1,700&display=swap" rel="stylesheet">
 <style>
@@ -170,6 +180,25 @@ hr { margin:2rem 0 1.25rem; border:none; border-top:1px solid var(--border); }
       <input type="password" id="si-pass" placeholder="Password" autocomplete="current-password" required>
       <p class="msg error" id="si-msg"></p>
       <button type="submit" id="si-btn">Sign In</button>
+      <p style="margin-top:.75rem;font-size:.82rem;"><a href="#" id="forgot-link" style="color:var(--text-dim);text-decoration:none;border-bottom:1px solid rgba(232,213,183,0.2);padding-bottom:1px;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-dim)'">Forgot password?</a></p>
+    </form>
+
+    <!-- Forgot password -->
+    <form id="forgotForm" style="display:none" autocomplete="on">
+      <p style="font-size:.9rem;color:var(--text-dim);font-style:italic;margin-bottom:1rem;">Enter your email and we'll send a reset link.</p>
+      <input type="email" id="forgot-email" placeholder="Email address" autocomplete="email" required>
+      <p class="msg" id="forgot-msg"></p>
+      <button type="submit" id="forgot-btn">Send Reset Link</button>
+      <p style="margin-top:.75rem;font-size:.82rem;"><a href="#" id="back-to-signin" style="color:var(--text-dim);text-decoration:none;border-bottom:1px solid rgba(232,213,183,0.2);padding-bottom:1px;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-dim)'">← Back to sign in</a></p>
+    </form>
+
+    <!-- Set new password (shown after clicking reset link) -->
+    <form id="resetForm" style="display:none" autocomplete="on">
+      <p style="font-size:.9rem;color:var(--text-dim);font-style:italic;margin-bottom:1rem;">Choose a new password for your account.</p>
+      <input type="password" id="reset-pass" placeholder="New password (min 6 characters)" autocomplete="new-password" required>
+      <input type="password" id="reset-confirm" placeholder="Confirm new password" autocomplete="new-password" required>
+      <p class="msg" id="reset-msg"></p>
+      <button type="submit" id="reset-btn">Set New Password</button>
     </form>
 
     <!-- Register -->
@@ -177,6 +206,10 @@ hr { margin:2rem 0 1.25rem; border:none; border-top:1px solid var(--border); }
       <input type="email" id="reg-email" placeholder="Email address" autocomplete="email" required>
       <input type="password" id="reg-pass" placeholder="Password (min 6 characters)" autocomplete="new-password" required>
       <input type="password" id="reg-confirm" placeholder="Confirm password" autocomplete="new-password" required>
+      <label style="display:flex;align-items:flex-start;gap:10px;margin-bottom:.75rem;font-size:.82rem;color:var(--text-dim);text-align:left;cursor:pointer;">
+        <input type="checkbox" id="reg-tos" style="margin-top:3px;flex-shrink:0;accent-color:var(--accent);" required>
+        <span>I agree to the <a href="/legal.html" target="_blank" style="color:var(--accent);text-decoration:none;border-bottom:1px solid rgba(196,162,100,0.3);">Terms of Service</a></span>
+      </label>
       <p class="msg" id="reg-msg"></p>
       <button type="submit" id="reg-btn">Create Account</button>
     </form>
@@ -255,6 +288,79 @@ document.getElementById('signinForm').addEventListener('submit', async e => {
     return;
   }
   location.replace('/shelf.html');
+});
+
+// ── Detect password recovery hash ────────────────────────────────
+_SB.auth.onAuthStateChange((event) => {
+  if (event === 'PASSWORD_RECOVERY') {
+    document.getElementById('gateSection').style.display = 'none';
+    document.getElementById('authSection').style.display = '';
+    document.querySelectorAll('.tabs, #signinForm, #registerForm, #forgotForm').forEach(el => el.style.display = 'none');
+    document.getElementById('resetForm').style.display = '';
+  }
+});
+
+// ── Forgot password ───────────────────────────────────────────────
+document.getElementById('forgot-link').addEventListener('click', e => {
+  e.preventDefault();
+  document.getElementById('signinForm').style.display = 'none';
+  document.getElementById('forgotForm').style.display = '';
+  document.getElementById('forgot-email').focus();
+});
+
+document.getElementById('back-to-signin').addEventListener('click', e => {
+  e.preventDefault();
+  document.getElementById('forgotForm').style.display = 'none';
+  document.getElementById('signinForm').style.display = '';
+  document.getElementById('si-email').focus();
+});
+
+document.getElementById('forgotForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const msgEl = document.getElementById('forgot-msg');
+  const btn   = document.getElementById('forgot-btn');
+  msgEl.className = 'msg'; msgEl.textContent = '';
+  btn.disabled = true; btn.textContent = 'Sending…';
+
+  const email = document.getElementById('forgot-email').value.trim();
+  const { error } = await _SB.auth.resetPasswordForEmail(email, {
+    redirectTo: `${location.origin}/login.html`,
+  });
+
+  btn.disabled = false; btn.textContent = 'Send Reset Link';
+  if (error) {
+    msgEl.className = 'msg error'; msgEl.textContent = error.message;
+  } else {
+    msgEl.className = 'msg success'; msgEl.textContent = 'Reset link sent — check your email.';
+  }
+});
+
+// ── Set new password ──────────────────────────────────────────────
+document.getElementById('resetForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const msgEl = document.getElementById('reset-msg');
+  const btn   = document.getElementById('reset-btn');
+  const pass  = document.getElementById('reset-pass').value;
+  const conf  = document.getElementById('reset-confirm').value;
+  msgEl.className = 'msg'; msgEl.textContent = '';
+
+  if (pass !== conf) {
+    msgEl.className = 'msg error'; msgEl.textContent = 'Passwords do not match.'; return;
+  }
+  if (pass.length < 6) {
+    msgEl.className = 'msg error'; msgEl.textContent = 'Password must be at least 6 characters.'; return;
+  }
+
+  btn.disabled = true; btn.textContent = 'Saving…';
+  const { error } = await _SB.auth.updateUser({ password: pass });
+  btn.disabled = false; btn.textContent = 'Set New Password';
+
+  if (error) {
+    msgEl.className = 'msg error'; msgEl.textContent = error.message;
+  } else {
+    msgEl.className = 'msg success'; msgEl.textContent = 'Password updated! Redirecting…';
+    setTimeout(() => location.replace('/shelf.html'), 1200);
+  }
 });
 
 // ── Register ──────────────────────────────────────────────────────

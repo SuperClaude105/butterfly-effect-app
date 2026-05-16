@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Page Not Found — Unwritten</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --gold:#c9a84c;--bg:#080705;--text:#e8d5b0;--muted:rgba(232,213,176,0.45);
+}
+body{
+  font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;text-align:center;padding:40px 24px;
+  background-image:
+    radial-gradient(ellipse 60% 50% at 50% 0%,rgba(80,40,0,0.18) 0%,transparent 70%),
+    radial-gradient(ellipse 40% 40% at 80% 80%,rgba(201,168,76,0.05) 0%,transparent 60%);
+}
+.eyebrow{font-size:0.62rem;letter-spacing:0.3em;text-transform:uppercase;color:var(--gold);margin-bottom:20px;opacity:0.7;}
+h1{
+  font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;
+  font-size:clamp(3rem,10vw,7rem);color:var(--text);line-height:1;
+  margin-bottom:16px;letter-spacing:-0.02em;
+}
+p{font-size:0.95rem;color:var(--muted);line-height:1.7;max-width:400px;margin-bottom:40px;}
+.links{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;}
+.btn-primary{
+  padding:12px 28px;background:var(--gold);color:#080705;border-radius:2px;
+  text-decoration:none;font-size:0.7rem;font-weight:600;letter-spacing:0.12em;
+  text-transform:uppercase;transition:opacity 0.2s;
+}
+.btn-primary:hover{opacity:0.85;}
+.btn-outline{
+  padding:12px 28px;border:1px solid rgba(201,168,76,0.3);color:var(--muted);
+  border-radius:2px;text-decoration:none;font-size:0.7rem;font-weight:500;
+  letter-spacing:0.1em;text-transform:uppercase;
+  transition:border-color 0.2s,color 0.2s;
+}
+.btn-outline:hover{border-color:var(--gold);color:var(--text);}
+</style>
+</head>
+<body>
+  <div class="eyebrow">404</div>
+  <h1>Lost chapter.</h1>
+  <p>This page doesn't exist — or the story has moved on without it.</p>
+  <div class="links">
+    <a class="btn-primary" href="/landing.html">Go Home</a>
+    <a class="btn-outline" href="/library.html">Browse Library</a>
+  </div>
+</body>
+</html>
