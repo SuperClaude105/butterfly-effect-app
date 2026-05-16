@@ -289,7 +289,8 @@ app.get('/api/gift-info/:token', async (req, res) => {
 app.post('/api/library/borrow', async (req, res) => {
   const { storyId } = req.body;
   const user = await getUserFromToken(req.headers.authorization);
-  if (!user || !storyId) return res.status(401).json({ error: 'Unauthorized' });
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+  if (!storyId) return res.status(400).json({ error: 'Missing storyId' });
 
   const { data: existing } = await supabaseAdmin
     .from('library_borrows').select('id')
@@ -400,6 +401,7 @@ app.get('/api/gift-session-info', async (req, res) => {
   try {
     const session = await stripe.checkout.sessions.retrieve(session_id);
     if (session.metadata?.isGuestGift !== 'true') return res.status(403).json({ error: 'Not a gift session' });
+    if (session.payment_status !== 'paid') return res.status(402).json({ error: 'Payment not complete' });
     res.json({ giftEmail: session.metadata.giftEmail, credits: parseInt(session.metadata.credits) || 0 });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -681,7 +683,13 @@ ${proseStyle}
 - Chapter length: 1000–1400 words of prose
 ${avoidBlock}${sequelBlock}${seriesBlock}${namesBlock}
 
-CONTINUITY MANDATE — before writing each chapter:
+GENRE PALETTE for this story (use these exact colors for primaryColor in mood JSON, shifting hue and lightness per chapter emotional beat): ${paletteHint}${noDecisions ? `
+
+STORY TYPE: LINEAR — this story has no reader choices. Always return an empty decisions array ([]). Do NOT write choice-soliciting cliffhangers, "what should she do?" prompts, or any language inviting the reader to decide. End each chapter as a standard novel chapter — a scene close, a revelation, or forward narrative momentum.` : ''}`;
+}
+
+// ─── Static rules — shared across all stories, caches globally ────────────────
+const STATIC_RULES = `CONTINUITY MANDATE — before writing each chapter:
 - Read the Story Bible in full. Every fact in it is CANON and cannot change.
 - Never alter an established location (if someone died in Martintown, they died in Martintown — forever).
 - Never alter an established time reference (if the investigation is 3 weeks old, it stays 3 weeks old — unless the new chapter explicitly advances time and the bible is updated accordingly).
@@ -714,7 +722,7 @@ MOOD OPTIONS (pick the one that best fits THIS chapter's emotional core):
 
 {
   "mood": "choose one mood word from the list above that captures THIS specific chapter",
-  "primaryColor": "#hexcode — GENRE PALETTE: ${paletteHint} Shift the exact hue and lightness to match THIS chapter's beat. Tense chapters go darker and more saturated. Quiet chapters go slightly lighter or more muted. Never the same shade twice in a row.",
+  "primaryColor": "#hexcode — draw from the GENRE PALETTE specified in your story configuration. Shift the exact hue and lightness to match THIS chapter's beat. Tense chapters go darker and more saturated. Quiet chapters go slightly lighter or more muted. Never the same shade twice in a row.",
   "secondaryColor": "#hexcode — the background color. Keep dark enough for light text to read clearly. Can be slightly warmer or cooler based on mood.",
   "accentColor": "#hexcode — headings and UI highlights. Should contrast with secondaryColor and complement primaryColor.",
   "particles": "one of: embers|petals|ash|sparks|dust|snow|none — vary this too. Calm chapters: none or dust. Tense: ash. Violent/dark: embers or ash. Magical/hopeful: sparks or petals. Winter/cold: snow.",
@@ -722,17 +730,15 @@ MOOD OPTIONS (pick the one that best fits THIS chapter's emotional core):
 }
 </mood>
 
-${noDecisions
-  ? `<decisions>[]</decisions>
-IMPORTANT: This is a LINEAR story with no reader choices — always return an empty decisions array ([]). Do NOT write choice-soliciting cliffhangers, "what should she do?" prompts, or any language inviting the reader to decide. End each chapter as a standard novel chapter — a scene close, a revelation, or forward narrative momentum.`
-  : `<decisions>
+<decisions>
 [
   {
     "prompt": "A question framing the protagonist's choice (one sentence)",
     "options": ["Option A (3–6 words)", "Option B (3–6 words)", "Option C (3–6 words)"]
   }
 ]
-</decisions>`}
+</decisions>
+For LINEAR stories configured with no reader choices: always return an empty decisions array — <decisions>[]</decisions>
 
 <bible>
 STORY BIBLE — update after every chapter. Be specific. This is the continuity record.
@@ -756,7 +762,6 @@ CURRENT STATE:
 </bible>
 
 IMPORTANT: All blocks required (except <booktitle> after Chapter 1). JSON must be valid. No commentary outside these blocks after the prose.`;
-}
 
 // ─── Embers hardcoded prompt (legacy — used by embers.html) ───────────────
 const EMBERS_PROMPT = buildSystemPrompt({
@@ -836,7 +841,10 @@ app.post('/api/start', async (req, res) => {
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 3200,
-      system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
+      system: [
+        { type: 'text', text: STATIC_RULES, cache_control: { type: 'ephemeral' } },
+        { type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } },
+      ],
       messages: [{ role: 'user', content: openingInstruction }],
     });
 
@@ -885,13 +893,20 @@ app.post('/api/chapter', async (req, res) => {
   }[arcPhase];
 
   try {
-    const chapterPrompt = `STORY BIBLE (current state — this is CANON, do not contradict it):\n${storyBible}\n\nREADER'S DECISION: "${decision}"\n\nBefore writing: verify every location, time reference, and character fate in the bible above. This chapter must be consistent with all of them.\n\n${arcInstruction}`;
-
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 3200,
-      system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
-      messages: [{ role: 'user', content: chapterPrompt }],
+      system: [
+        { type: 'text', text: STATIC_RULES, cache_control: { type: 'ephemeral' } },
+        { type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } },
+      ],
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'text', text: `STORY BIBLE (current state — this is CANON, do not contradict it):\n${storyBible}`, cache_control: { type: 'ephemeral' } },
+          { type: 'text', text: `\n\nREADER'S DECISION: "${decision}"\n\nBefore writing: verify every location, time reference, and character fate in the bible above. This chapter must be consistent with all of them.\n\n${arcInstruction}` },
+        ],
+      }],
     });
 
     const parsed = parseResponse(response.content[0].text);

@@ -983,13 +983,20 @@ function ordinal(n) { return ORDINALS[n-1] || String(n); }
 // ═══════════════════════════════════════════════════════════════
 let _storyCache = null; // in-memory cache for the current story's DB row
 let _currentUserId = null;
+let _currentToken  = null;
 
 async function _ensureUser() {
   if (_currentUserId) return _currentUserId;
   const { data: { session } } = await _SB.auth.getSession();
   if (!session) { location.replace('/login.html'); return null; }
   _currentUserId = session.user.id;
+  _currentToken  = session.access_token;
   return _currentUserId;
+}
+
+async function _authHeader() {
+  await _ensureUser();
+  return _currentToken ? { 'Authorization': 'Bearer ' + _currentToken } : {};
 }
 
 function getLibrary() { return _storyCache ? { [STORY_ID]: _storyCache } : {}; }
@@ -1208,7 +1215,7 @@ async function resumeStory() {
   // If decisions were lost (navigated away mid-animation), inject a generic continue
   const decisions = (S.pendingDecisions && S.pendingDecisions.length > 0)
     ? S.pendingDecisions
-    : (!atLimit && S.chapter > 0)
+    : (!atLimit && S.chapter > 0 && !STORY_CONFIG?.noDecisions)
       ? [{ prompt: 'How does the story continue?', options: ['Press forward', 'Tread carefully', 'Take a different path'] }]
       : [];
   showReading({
@@ -1247,7 +1254,7 @@ async function loadChapter(decision, chapterNum, isFirst = false, isFinal = fals
     const body = isFirst
       ? { storyConfig: STORY_CONFIG }
       : { storyBible: S.bible, decision, chapterNumber: chapterNum, storyConfig: STORY_CONFIG, isFinalChapter: isFinal };
-    const res  = await fetch(endpoint, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    const res  = await fetch(endpoint, { method:'POST', headers:{'Content-Type':'application/json', ...(await _authHeader())}, body: JSON.stringify(body) });
     const data = await res.json();
     if (!data.success) throw new Error(data.error || 'Unknown error');
     showReading(data, true, isFinal);
@@ -1383,8 +1390,8 @@ function submitCustom() {
 
 async function choose(option) {
   const prompt = document.getElementById('d-prompt')?.textContent || '';
-  S.decisionHistory.push({ chapter: S.chapter, prompt, chosen: option });
-  S.decisions.push(option);
+  if (option) S.decisionHistory.push({ chapter: S.chapter, prompt, chosen: option });
+  if (option) S.decisions.push(option);
   S.pendingDecisions = null;
   const nextChapter = S.chapter + 1;
   const limit = STORY_CONFIG?.targetChapters || 20;
@@ -1455,7 +1462,7 @@ async function generateSpine() {
   try {
     const res = await fetch('/api/generate-spine', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(await _authHeader()) },
       body: JSON.stringify({
         title:             S.bookTitle || STORY_CONFIG.bookTitleInput || '',
         genre:             STORY_CONFIG.genre || 'Dark Romance',

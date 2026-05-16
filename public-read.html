@@ -675,7 +675,7 @@ async function setupRating() {
   const { data: existing } = await _SB.from('story_ratings')
     .select('stars')
     .eq('story_id', STORY_ID)
-    .eq('user_id', session.user.id)
+    .eq('user_id', _session.user.id)
     .maybeSingle();
 
   if (existing) {

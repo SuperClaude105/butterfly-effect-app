@@ -1976,13 +1976,21 @@ async function togglePublic() {
         });
         const data = await res.json();
         if (data.success) {
-          const added = data.credits || 0;
-          if (data.gift && data.giftEmail) {
-            showToast(`${added} credit${added !== 1 ? 's' : ''} sent to ${data.giftEmail}`);
+          if (data.librarySlots) {
+            showToast(`Library Pass activated — you can now borrow up to ${data.librarySlots} books at once`);
+          } else if (data.storiedCredits) {
+            showToast(`Payment confirmed — ${data.storiedCredits} Your Story credit${data.storiedCredits !== 1 ? 's' : ''} added`);
+          } else if (data.shareCredits) {
+            showToast(`Payment confirmed — ${data.shareCredits} share credit${data.shareCredits !== 1 ? 's' : ''} added`);
           } else {
-            showToast(added > 0
-              ? `Payment confirmed — ${added} credit${added !== 1 ? 's' : ''} added to your account`
-              : 'Credits already applied to your account');
+            const added = data.credits || 0;
+            if (data.gift && data.giftEmail) {
+              showToast(`${added} credit${added !== 1 ? 's' : ''} sent to ${data.giftEmail}`);
+            } else {
+              showToast(added > 0
+                ? `Payment confirmed — ${added} credit${added !== 1 ? 's' : ''} added to your account`
+                : 'Credits already applied to your account');
+            }
           }
         }
       } catch (_) {}
