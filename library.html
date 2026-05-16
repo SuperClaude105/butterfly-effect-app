@@ -223,6 +223,105 @@ body::before {
     radial-gradient(ellipse 60% 50% at 80% 10%,rgba(100,50,0,0.12) 0%,transparent 60%),
     radial-gradient(ellipse 50% 40% at 20% 90%,rgba(50,30,0,0.08) 0%,transparent 55%);
 }
+
+/* ── Book detail modal ── */
+.bd-backdrop {
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,0.78);backdrop-filter:blur(6px);
+  z-index:400;align-items:center;justify-content:center;padding:24px;
+}
+.bd-backdrop.open { display:flex; }
+
+.bd-modal {
+  width:100%;max-width:800px;max-height:90vh;overflow-y:auto;
+  background:var(--card);border:1px solid rgba(201,168,76,0.15);
+  border-radius:4px;
+  box-shadow:0 32px 100px rgba(0,0,0,0.85),0 0 0 1px rgba(201,168,76,0.06);
+  display:grid;grid-template-columns:220px 1fr;
+  position:relative;
+}
+@media(max-width:580px){
+  .bd-modal{grid-template-columns:1fr;max-height:92vh;}
+}
+
+.bd-cover-col {
+  position:relative;min-height:320px;
+  background-size:cover;background-position:center top;
+  border-radius:4px 0 0 4px;overflow:hidden;flex-shrink:0;
+}
+.bd-cover-col::after {
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(to right,transparent 60%,rgba(20,17,9,0.95) 100%);
+}
+@media(max-width:580px){
+  .bd-cover-col{min-height:220px;border-radius:4px 4px 0 0;}
+  .bd-cover-col::after{background:linear-gradient(to bottom,transparent 50%,rgba(20,17,9,0.95) 100%);}
+}
+
+.bd-content {
+  padding:36px 36px 32px;display:flex;flex-direction:column;gap:0;
+}
+@media(max-width:580px){.bd-content{padding:24px 22px 28px;}}
+
+.bd-close {
+  position:absolute;top:16px;right:16px;z-index:10;
+  background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.1);
+  color:var(--muted);width:32px;height:32px;border-radius:50%;
+  cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;
+  transition:color 0.2s,border-color 0.2s;
+}
+.bd-close:hover{color:var(--text);border-color:rgba(255,255,255,0.25);}
+
+.bd-eyebrow {
+  font-size:0.66rem;letter-spacing:0.18em;text-transform:uppercase;
+  color:var(--gold);margin-bottom:8px;
+}
+.bd-title {
+  font-family:'Cormorant Garamond',serif;font-size:1.8rem;font-weight:300;
+  color:var(--text);line-height:1.15;margin-bottom:6px;
+}
+.bd-stars-row { display:flex;align-items:center;gap:8px;margin-bottom:20px; }
+.bd-rating-count { font-size:0.72rem;color:var(--muted); }
+
+.bd-premise {
+  font-family:'Cormorant Garamond',serif;font-style:italic;
+  font-size:0.95rem;line-height:1.65;color:var(--gold2);
+  margin-bottom:14px;opacity:0.85;
+}
+.bd-blurb {
+  font-size:0.84rem;line-height:1.75;color:rgba(237,224,200,0.75);
+  margin-bottom:20px;
+}
+.bd-tags {
+  display:flex;flex-wrap:wrap;gap:6px;margin-bottom:28px;
+}
+.bd-tag {
+  font-size:0.67rem;letter-spacing:0.08em;text-transform:uppercase;
+  padding:4px 10px;border:1px solid rgba(201,168,76,0.18);
+  border-radius:2px;color:var(--dim);
+}
+.bd-meta-row {
+  font-size:0.72rem;color:var(--muted);margin-bottom:28px;
+}
+
+.bd-cta-btn {
+  display:block;width:100%;padding:15px;
+  background:linear-gradient(135deg,var(--gold) 0%,#b8962e 100%);
+  color:#080705;font-weight:600;font-size:0.9rem;letter-spacing:0.03em;
+  border:none;border-radius:3px;cursor:pointer;
+  transition:opacity 0.2s,transform 0.15s;text-align:center;
+  text-decoration:none;
+}
+.bd-cta-btn:hover{opacity:0.88;}
+.bd-cta-btn:active{transform:scale(0.99);}
+
+.bd-secondary-btn {
+  display:block;width:100%;padding:12px;margin-top:10px;
+  background:none;border:1px solid rgba(201,168,76,0.2);
+  color:var(--muted);font-size:0.82rem;border-radius:3px;cursor:pointer;
+  transition:border-color 0.2s,color 0.2s;
+}
+.bd-secondary-btn:hover{border-color:rgba(201,168,76,0.4);color:var(--text);}
 </style>
 </head>
 <body>
@@ -272,9 +371,14 @@ const _SB = supabase.createClient(
 );
 
 let _stories = [];
+let _storyMap = {};
 let _currentGenre = 'all';
 let _sortBy = 'newest';
 let _ratings = {};
+let _isLoggedIn = false;
+
+// Check auth state
+_SB.auth.getSession().then(({ data: { session } }) => { _isLoggedIn = !!session; });
 
 const GENRE_GRADIENTS = {
   'Fantasy':       'linear-gradient(145deg,#1a0a2e 0%,#3d1a6e 50%,#6b2fa0 100%)',
@@ -343,7 +447,7 @@ function render() {
     const blurb = getBlurb(d);
     const photoUrl = d.coverImage || `https://picsum.photos/seed/${s.id}/400/600`;
     const coverBg = `background:url('${photoUrl}') center top / cover no-repeat, ${genreGradient(genre)}`;
-    return `<a class="book-card" href="public-read.html?id=${s.id}" style="color:inherit;">
+    return `<a class="book-card" href="#" onclick="openBookDetail(event,'${s.id}')" style="color:inherit;">
       <div class="cover-wrap">
         <div class="cover-bg" style="${coverBg}"></div>
         <div class="cover-overlay"></div>
@@ -390,6 +494,7 @@ async function load() {
   }
 
   _stories = stories;
+  stories.forEach(s => { _storyMap[s.id] = s; });
 
   if (stories.length > 0) {
     const ids = stories.map(s => s.id);
@@ -424,7 +529,102 @@ async function load() {
   render();
 }
 
+// ── Book detail modal ────────────────────────────────────────────────────────
+function getLongBlurb(d) {
+  const ch = (d?.progress?.chapters?.[0] || '').replace(/\n+/g, ' ').trim();
+  if (!ch) return '';
+  // Try to grab 3 complete sentences
+  const sents = ch.match(/[^.!?]+[.!?]+/g) || [];
+  if (sents.length >= 3) return sents.slice(0, 3).join(' ').trim();
+  return ch.length > 320 ? ch.slice(0, 320) + '…' : ch;
+}
+
+function openBookDetail(evt, id) {
+  evt.preventDefault();
+  const s = _storyMap[id];
+  if (!s) return;
+
+  const d = s.data || {};
+  const title    = d.bookTitle || d.config?.protagonistName || 'Untitled';
+  const genre    = d.config?.genre || 'Fiction';
+  const premise  = d.config?.storyIdea || '';
+  const themes   = (d.config?.themes || []).slice(0, 5);
+  const chapters = (d.progress?.chapters || []).length;
+  const r        = _ratings[id] || { avg: 0, count: 0 };
+  const photoUrl = d.coverImage || `https://picsum.photos/seed/${s.id}/400/600`;
+  const longBlurb = getLongBlurb(d);
+
+  // Cover
+  const coverCol = document.getElementById('bd-cover-col');
+  coverCol.style.backgroundImage = `url('${photoUrl}')`;
+  coverCol.style.background = `url('${photoUrl}') center top / cover no-repeat, ${genreGradient(genre)}`;
+
+  // Text
+  document.getElementById('bd-eyebrow').textContent = genre;
+  document.getElementById('bd-title').textContent   = title;
+
+  const starsEl = document.getElementById('bd-stars-row');
+  starsEl.innerHTML = r.count > 0
+    ? `${renderStars(r.avg, r.count)}<span class="bd-rating-count">${r.count} rating${r.count !== 1 ? 's' : ''}</span>`
+    : '';
+
+  const premiseEl = document.getElementById('bd-premise');
+  premiseEl.textContent = premise ? `"${premise}"` : '';
+  premiseEl.style.display = premise ? 'block' : 'none';
+
+  document.getElementById('bd-blurb').textContent = longBlurb;
+
+  const tagsEl = document.getElementById('bd-tags');
+  tagsEl.innerHTML = themes.map(t => `<span class="bd-tag">${t}</span>`).join('');
+
+  document.getElementById('bd-meta').textContent =
+    `${chapters} chapter${chapters !== 1 ? 's' : ''} · ${genre}`;
+
+  // CTA
+  const ctaBtn = document.getElementById('bd-cta');
+  if (_isLoggedIn) {
+    ctaBtn.textContent = 'Start Reading →';
+    ctaBtn.onclick = () => { location.href = `public-read.html?id=${id}`; };
+  } else {
+    ctaBtn.textContent = 'Log In to Start Reading →';
+    ctaBtn.onclick = () => {
+      sessionStorage.setItem('lib_pending_read', id);
+      location.href = 'login.html';
+    };
+  }
+
+  document.getElementById('bd-backdrop').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeBookDetail() {
+  document.getElementById('bd-backdrop').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeBookDetail(); });
+
 load();
 </script>
+
+<!-- Book detail modal -->
+<div class="bd-backdrop" id="bd-backdrop" onclick="if(event.target===this)closeBookDetail()">
+  <div class="bd-modal">
+    <button class="bd-close" onclick="closeBookDetail()">&#10005;</button>
+    <div class="bd-cover-col" id="bd-cover-col"></div>
+    <div class="bd-content">
+      <div class="bd-eyebrow" id="bd-eyebrow"></div>
+      <h2 class="bd-title" id="bd-title"></h2>
+      <div class="bd-stars-row" id="bd-stars-row"></div>
+      <p class="bd-premise" id="bd-premise" style="display:none"></p>
+      <p class="bd-blurb" id="bd-blurb"></p>
+      <div class="bd-tags" id="bd-tags"></div>
+      <div class="bd-meta-row" id="bd-meta"></div>
+      <button class="bd-cta-btn" id="bd-cta"></button>
+      <button class="bd-secondary-btn" onclick="closeBookDetail()">Browse More Books</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

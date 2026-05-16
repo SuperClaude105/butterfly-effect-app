@@ -217,9 +217,17 @@ const _SB = supabase.createClient(
   'sb_publishable_ob7bw2JF-iSjqyjSXRu4-g_lLuFagj7'
 );
 
-// If already signed in, go straight to shelf
+// If already signed in, go straight to shelf (or pending book)
 _SB.auth.getSession().then(({ data: { session } }) => {
-  if (session) location.replace('/shelf.html');
+  if (session) {
+    const pendingRead = sessionStorage.getItem('lib_pending_read');
+    if (pendingRead) {
+      sessionStorage.removeItem('lib_pending_read');
+      location.replace(`/public-read.html?id=${pendingRead}`);
+    } else {
+      location.replace('/shelf.html');
+    }
+  }
 });
 
 
@@ -256,7 +264,13 @@ document.getElementById('signinForm').addEventListener('submit', async e => {
     btn.textContent = 'Sign In';
     return;
   }
-  location.replace('/shelf.html');
+  const pendingRead = sessionStorage.getItem('lib_pending_read');
+  if (pendingRead) {
+    sessionStorage.removeItem('lib_pending_read');
+    location.replace(`/public-read.html?id=${pendingRead}`);
+  } else {
+    location.replace('/shelf.html');
+  }
 });
 
 // ── Detect password recovery hash ────────────────────────────────
