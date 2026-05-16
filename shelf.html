@@ -1269,9 +1269,14 @@ body::before {
       <span class="stat-label">Genres</span>
     </div>
     <div class="stat-divider"></div>
-    <div class="stat-item" style="cursor:pointer;" onclick="location.href='index.html'" title="Buy more credits">
+    <div class="stat-item" style="cursor:pointer;" onclick="location.href='index.html'" title="Buy more book credits">
       <span class="stat-num" id="stat-credits" style="color:var(--gold);">—</span>
-      <span class="stat-label">Credits <span style="font-size:0.6rem;opacity:0.6;">+ add</span></span>
+      <span class="stat-label">Book Credits <span style="font-size:0.6rem;opacity:0.6;">+ add</span></span>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item" style="cursor:pointer;" onclick="buyShareCredits('share_3')" title="Buy more share credits">
+      <span class="stat-num" id="stat-share-credits" style="color:var(--gold);">—</span>
+      <span class="stat-label">Share Credits <span style="font-size:0.6rem;opacity:0.6;">+ add</span></span>
     </div>
   </div>
 
@@ -1929,6 +1934,8 @@ async function togglePublic() {
     }).then(r => r.json());
     const el = document.getElementById('stat-credits');
     if (el) el.textContent = cr.is_comped ? '∞' : (cr.credits || 0);
+    const sel = document.getElementById('stat-share-credits');
+    if (sel) sel.textContent = cr.is_comped ? '∞' : (cr.share_credits || 0);
   } catch (_) {}
 
   // ── Handle pending gift claim (set by accept-gift.html) ───────
