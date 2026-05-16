@@ -344,8 +344,8 @@ footer{
         </div>
       </div>
       <div class="price-per">per story</div>
-      <div class="price-bundle-box">
-        <div class="price-bundle-label">Bundle of 3</div>
+      <div class="price-bundle-box" style="cursor:pointer;" onclick="startCheckout('compact', true)">
+        <div class="price-bundle-label">Bundle of 3 — click to buy</div>
         <div class="price-bundle-amount">$15.00</div>
         <div class="price-bundle-save">Save $5.97 — $5.00 per story</div>
       </div>
@@ -357,8 +357,8 @@ footer{
         <li>Share to the Public Library</li>
         <li>Content warning controls</li>
       </ul>
-      <a class="price-cta" href="login.html">Get Started</a>
-      <div class="price-cta-note">Payment coming soon · Free access while in beta</div>
+      <button class="price-cta" onclick="startCheckout('compact', false)">Get Started</button>
+      <div class="price-cta-note">First chapter free · No commitment</div>
     </div>
 
     <!-- Standard (featured) -->
@@ -372,8 +372,8 @@ footer{
         </div>
       </div>
       <div class="price-per">per story</div>
-      <div class="price-bundle-box">
-        <div class="price-bundle-label">Bundle of 3</div>
+      <div class="price-bundle-box" style="cursor:pointer;" onclick="startCheckout('standard', true)">
+        <div class="price-bundle-label">Bundle of 3 — click to buy</div>
         <div class="price-bundle-amount">$20.00</div>
         <div class="price-bundle-save">Save $3.97 — $6.67 per story</div>
       </div>
@@ -386,8 +386,8 @@ footer{
         <li>Content warning controls</li>
         <li>Series and sequel support</li>
       </ul>
-      <a class="price-cta gold" href="login.html">Get Started</a>
-      <div class="price-cta-note">Payment coming soon · Free access while in beta</div>
+      <button class="price-cta gold" onclick="startCheckout('standard', false)">Get Started</button>
+      <div class="price-cta-note">First chapter free · No commitment</div>
     </div>
 
   </div>
@@ -505,12 +505,46 @@ footer{
   </div>
 </footer>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+const _SB = supabase.createClient(
+  'https://puywhvrgixlhijxzircy.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB1eXdodnJnaXhsaGlqeHppcmN5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM2MjMwMDEsImV4cCI6MjA1OTE5OTAwMX0.NINdnqDMhQMVU93TYcqTpHDdD7hZqv7pH_2PkdkMsFo'
+);
+
 function toggleFaq(el) {
   const item = el.closest('.faq-item');
   const wasOpen = item.classList.contains('open');
   document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
   if (!wasOpen) item.classList.add('open');
+}
+
+async function startCheckout(tier, bundle) {
+  const { data: { session } } = await _SB.auth.getSession();
+  if (!session) {
+    // Store intent so after login we can redirect back
+    sessionStorage.setItem('postLoginRedirect', window.location.href);
+    window.location.href = '/login.html';
+    return;
+  }
+  try {
+    const res = await fetch('/api/checkout', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + session.access_token,
+      },
+      body: JSON.stringify({ tier, bundle }),
+    });
+    const data = await res.json();
+    if (data.url) {
+      window.location.href = data.url;
+    } else {
+      alert(data.error || 'Could not start checkout. Please try again.');
+    }
+  } catch (e) {
+    alert('Something went wrong. Please try again.');
+  }
 }
 </script>
 </body>

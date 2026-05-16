@@ -837,6 +837,15 @@ body::after {
     <div id="linear-continue" style="display:none;text-align:center;padding:3rem 2rem 5rem;border-top:1px solid rgba(255,255,255,0.07);">
       <button class="btn-primary" onclick="linearContinue()"><span>Next Chapter →</span></button>
     </div>
+
+    <!-- Trial gate: shown after free chapter 1 -->
+    <div id="trial-gate" style="display:none;flex-direction:column;align-items:center;text-align:center;padding:3rem 2rem 5rem;border-top:1px solid rgba(201,168,76,0.15);gap:16px;">
+      <div style="font-size:0.72rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--gold);opacity:0.7;">Free preview complete</div>
+      <h3 style="font-family:'Cormorant Garamond',serif;font-size:1.8rem;font-weight:400;color:var(--text);margin:0;">Your story is just beginning</h3>
+      <p style="font-size:0.9rem;color:var(--muted);max-width:380px;line-height:1.7;margin:0;">You've read your first free chapter. Unlock the full story — all your decisions, all your chapters — for one credit.</p>
+      <button onclick="buyToUnlock()" style="margin-top:8px;padding:14px 36px;background:var(--gold);color:#0d0a07;border:none;border-radius:3px;font-size:0.95rem;font-weight:600;cursor:pointer;letter-spacing:0.02em;transition:opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">Unlock Full Story — from $6.99 →</button>
+      <a href="/pricing.html" style="font-size:0.78rem;color:var(--muted);text-decoration:none;border-bottom:1px solid rgba(122,106,84,0.3);">See what's included</a>
+    </div>
   </div>
 
 </div>
@@ -958,6 +967,7 @@ const S = {
   typing: false,
   bookTitle: STORY_CONFIG?.bookTitleInput || null,
   summary: null,
+  isTrial: false,
 };
 
 const LOAD_MSGS = [
@@ -1241,6 +1251,7 @@ async function loadChapter(decision, chapterNum, isFirst = false, isFinal = fals
   dp.classList.remove('open');
   dp.querySelector('#d-choices').innerHTML = '';
   document.getElementById('linear-continue').style.display = 'none';
+  document.getElementById('trial-gate').style.display = 'none';
   window.scrollTo({ top: 0, behavior: 'smooth' });
 
   // Reset reading area
@@ -1266,6 +1277,7 @@ async function loadChapter(decision, chapterNum, isFirst = false, isFinal = fals
 
 async function showReading(data, animate, isFinal = false) {
   const { chapterText, title, mood, decisions, bible, chapterNumber } = data;
+  if (data.isTrial) S.isTrial = true;
 
   S.chapter = chapterNumber;
   if (chapterText) S.chapters.push(chapterText);
@@ -1301,9 +1313,11 @@ async function showReading(data, animate, isFinal = false) {
 
   const atLimit = S.chapter >= (STORY_CONFIG?.targetChapters || 20);
 
-  // Queue decisions or linear continue after chapter finishes
+  // Queue decisions, linear continue, or trial unlock gate
   if (!isFinal && !atLimit) {
-    if (STORY_CONFIG?.noDecisions) {
+    if (S.isTrial) {
+      setTimeout(() => openTrialGate(), narrator.active ? 1200 : 4000);
+    } else if (STORY_CONFIG?.noDecisions) {
       S.pendingDecisions = null;
       saveProgress();
       setTimeout(() => showLinearContinue(), narrator.active ? 1200 : 4000);
@@ -1933,6 +1947,25 @@ function downloadQuote() {
 function closeQuoteCard() {
   document.getElementById('qc-overlay').classList.remove('open');
   document.getElementById('qc-modal').classList.remove('open');
+}
+
+// ── Trial gate ───────────────────────────────────────────────────────────────
+function openTrialGate() {
+  document.getElementById('trial-gate').style.display = 'flex';
+  document.getElementById('trial-gate').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+async function buyToUnlock() {
+  const { data: { session } } = await _SB.auth.getSession();
+  if (!session) return location.replace('/login.html');
+  const tier = STORY_CONFIG?.targetChapters <= 25 ? 'compact' : 'standard';
+  const res = await fetch('/api/checkout', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+    body: JSON.stringify({ tier, bundle: false }),
+  });
+  const data = await res.json();
+  if (data.url) location.href = data.url;
 }
 
 // ── Linear (no-decisions) continue ──────────────────────────────────────────

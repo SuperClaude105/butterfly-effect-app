@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Feedback — Enter the Unwritten</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Playfair+Display:ital,wght@0,700;0,900;1,400;1,700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --primary:  #8B0000;
+  --accent:   #c4a264;
+  --bg:       #0a0505;
+  --surface:  #130808;
+  --surface2: #1a0a0a;
+  --border:   rgba(255,255,255,0.08);
+  --border-a: rgba(196,162,100,0.25);
+  --text:     #e8d5b7;
+  --text-dim: rgba(232,213,183,0.5);
+  --glow:     rgba(139,0,0,0.35);
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+
+body {
+  font-family: 'EB Garamond', Georgia, serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+body::after {
+  content:''; position:fixed; inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.032'/%3E%3C/svg%3E");
+  pointer-events:none; z-index:9999; opacity:0.55;
+}
+body::before {
+  content:''; position:fixed; inset:0;
+  background:
+    radial-gradient(ellipse 55% 45% at 20% 25%, rgba(139,0,0,0.16) 0%, transparent 65%),
+    radial-gradient(ellipse 40% 50% at 80% 80%, rgba(80,0,0,0.1) 0%, transparent 60%);
+  pointer-events:none; z-index:0;
+}
+
+/* ── Nav ── */
+.nav {
+  position: relative; z-index: 10;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1.25rem 2rem;
+  border-bottom: 1px solid var(--border);
+  max-width: 900px; margin: 0 auto;
+}
+.nav-brand {
+  font-family: 'Playfair Display', serif;
+  font-style: italic; font-weight: 700;
+  font-size: 1.2rem; color: var(--accent);
+  text-decoration: none;
+  text-shadow: 0 0 30px var(--glow);
+}
+.nav-links { display:flex; gap:1.75rem; list-style:none; }
+.nav-links a {
+  font-size: 0.7rem; letter-spacing: 0.3em; text-transform: uppercase;
+  color: var(--text-dim); text-decoration: none;
+  transition: color 0.2s;
+}
+.nav-links a:hover { color: var(--accent); }
+.nav-links a.active { color: var(--accent); }
+
+/* ── Page ── */
+.page {
+  position: relative; z-index: 10;
+  max-width: 900px; margin: 0 auto;
+  padding: 4rem 2rem 8rem;
+}
+@media (max-width:600px) { .page { padding: 3rem 1.25rem 6rem; } }
+
+/* ── Header ── */
+.page-header { margin-bottom: 3rem; }
+.page-eyebrow {
+  font-size: 0.68rem; letter-spacing: 0.4em; text-transform: uppercase;
+  color: var(--accent); opacity: 0.65; margin-bottom: 0.6rem;
+}
+.page-title {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  font-style: italic; font-weight: 700; letter-spacing: -0.02em;
+  color: var(--text); margin-bottom: 0.75rem;
+}
+.page-desc {
+  font-size: 1rem; color: var(--text-dim); line-height: 1.7; max-width: 560px;
+}
+
+/* ── Layout ── */
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 2rem;
+  align-items: start;
+}
+@media (max-width: 740px) { .layout { grid-template-columns: 1fr; } }
+
+/* ── Suggestion list ── */
+.list-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+.list-label {
+  font-size: 0.68rem; letter-spacing: 0.35em; text-transform: uppercase;
+  color: var(--accent); opacity: 0.6;
+}
+.sort-tabs { display: flex; gap: 0; }
+.sort-tab {
+  font-size: 0.68rem; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--text-dim); cursor: pointer;
+  padding: 0.3rem 0.75rem;
+  border: 1px solid var(--border);
+  background: transparent;
+  transition: color 0.2s, background 0.2s;
+}
+.sort-tab:first-child { border-right: none; }
+.sort-tab.active { color: var(--accent); background: rgba(196,162,100,0.07); }
+
+#suggestions-list { display:flex; flex-direction:column; gap:0.75rem; }
+
+.suggestion-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 1.25rem 1.25rem 1.25rem 1rem;
+  display: flex; gap: 1rem;
+  align-items: flex-start;
+  transition: border-color 0.2s;
+}
+.suggestion-card:hover { border-color: rgba(255,255,255,0.13); }
+.suggestion-card.voted { border-color: var(--border-a); }
+
+/* Vote column */
+.vote-col {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 0.2rem; flex-shrink: 0; width: 40px;
+}
+.vote-btn {
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  cursor: pointer; font-size: 1rem;
+  transition: border-color 0.2s, color 0.2s, background 0.2s, transform 0.15s;
+}
+.vote-btn:hover {
+  border-color: var(--border-a);
+  color: var(--accent);
+  background: rgba(196,162,100,0.07);
+  transform: translateY(-1px);
+}
+.vote-btn:active { transform: translateY(0); }
+.vote-btn.voted {
+  border-color: var(--border-a);
+  color: var(--accent);
+  background: rgba(196,162,100,0.1);
+}
+.vote-count {
+  font-family: 'Playfair Display', serif;
+  font-size: 0.9rem; font-weight: 700;
+  color: var(--text-dim); text-align:center; line-height:1;
+}
+.vote-count.has-votes { color: var(--accent); }
+
+/* Card body */
+.card-body { flex: 1; min-width: 0; }
+.card-header { display:flex; align-items:center; gap:0.6rem; margin-bottom:0.4rem; flex-wrap:wrap; }
+.card-title {
+  font-size: 1rem; font-weight: 500; color: var(--text);
+  flex: 1; min-width: 0;
+}
+.status-badge {
+  font-size: 0.6rem; letter-spacing: 0.22em; text-transform: uppercase;
+  padding: 0.18rem 0.55rem;
+  border: 1px solid;
+  flex-shrink: 0;
+}
+.status-open     { border-color: rgba(255,255,255,0.15); color: var(--text-dim); }
+.status-planned  { border-color: rgba(196,162,100,0.4);  color: var(--accent); }
+.status-done     { border-color: rgba(92,184,92,0.4);    color: #5cb85c; }
+
+.card-body-text {
+  font-size: 0.88rem; color: var(--text-dim); line-height: 1.65;
+  margin-bottom: 0.5rem;
+}
+.card-meta { font-size: 0.72rem; color: rgba(232,213,183,0.3); }
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+.empty-state p { font-size: 1rem; color: var(--text-dim); }
+
+/* ── Submit panel ── */
+.submit-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 1.75rem;
+  position: sticky; top: 1.5rem;
+}
+.panel-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.1rem; font-weight: 700; font-style: italic;
+  color: var(--text); margin-bottom: 0.4rem;
+}
+.panel-sub {
+  font-size: 0.83rem; color: var(--text-dim); line-height: 1.6;
+  margin-bottom: 1.5rem;
+}
+
+.form-field { margin-bottom: 1rem; }
+.form-label {
+  display: block;
+  font-size: 0.68rem; letter-spacing: 0.28em; text-transform: uppercase;
+  color: var(--accent); opacity: 0.7;
+  margin-bottom: 0.4rem;
+}
+.form-input, .form-textarea {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'EB Garamond', serif;
+  font-size: 0.95rem;
+  padding: 0.65rem 0.85rem;
+  resize: none;
+  transition: border-color 0.2s;
+  outline: none;
+}
+.form-input:focus, .form-textarea:focus {
+  border-color: var(--border-a);
+}
+.form-input::placeholder, .form-textarea::placeholder {
+  color: rgba(232,213,183,0.3);
+}
+.form-textarea { min-height: 90px; }
+.char-count {
+  font-size: 0.7rem; color: rgba(232,213,183,0.3);
+  text-align: right; margin-top: 0.25rem;
+}
+
+.btn-submit {
+  width: 100%;
+  padding: 0.85rem 1.25rem;
+  background: var(--primary);
+  border: none;
+  color: var(--text);
+  font-family: 'EB Garamond', serif;
+  font-size: 0.85rem; letter-spacing: 0.2em; text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(139,0,0,0.4);
+  transition: opacity 0.2s, transform 0.15s;
+}
+.btn-submit:hover { opacity: 0.88; transform: translateY(-1px); }
+.btn-submit:active { transform: translateY(0); }
+.btn-submit:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+.auth-notice {
+  font-size: 0.8rem; color: var(--text-dim); line-height: 1.6;
+  text-align: center; padding: 0.5rem 0;
+}
+.auth-notice a { color: var(--accent); text-decoration: none; }
+.auth-notice a:hover { text-decoration: underline; }
+
+/* ── Toast ── */
+#toast {
+  position: fixed; bottom: 2rem; right: 2rem; z-index: 1000;
+  background: var(--surface2);
+  border: 1px solid var(--border-a);
+  color: var(--text);
+  padding: 0.85rem 1.25rem;
+  font-size: 0.85rem;
+  max-width: 300px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  opacity: 0; transform: translateY(8px);
+  transition: opacity 0.3s, transform 0.3s;
+  pointer-events: none;
+}
+#toast.show { opacity: 1; transform: translateY(0); }
+
+/* ── Loading skeleton ── */
+.skeleton {
+  background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 50%, var(--surface) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  height: 80px;
+  border: 1px solid var(--border);
+}
+@keyframes shimmer { 0% { background-position: 200% 0 } 100% { background-position: -200% 0 } }
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+  <div class="nav">
+    <a href="/" class="nav-brand">Enter the Unwritten</a>
+    <ul class="nav-links">
+      <li><a href="/library.html">Library</a></li>
+      <li><a href="/feedback.html" class="active">Feedback</a></li>
+      <li><a href="/shelf.html">My Shelf</a></li>
+    </ul>
+  </div>
+</nav>
+
+<div class="page">
+
+  <header class="page-header">
+    <p class="page-eyebrow">Community</p>
+    <h1 class="page-title">Shape what comes next</h1>
+    <p class="page-desc">Suggest features, vote for what matters most, and watch ideas move from the page to the product. Every vote is read.</p>
+  </header>
+
+  <div class="layout">
+
+    <!-- Left: suggestion list -->
+    <div>
+      <div class="list-header">
+        <span class="list-label" id="list-count">Loading…</span>
+        <div class="sort-tabs">
+          <button class="sort-tab active" data-sort="votes" onclick="setSort('votes', this)">Top</button>
+          <button class="sort-tab" data-sort="newest" onclick="setSort('newest', this)">New</button>
+        </div>
+      </div>
+      <div id="suggestions-list">
+        <div class="skeleton"></div>
+        <div class="skeleton" style="height:60px;margin-top:0.75rem;"></div>
+        <div class="skeleton" style="height:95px;margin-top:0.75rem;"></div>
+      </div>
+    </div>
+
+    <!-- Right: submit panel -->
+    <div class="submit-panel">
+      <p class="panel-title">Submit an idea</p>
+      <p class="panel-sub">Something missing? Something broken? Tell us. Keep it specific — one idea per suggestion gets the best results.</p>
+
+      <div id="submit-area">
+        <!-- Populated after auth check -->
+        <div class="auth-notice">Checking sign-in…</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const _SB = supabase.createClient(
+  'https://puywhvrgixlhijxzircy.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB1eXdodnJnaXhsaGlqeHppcmN5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM2MjMwMDEsImV4cCI6MjA1OTE5OTAwMX0.NINdnqDMhQMVU93TYcqTpHDdD7hZqv7pH_2PkdkMsFo'
+);
+
+let _token = null;
+let _suggestions = [];
+let _sort = 'votes';
+
+// ── Bootstrap ──────────────────────────────────────────────────────────────
+(async () => {
+  const { data: { session } } = await _SB.auth.getSession();
+  _token = session?.access_token || null;
+  renderSubmitPanel(!!_token);
+  await loadSuggestions();
+})();
+
+// ── Load suggestions ───────────────────────────────────────────────────────
+async function loadSuggestions() {
+  const headers = {};
+  if (_token) headers['Authorization'] = 'Bearer ' + _token;
+  const res = await fetch('/api/suggestions', { headers });
+  const data = await res.json();
+  _suggestions = data.suggestions || [];
+  renderList();
+}
+
+// ── Render list ────────────────────────────────────────────────────────────
+function renderList() {
+  const list = document.getElementById('suggestions-list');
+  const countEl = document.getElementById('list-count');
+
+  let sorted = [..._suggestions];
+  if (_sort === 'newest') {
+    sorted.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  } else {
+    sorted.sort((a, b) => b.votes - a.votes || new Date(b.created_at) - new Date(a.created_at));
+  }
+
+  countEl.textContent = sorted.length === 0 ? 'No suggestions yet'
+    : sorted.length === 1 ? '1 suggestion'
+    : `${sorted.length} suggestions`;
+
+  if (sorted.length === 0) {
+    list.innerHTML = '<div class="empty-state"><p>No suggestions yet — be the first to share an idea.</p></div>';
+    return;
+  }
+
+  list.innerHTML = sorted.map(s => {
+    const statusClass = s.status === 'planned' ? 'status-planned' : s.status === 'done' ? 'status-done' : 'status-open';
+    const statusLabel = s.status === 'planned' ? 'Planned' : s.status === 'done' ? 'Done' : 'Open';
+    const age = timeAgo(s.created_at);
+    const body = s.body ? `<p class="card-body-text">${escHtml(s.body)}</p>` : '';
+    return `
+      <div class="suggestion-card${s.votedByMe ? ' voted' : ''}" id="card-${s.id}">
+        <div class="vote-col">
+          <button class="vote-btn${s.votedByMe ? ' voted' : ''}" onclick="toggleVote('${s.id}')" title="${s.votedByMe ? 'Remove vote' : 'Upvote'}">▲</button>
+          <span class="vote-count${s.votes > 0 ? ' has-votes' : ''}" id="votes-${s.id}">${s.votes}</span>
+        </div>
+        <div class="card-body">
+          <div class="card-header">
+            <span class="card-title">${escHtml(s.title)}</span>
+            <span class="status-badge ${statusClass}">${statusLabel}</span>
+          </div>
+          ${body}
+          <div class="card-meta">${age}</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── Vote toggle ────────────────────────────────────────────────────────────
+async function toggleVote(id) {
+  if (!_token) {
+    showToast('Sign in to vote for suggestions.');
+    setTimeout(() => window.location.href = '/login.html', 1500);
+    return;
+  }
+  const s = _suggestions.find(x => x.id === id);
+  if (!s) return;
+
+  // Optimistic update
+  const wasVoted = s.votedByMe;
+  s.votedByMe = !wasVoted;
+  s.votes += wasVoted ? -1 : 1;
+  renderList();
+
+  const res = await fetch(`/api/suggestions/${id}/vote`, {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + _token },
+  });
+  if (!res.ok) {
+    // Revert
+    s.votedByMe = wasVoted;
+    s.votes += wasVoted ? 1 : -1;
+    renderList();
+    showToast('Could not save vote. Try again.');
+  }
+}
+
+// ── Submit form ────────────────────────────────────────────────────────────
+function renderSubmitPanel(loggedIn) {
+  const area = document.getElementById('submit-area');
+  if (!loggedIn) {
+    area.innerHTML = `<p class="auth-notice">
+      <a href="/login.html">Sign in</a> to submit an idea or vote.
+    </p>`;
+    return;
+  }
+  area.innerHTML = `
+    <form id="suggestion-form" onsubmit="submitSuggestion(event)">
+      <div class="form-field">
+        <label class="form-label" for="s-title">Title <span style="color:var(--primary)">*</span></label>
+        <input class="form-input" id="s-title" type="text" placeholder="One clear, specific idea" maxlength="120" oninput="updateCount(this,'t-count',120)">
+        <div class="char-count" id="t-count">0 / 120</div>
+      </div>
+      <div class="form-field">
+        <label class="form-label" for="s-body">Details <span style="opacity:0.5">(optional)</span></label>
+        <textarea class="form-textarea" id="s-body" placeholder="Why does this matter? How would you use it?" maxlength="500" oninput="updateCount(this,'b-count',500)"></textarea>
+        <div class="char-count" id="b-count">0 / 500</div>
+      </div>
+      <button class="btn-submit" type="submit" id="submit-btn">Submit idea</button>
+    </form>`;
+}
+
+async function submitSuggestion(e) {
+  e.preventDefault();
+  const title = document.getElementById('s-title').value.trim();
+  const body  = document.getElementById('s-body').value.trim();
+  if (!title) { showToast('Please enter a title.'); return; }
+
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.textContent = 'Submitting…';
+
+  const res = await fetch('/api/suggestions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _token },
+    body: JSON.stringify({ title, body }),
+  });
+  const data = await res.json();
+
+  if (data.success) {
+    _suggestions.unshift(data.suggestion);
+    renderList();
+    document.getElementById('s-title').value = '';
+    document.getElementById('s-body').value = '';
+    document.getElementById('t-count').textContent = '0 / 120';
+    document.getElementById('b-count').textContent = '0 / 500';
+    showToast('Idea submitted — thank you!');
+  } else {
+    showToast(data.error || 'Could not submit. Try again.');
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Submit idea';
+}
+
+// ── Sort ───────────────────────────────────────────────────────────────────
+function setSort(sort, el) {
+  _sort = sort;
+  document.querySelectorAll('.sort-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderList();
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function updateCount(el, countId, max) {
+  document.getElementById(countId).textContent = `${el.value.length} / ${max}`;
+}
+
+function showToast(msg, duration = 3500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), duration);
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function timeAgo(iso) {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 2) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 30) return `${days}d ago`;
+  return new Date(iso).toLocaleDateString('en-US', { month:'short', day:'numeric' });
+}
+</script>
+</body>
+</html>

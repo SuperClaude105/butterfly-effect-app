@@ -321,6 +321,38 @@ footer{
 /* ── Reveal animation ── */
 .reveal{opacity:0;transform:translateY(22px);transition:opacity 0.65s ease,transform 0.65s ease;}
 .reveal.in{opacity:1;transform:none;}
+
+/* ── Social proof ── */
+.social-proof{text-align:center;}
+.sp-stat-row{
+  display:flex;align-items:center;justify-content:center;
+  gap:0;margin:40px 0 16px;
+  flex-wrap:wrap;
+}
+.sp-stat{
+  padding:28px 44px;
+  border:1px solid var(--border);
+  position:relative;
+}
+.sp-stat+.sp-stat{border-left:none;}
+.sp-stat-number{
+  font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;
+  font-size:clamp(2.4rem,5vw,3.4rem);color:var(--gold);
+  line-height:1;margin-bottom:6px;
+}
+.sp-stat-label{
+  font-size:0.62rem;font-weight:600;letter-spacing:0.28em;text-transform:uppercase;
+  color:var(--muted);
+}
+@media(max-width:600px){
+  .sp-stat-row{flex-direction:column;}
+  .sp-stat{width:100%;}
+  .sp-stat+.sp-stat{border-left:1px solid var(--border);border-top:none;}
+}
+.sp-founding{
+  font-size:0.78rem;color:var(--muted);line-height:1.75;max-width:480px;margin:0 auto;
+}
+.sp-founding strong{color:var(--gold);font-weight:400;}
 </style>
 </head>
 <body>
@@ -487,6 +519,29 @@ footer{
   </div>
 </div>
 
+<!-- ── Social Proof ── -->
+<div class="section social-proof">
+  <div class="section-inner">
+    <div class="eyebrow reveal">Founding Community</div>
+    <h2 class="section-title reveal">Written by real readers,<br>for real readers.</h2>
+    <div class="sp-stat-row">
+      <div class="sp-stat reveal">
+        <div class="sp-stat-number" id="stat-stories">—</div>
+        <div class="sp-stat-label">Stories Written</div>
+      </div>
+      <div class="sp-stat reveal" style="transition-delay:0.1s">
+        <div class="sp-stat-number">12+</div>
+        <div class="sp-stat-label">Genres Available</div>
+      </div>
+      <div class="sp-stat reveal" style="transition-delay:0.2s">
+        <div class="sp-stat-number">Free</div>
+        <div class="sp-stat-label">First Chapter Always</div>
+      </div>
+    </div>
+    <p class="sp-founding reveal">Enter the Unwritten is built in public by a small team. The people writing stories right now are <strong>the founding community</strong> — the ones who shaped what the product became. There's no better time to start.</p>
+  </div>
+</div>
+
 <!-- ── Final CTA ── -->
 <div class="section final-cta">
   <div class="section-inner">
@@ -537,6 +592,12 @@ function spawnEmber(){
   }
   requestAnimationFrame(tick);
 })();
+
+// ── Social proof stats ──
+fetch('/api/stats').then(r=>r.json()).then(d=>{
+  const el = document.getElementById('stat-stories');
+  if (el && d.storiesWritten != null) el.textContent = d.storiesWritten;
+}).catch(()=>{});
 
 // ── Scroll reveal ──
 const observer = new IntersectionObserver(entries => {

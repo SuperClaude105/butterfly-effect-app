@@ -285,6 +285,151 @@ app.get('/api/gift-info/:token', async (req, res) => {
   res.json({ valid: true, credits: gift.credits, tier: gift.tier });
 });
 
+// ─── GET /api/suggestions ─────────────────────────────────────────────────────
+app.get('/api/suggestions', async (req, res) => {
+  const { data: suggestions } = await supabaseAdmin
+    .from('suggestions')
+    .select('id, title, body, status, created_at, user_id')
+    .order('created_at', { ascending: false });
+
+  const { data: votes } = await supabaseAdmin
+    .from('suggestion_votes')
+    .select('suggestion_id, user_id');
+
+  const user = await getUserFromToken(req.headers.authorization);
+  const myVotes = new Set((votes || []).filter(v => user && v.user_id === user.id).map(v => v.suggestion_id));
+  const voteCounts = {};
+  for (const v of (votes || [])) voteCounts[v.suggestion_id] = (voteCounts[v.suggestion_id] || 0) + 1;
+
+  const enriched = (suggestions || []).map(s => ({
+    ...s, votes: voteCounts[s.id] || 0, votedByMe: myVotes.has(s.id),
+  })).sort((a, b) => b.votes - a.votes);
+
+  res.json({ suggestions: enriched });
+});
+
+// ─── POST /api/suggestions ────────────────────────────────────────────────────
+app.post('/api/suggestions', async (req, res) => {
+  const user = await getUserFromToken(req.headers.authorization);
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+  const { title, body } = req.body;
+  if (!title?.trim()) return res.status(400).json({ error: 'Title required' });
+  const { data, error } = await supabaseAdmin
+    .from('suggestions')
+    .insert({ user_id: user.id, title: title.trim().slice(0, 120), body: (body || '').trim().slice(0, 500) })
+    .select().single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ success: true, suggestion: { ...data, votes: 0, votedByMe: false } });
+});
+
+// ─── POST /api/suggestions/:id/vote ───────────────────────────────────────────
+app.post('/api/suggestions/:id/vote', async (req, res) => {
+  const user = await getUserFromToken(req.headers.authorization);
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+  const { id } = req.params;
+  const { data: existing } = await supabaseAdmin
+    .from('suggestion_votes').select('id').eq('user_id', user.id).eq('suggestion_id', id).maybeSingle();
+  if (existing) {
+    await supabaseAdmin.from('suggestion_votes').delete().eq('id', existing.id);
+    return res.json({ voted: false });
+  }
+  await supabaseAdmin.from('suggestion_votes').insert({ user_id: user.id, suggestion_id: id });
+  res.json({ voted: true });
+});
+
+// ─── GET /api/stats — public story count for social proof ─────────────────────
+app.get('/api/stats', async (_req, res) => {
+  const { count } = await supabaseAdmin
+    .from('stories').select('id', { count: 'exact', head: true }).is('deleted_at', null);
+  res.json({ storiesWritten: count || 0 });
+});
+
+// ─── POST /api/cron/reengagement — re-engagement emails (call daily via cron) ─
+app.post('/api/cron/reengagement', async (req, res) => {
+  const secret = req.headers['x-cron-secret'];
+  if (secret !== process.env.CRON_SECRET) return res.status(401).json({ error: 'Unauthorized' });
+
+  const cutoff = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();  // 3 days ago
+  const emailCutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 days ago
+
+  // Find stories updated 3-14 days ago that aren't finished
+  const windowStart = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+  const { data: stories } = await supabaseAdmin
+    .from('stories')
+    .select('id, user_id, data, updated_at')
+    .is('deleted_at', null)
+    .eq('is_public', false)
+    .lt('updated_at', cutoff)
+    .gt('updated_at', windowStart);
+
+  if (!stories?.length) return res.json({ sent: 0 });
+
+  // Group by user, pick one story per user, skip recently emailed users
+  const byUser = {};
+  for (const s of stories) {
+    const chapters = s.data?.progress?.chapters?.length || 0;
+    const target   = s.data?.config?.targetChapters || 20;
+    if (chapters === 0 || chapters >= target) continue; // skip empty or finished
+    if (!byUser[s.user_id] || chapters > (byUser[s.user_id].chapters)) {
+      byUser[s.user_id] = { storyId: s.id, bookTitle: s.data?.bookTitle || 'your story', chapters, target };
+    }
+  }
+
+  const userIds = Object.keys(byUser);
+  if (!userIds.length) return res.json({ sent: 0 });
+
+  // Check which users were recently emailed
+  const { data: profiles } = await supabaseAdmin
+    .from('profiles')
+    .select('user_id, last_reengagement_email_at')
+    .in('user_id', userIds);
+
+  const recentlyEmailed = new Set(
+    (profiles || []).filter(p => p.last_reengagement_email_at && p.last_reengagement_email_at > emailCutoff).map(p => p.user_id)
+  );
+
+  // Get auth emails for eligible users
+  const eligible = userIds.filter(uid => !recentlyEmailed.has(uid));
+  if (!eligible.length) return res.json({ sent: 0 });
+
+  const { data: { users } } = await supabaseAdmin.auth.admin.listUsers();
+  const emailMap = {};
+  for (const u of (users || [])) emailMap[u.id] = u.email;
+
+  let sent = 0;
+  for (const uid of eligible) {
+    const email = emailMap[uid];
+    if (!email) continue;
+    const { bookTitle, chapters, target } = byUser[uid];
+    const remaining = target - chapters;
+    try {
+      await resend.emails.send({
+        from: 'Unwritten <noreply@entertheunwritten.com>',
+        to: email,
+        subject: `Your story is waiting — ${remaining} chapter${remaining !== 1 ? 's' : ''} to go`,
+        html: `
+          <div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;padding:40px 24px;background:#0d0a07;color:#e8d5b0;">
+            <h1 style="font-size:26px;color:#c8a96e;margin-bottom:4px;">Unwritten</h1>
+            <p style="color:#7a6a58;font-size:13px;margin-bottom:36px;">Your story is calling</p>
+            <h2 style="font-size:22px;color:#f0e8d0;margin-bottom:14px;">"${bookTitle}"</h2>
+            <p style="font-size:16px;line-height:1.75;color:#c0a880;margin-bottom:28px;">
+              You're ${chapters} chapter${chapters !== 1 ? 's' : ''} in — only ${remaining} more to go until your story is complete.
+              Your characters are waiting for the next decision.
+            </p>
+            <a href="${process.env.APP_URL}/shelf.html" style="display:inline-block;padding:13px 30px;background:#c8a96e;color:#0d0a07;text-decoration:none;font-size:15px;font-weight:bold;border-radius:3px;">Continue Reading →</a>
+            <p style="margin-top:40px;font-size:11px;color:#3a2e1e;">You're receiving this because you have an unfinished story on Unwritten. <a href="${process.env.APP_URL}/shelf.html" style="color:#7a6a58;">Go to your shelf</a></p>
+          </div>`,
+      });
+      await supabaseAdmin.from('profiles')
+        .update({ last_reengagement_email_at: new Date().toISOString() })
+        .eq('user_id', uid);
+      sent++;
+    } catch (_) {}
+  }
+
+  res.json({ sent });
+});
+
 // ─── POST /api/library/borrow ─────────────────────────────────────────────────
 app.post('/api/library/borrow', async (req, res) => {
   const { storyId } = req.body;
@@ -572,10 +717,10 @@ async function getUserFromToken(authHeader) {
 async function getProfile(userId) {
   const { data } = await supabaseAdmin
     .from('profiles')
-    .select('credits, is_comped, share_credits, storied_credits, library_slots')
+    .select('credits, is_comped, share_credits, storied_credits, library_slots, free_chapter_used')
     .eq('user_id', userId)
     .maybeSingle();
-  return data || { credits: 0, is_comped: false, share_credits: 0, storied_credits: 0, library_slots: 1 };
+  return data || { credits: 0, is_comped: false, share_credits: 0, storied_credits: 0, library_slots: 1, free_chapter_used: false };
 }
 
 // ─── Dynamic system prompt builder ────────────────────────────────────────
@@ -825,10 +970,21 @@ app.post('/api/start', async (req, res) => {
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
   const profile = await getProfile(user.id);
+  let isTrial = false;
+
   if (!profile.is_comped) {
-    if (profile.credits < 1) return res.status(402).json({ error: 'No credits', code: 'NO_CREDITS' });
-    const { data: ok } = await supabaseAdmin.rpc('deduct_credit', { p_user_id: user.id });
-    if (!ok) return res.status(402).json({ error: 'No credits', code: 'NO_CREDITS' });
+    if (profile.credits < 1) {
+      // Allow one free trial chapter if they haven't used it yet
+      if (!profile.free_chapter_used) {
+        await supabaseAdmin.from('profiles').update({ free_chapter_used: true }).eq('user_id', user.id);
+        isTrial = true;
+      } else {
+        return res.status(402).json({ error: 'No credits', code: 'NO_CREDITS' });
+      }
+    } else {
+      const { data: ok } = await supabaseAdmin.rpc('deduct_credit', { p_user_id: user.id });
+      if (!ok) return res.status(402).json({ error: 'No credits', code: 'NO_CREDITS' });
+    }
   }
 
   const systemPrompt = storyConfig ? buildSystemPrompt(storyConfig) : EMBERS_PROMPT;
@@ -849,14 +1005,18 @@ app.post('/api/start', async (req, res) => {
     });
 
     const parsed = parseResponse(response.content[0].text);
-    res.json({ success: true, ...parsed, chapterNumber: 1 });
+    res.json({ success: true, ...parsed, chapterNumber: 1, isTrial });
   } catch (err) {
     console.error('Error generating chapter 1:', err.message);
-    // Refund the credit — generation failed, user shouldn't be charged
     if (!profile.is_comped) {
-      await supabaseAdmin.rpc('add_credits', { p_user_id: user.id, p_credits: 1 }).catch(() => {});
+      if (isTrial) {
+        // Reset trial flag so they can try again
+        await supabaseAdmin.from('profiles').update({ free_chapter_used: false }).eq('user_id', user.id).catch(() => {});
+      } else {
+        await supabaseAdmin.rpc('add_credits', { p_user_id: user.id, p_credits: 1 }).catch(() => {});
+      }
     }
-    res.status(500).json({ error: 'Generation failed — your credit has been refunded.', refunded: true });
+    res.status(500).json({ error: 'Generation failed — please try again.', refunded: !isTrial });
   }
 });
 

@@ -325,6 +325,63 @@ input[type=range]::-webkit-slider-thumb:hover { box-shadow:0 0 18px rgba(196,162
 }
 .embers-link:hover { opacity:0.9; }
 
+/* ── Quick Start tiles ── */
+.qs-section { margin-bottom:1.25rem; }
+.qs-header {
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:0.9rem;
+}
+.qs-label {
+  font-size:0.68rem; letter-spacing:0.38em; text-transform:uppercase;
+  color:var(--accent); opacity:0.65;
+  display:flex; align-items:center; gap:0.75rem;
+}
+.qs-label::after {
+  content:''; flex:1; height:1px;
+  background:linear-gradient(to right, rgba(196,162,100,0.3), transparent);
+  width:80px;
+}
+.qs-skip {
+  font-size:0.68rem; letter-spacing:0.2em; text-transform:uppercase;
+  color:var(--text-dim); opacity:0.5; cursor:pointer; background:none; border:none;
+  transition:opacity 0.2s;
+}
+.qs-skip:hover { opacity:1; }
+.qs-grid {
+  display:grid;
+  grid-template-columns:repeat(3, 1fr);
+  gap:0.55rem;
+}
+@media(max-width:500px) { .qs-grid { grid-template-columns:repeat(2,1fr); } }
+.qs-tile {
+  background:var(--surface);
+  border:1px solid var(--border);
+  padding:1rem 0.9rem;
+  cursor:pointer;
+  position:relative;
+  transition:border-color 0.2s, background 0.2s, transform 0.15s;
+  text-align:left;
+  overflow:hidden;
+}
+.qs-tile::before {
+  content:''; position:absolute; inset:0;
+  background:linear-gradient(135deg, rgba(196,162,100,0.04) 0%, transparent 55%);
+  opacity:0; transition:opacity 0.2s;
+  pointer-events:none;
+}
+.qs-tile:hover { border-color:rgba(196,162,100,0.35); transform:translateY(-1px); }
+.qs-tile:hover::before { opacity:1; }
+.qs-tile:active { transform:translateY(0); }
+.qs-icon { font-size:1.3rem; display:block; margin-bottom:0.35rem; }
+.qs-genre-name {
+  font-size:0.76rem; font-weight:500; color:var(--text);
+  margin-bottom:0.2rem; line-height:1.3;
+}
+.qs-tagline {
+  font-size:0.7rem; color:var(--text-dim); line-height:1.45;
+  font-style:italic;
+}
+
 /* ── Top nav ── */
 .top-nav {
   position:fixed; top:0; left:0; right:0;
@@ -386,8 +443,17 @@ input[type=range]::-webkit-slider-thumb:hover { box-shadow:0 0 18px rgba(196,162
     <div id="credit-banner" style="margin-top:1.1rem;font-size:0.82rem;color:rgba(232,213,183,0.45);min-height:1.2em;"></div>
   </header>
 
+  <!-- ── Quick Start ── -->
+  <div class="qs-section section" id="qs-section">
+    <div class="qs-header">
+      <span class="qs-label">Quick Start</span>
+      <button class="qs-skip" onclick="skipQuickStart()">All genres ↓</button>
+    </div>
+    <div class="qs-grid" id="qs-grid"></div>
+  </div>
+
   <!-- ── Genre ── -->
-  <div class="section">
+  <div class="section" id="genre-section" style="display:none">
     <div class="section-label" data-l="Genre"></div>
     <div id="genre-container"></div>
   </div>
@@ -823,7 +889,7 @@ function updateStoryPlaceholder(genre) {
 // ═══════════════════════════════════════════════════════════════
 // LIBRARY + CREDITS
 // ═══════════════════════════════════════════════════════════════
-let _lib = {}, _stories = [], _session = null, _credits = 0, _isComped = false;
+let _lib = {}, _stories = [], _session = null, _credits = 0, _isComped = false, _freeChapterUsed = false;
 (async () => {
   const { data: { session } } = await _SB.auth.getSession();
   if (!session) { location.replace('/login.html'); return; }
@@ -852,6 +918,7 @@ let _lib = {}, _stories = [], _session = null, _credits = 0, _isComped = false;
     }).then(r => r.json());
     _credits = cr.credits || 0;
     _isComped = cr.is_comped || false;
+    _freeChapterUsed = cr.free_chapter_used || false;
   } catch (_) {}
   updateCreditDisplay();
 
@@ -876,6 +943,10 @@ function updateCreditDisplay() {
     bottomHtml  = `${label} · <span style="color:#c4a264;cursor:pointer;text-decoration:underline;" onclick="openBuyModal()">add more</span>`;
     bannerHtml  = `${label} · <span style="color:#c4a264;cursor:pointer;text-decoration:underline;" onclick="openBuyModal()">add more</span>`;
     bottomColor = 'rgba(232,213,183,0.5)';
+  } else if (!_freeChapterUsed) {
+    bottomHtml  = '✦ Your first chapter is free — no credit needed';
+    bannerHtml  = '✦ First chapter free';
+    bottomColor = 'rgba(196,162,100,0.85)';
   } else {
     bottomHtml = 'No credits — <span style="color:#c4a264;cursor:pointer;text-decoration:underline;" onclick="openBuyModal()">buy credits to generate</span>';
     bannerHtml = 'No credits — <span style="color:#c4a264;cursor:pointer;text-decoration:underline;" onclick="openBuyModal()">buy credits to get started</span>';
@@ -1158,9 +1229,95 @@ async function beginStory() {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// QUICK START TILES
+// ═══════════════════════════════════════════════════════════════
+const QUICK_START_TEMPLATES = [
+  {
+    genre: 'Contemporary Romance',
+    tagline: 'Small town, second chances',
+    premise: 'A disgraced hockey player returns to his hometown and falls for the one person who never forgave him…',
+    protagonist: 'Quinn',
+    secondChar: 'Jake',
+  },
+  {
+    genre: 'Dark Fantasy',
+    tagline: 'Blood magic, fallen gods',
+    premise: 'A sellsword discovers she carries the blood of a god long thought dead — and there are those who will kill to claim that power…',
+    protagonist: 'Sera',
+    secondChar: 'Vael',
+  },
+  {
+    genre: 'Psychological Thriller',
+    tagline: 'Nothing is as it seems',
+    premise: 'A therapist realizes her new patient knows things about her past that no one should know…',
+    protagonist: 'Lena',
+    secondChar: 'Dr. Kane',
+  },
+  {
+    genre: 'Fantasy Romance',
+    tagline: 'Fae courts & forbidden love',
+    premise: 'Bound to serve a fae lord for a year, she slowly discovers his cruelty is a mask for something far older and more wounded…',
+    protagonist: 'Evren',
+    secondChar: 'Caelan',
+  },
+  {
+    genre: 'Crime Thriller',
+    tagline: 'Cold case, hot pursuit',
+    premise: 'A retired detective is pulled back into a cold case when the killer starts sending her messages…',
+    protagonist: 'Detective Marsh',
+    secondChar: 'Agent Cole',
+  },
+  {
+    genre: 'Mystery',
+    tagline: 'An island, a body, one suspect',
+    premise: 'A mystery writer invited to a remote island finds herself the only suspect when the host is murdered…',
+    protagonist: 'Clara',
+    secondChar: 'Inspector Holt',
+  },
+];
+
+function buildQuickStartTiles() {
+  const grid = document.getElementById('qs-grid');
+  QUICK_START_TEMPLATES.forEach(t => {
+    const d = GENRE_DATA[t.genre];
+    if (!d) return;
+    const tile = document.createElement('button');
+    tile.className = 'qs-tile';
+    tile.innerHTML = `<span class="qs-icon">${d.icon}</span><div class="qs-genre-name">${t.genre}</div><div class="qs-tagline">${t.tagline}</div>`;
+    tile.addEventListener('click', () => applyQuickStart(t));
+    grid.appendChild(tile);
+  });
+}
+
+function applyQuickStart(t) {
+  // Select genre
+  selectGenre(t.genre);
+  // Fill premise
+  const idea = document.getElementById('story-idea');
+  if (idea && !idea.value.trim()) idea.value = t.premise;
+  // Fill characters
+  const proto = document.getElementById('protagonist-name');
+  if (proto && !proto.value.trim()) proto.value = t.protagonist;
+  const second = document.getElementById('love-interest-name');
+  if (second && !second.value.trim()) second.value = t.secondChar;
+  // Show genre section and hide quick-start
+  document.getElementById('qs-section').style.display = 'none';
+  document.getElementById('genre-section').style.display = '';
+  // Scroll to story idea
+  document.getElementById('story-idea').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function skipQuickStart() {
+  document.getElementById('qs-section').style.display = 'none';
+  document.getElementById('genre-section').style.display = '';
+  document.getElementById('genre-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ═══════════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════════
 buildGenreGrid();
+buildQuickStartTiles();
 updateThemeChips(selectedGenre);
 updateCharacterFields(selectedGenre);
 updateStoryPlaceholder(selectedGenre);
