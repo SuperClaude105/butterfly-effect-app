@@ -378,18 +378,21 @@ app.post('/api/cron/reengagement', async (req, res) => {
   const userIds = Object.keys(byUser);
   if (!userIds.length) return res.json({ sent: 0 });
 
-  // Check which users were recently emailed
+  // Check which users were recently emailed or have unsubscribed
   const { data: profiles } = await supabaseAdmin
     .from('profiles')
-    .select('user_id, last_reengagement_email_at')
+    .select('user_id, last_reengagement_email_at, email_unsubscribed')
     .in('user_id', userIds);
 
-  const recentlyEmailed = new Set(
-    (profiles || []).filter(p => p.last_reengagement_email_at && p.last_reengagement_email_at > emailCutoff).map(p => p.user_id)
+  const skipSet = new Set(
+    (profiles || []).filter(p =>
+      p.email_unsubscribed ||
+      (p.last_reengagement_email_at && p.last_reengagement_email_at > emailCutoff)
+    ).map(p => p.user_id)
   );
 
   // Get auth emails for eligible users
-  const eligible = userIds.filter(uid => !recentlyEmailed.has(uid));
+  const eligible = userIds.filter(uid => !skipSet.has(uid));
   if (!eligible.length) return res.json({ sent: 0 });
 
   const { data: { users } } = await supabaseAdmin.auth.admin.listUsers();
@@ -417,7 +420,7 @@ app.post('/api/cron/reengagement', async (req, res) => {
               Your characters are waiting for the next decision.
             </p>
             <a href="${process.env.APP_URL}/shelf.html" style="display:inline-block;padding:13px 30px;background:#c8a96e;color:#0d0a07;text-decoration:none;font-size:15px;font-weight:bold;border-radius:3px;">Continue Reading →</a>
-            <p style="margin-top:40px;font-size:11px;color:#3a2e1e;">You're receiving this because you have an unfinished story on Unwritten. <a href="${process.env.APP_URL}/shelf.html" style="color:#7a6a58;">Go to your shelf</a></p>
+            <p style="margin-top:40px;font-size:11px;color:#3a2e1e;">You're receiving this because you have an unfinished story on Unwritten. <a href="${process.env.APP_URL}/shelf.html" style="color:#7a6a58;">Go to your shelf</a> &nbsp;·&nbsp; <a href="${process.env.APP_URL}/api/unsubscribe?uid=${uid}" style="color:#3a2e1e;">Unsubscribe</a></p>
           </div>`,
       });
       await supabaseAdmin.from('profiles')
@@ -428,6 +431,24 @@ app.post('/api/cron/reengagement', async (req, res) => {
   }
 
   res.json({ sent });
+});
+
+// ─── GET /api/unsubscribe — one-click email unsubscribe (no auth required) ────
+app.get('/api/unsubscribe', async (req, res) => {
+  const { uid } = req.query;
+  if (!uid) return res.status(400).send('Missing uid');
+  await supabaseAdmin.from('profiles').update({ email_unsubscribed: true }).eq('user_id', uid);
+  res.send(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Unsubscribed — Unwritten</title>
+  <style>body{font-family:Georgia,serif;background:#0d0a07;color:#e8d5b0;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}
+  .box{text-align:center;max-width:420px;padding:40px 24px;}
+  h1{color:#c8a96e;font-size:24px;margin-bottom:12px;}
+  p{color:#7a6a58;font-size:15px;line-height:1.7;margin-bottom:24px;}
+  a{color:#c8a96e;font-size:13px;}</style></head>
+  <body><div class="box">
+    <h1>You've been unsubscribed</h1>
+    <p>You won't receive any more re-engagement emails from Unwritten. Your stories and account are untouched.</p>
+    <a href="${process.env.APP_URL}/shelf.html">Go to your shelf →</a>
+  </div></body></html>`);
 });
 
 // ─── POST /api/library/borrow ─────────────────────────────────────────────────
