@@ -388,11 +388,15 @@ function buildSystemPrompt(config = {}) {
     charactersBlock += `\n- Victim / Missing person: ${victimLine}${descLine}\n  Their fate is the mystery at the heart of this story. Every chapter must slowly reveal more about who they were, what happened, and why it was covered up. Make the reader feel the weight of their absence.`;
   }
 
+  const isLightNovel = genre === 'Light Novel';
+
   const proseStyle = isRomance
     ? '- Lush, atmospheric, emotionally intense — slow-burn romance with real tension\n- Adult themes handled with literary weight. No purple prose.'
     : isTrueCrime
       ? '- Gripping, propulsive, journalistic with literary depth — the prose of a true crime book that keeps you reading at 2am\n- Alternate between the investigator\'s present-day search and vivid flashbacks to the victim\'s life\n- Each chapter should end with a revelation, a new suspect, or a detail that reframes everything before it\n- The victim must feel like a real person — not just a case file. Show who they were before they became a mystery.'
-      : '- Lush, atmospheric, emotionally intense — driven by character, stakes, and dread\n- Tone matched to genre: thrillers run taut and propulsive; horror lingers; fantasy breathes wide.';
+      : isLightNovel
+        ? '- First-person narrator with a distinct inner voice — witty, self-aware, often remarking on the absurdity of their situation\n- Fast-paced chapters with sharp scene breaks. Every chapter ends on momentum — a new revelation, a level-up, an encounter\n- RPG/game-world logic must feel internally consistent: stats, skills, and system notifications should follow rules\n- Dialogue-heavy and expressive. Rivals and companions have strong, recognisable personalities\n- Balance action sequences with slice-of-life moments that build character bonds'
+        : '- Lush, atmospheric, emotionally intense — driven by character, stakes, and dread\n- Tone matched to genre: thrillers run taut and propulsive; horror lingers; fantasy breathes wide.';
 
   // ── Genre-specific mood palette guidance ──────────────────────────────────
   const moodPaletteGuide = {
@@ -416,6 +420,7 @@ function buildSystemPrompt(config = {}) {
     'Psychological Horror':  'Muted grey-green primary (#2a3a2a–#3a4e3a), washed secondary (#060808–#0c1010), pale sickly accent (#90a888–#b0c0a8). Particles: ash or none.',
     'Historical Fiction':    'Warm sepia primary (#6a3a10–#8a5020), aged parchment secondary (#0e0a06–#18120a), burnished gold accent (#c4960a–#d8aa20). Particles: dust or none.',
     'Adventure':             'Ocean teal or terracotta primary (#1a5a5a–#2a7a7a or #8a4020–#aa5830), earthy secondary (#080e0a–#0e1410), warm sunlit accent (#d4a030–#e8bc40). Particles: dust or sparks.',
+    'Light Novel':           'Bright azure-cerulean primary (#1a4a9a–#2a5ab0), deep midnight secondary (#04080e–#080c18), electric sky-blue accent (#40a8e8–#60c0f8). Particles: sparks.',
   };
 
   const paletteHint = moodPaletteGuide[genre] || 'Choose colors appropriate to the story\'s emotional tone and genre.';
