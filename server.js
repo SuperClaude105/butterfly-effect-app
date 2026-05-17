@@ -755,6 +755,11 @@ function buildSystemPrompt(config = {}) {
   const avoid        = config.triggerAvoid    || [];
   const chapters     = config.targetChapters  || 20;
   const noDecisions  = config.noDecisions     || false;
+  const language     = config.language        || 'English';
+
+  const languageBlock = language !== 'English'
+    ? `\n\nLANGUAGE: Write the ENTIRE story — every word of prose, dialogue, chapter titles, character names (unless user-specified), and all JSON string values — in ${language}. Do not use English anywhere in the narrative output.`
+    : '';
 
   const avoidBlock = avoid.length
     ? `\n\nSTRICT CONTENT RULES — never include, reference, or imply the following: ${avoid.join(', ')}. This is non-negotiable.`
@@ -834,8 +839,39 @@ function buildSystemPrompt(config = {}) {
 
   const paletteHint = moodPaletteGuide[genre] || 'Choose colors appropriate to the story\'s emotional tone and genre.';
 
-  return `You are narrating an original ${genre} novel — ${chapters} chapters total.
+  // ── Genre-specific decision craft guidance ───────────────────────────────
+  const decisionGuides = {
+    'Dark Romance':          `DECISION CRAFT: Every choice must exploit core dark romance tension — power dynamics, desire vs. self-preservation, pride vs. surrender. Never give the reader plot-logistics choices ("go left or right"). Give them charged, loaded moments: "Does she hold his gaze or look away first?" / "Tell him the truth or protect herself with a lie?" / "Stay in the room or leave while she still can?" Options should feel dangerous. The reader should feel the weight of both sides.`,
+    'Fantasy Romance':       `DECISION CRAFT: Layer magical stakes onto emotional ones. Choices force the protagonist to weigh power or magic against the relationship, duty to her world against her heart. Examples: "Use the forbidden magic to save him or trust him to survive alone?" / "Reveal her true nature or keep the secret that protects them both?" Every option carries both a plot consequence and an emotional cost.`,
+    'Contemporary Romance':  `DECISION CRAFT: Decisions are emotionally honest and grounded — vulnerability vs. self-protection, reaching out vs. pulling back, honesty vs. avoidance. Examples: "Call him back or let the silence answer for her?" / "Go to the event alone or ask for help?" Choices should feel like real decisions real people agonise over at 2am.`,
+    'Paranormal Romance':    `DECISION CRAFT: Decisions sit at the edge of the supernatural and the deeply human — trust the inhuman love interest or fear what they are, embrace the paranormal world or cling to the ordinary one. Examples: "Let him feed or demand he keep his distance?" / "Cross into their world tonight or wait until she understands the cost?" Every choice carries existential weight.`,
+    'Romantic Thriller':     `DECISION CRAFT: Every decision tightens the double tension — trust the love interest or suspect them, pursue the truth or protect the relationship, take the risk for love or for survival. Examples: "Tell him what she found or wait until she's certain?" / "Run with him or turn him in?" Options should feel like they could cost the protagonist everything — either way.`,
+    'Historical Romance':    `DECISION CRAFT: Decisions are shaped by period constraints — reputation, duty, propriety — colliding with private desire. Examples: "Accept the chaperone's escort or find a reason to slip away?" / "Sign the contract her family needs or trust a man society says she shouldn't?" The weight of consequence in a world with fewer second chances.`,
+    'Psychological Thriller':`DECISION CRAFT: Exploit unreliable reality — who to trust when you can't trust your own perception, whether to act on evidence that might be fabricated, confront or play along. Examples: "Confront him with what she found or pretend she doesn't know?" / "Tell the detective the truth or protect the secret that makes her look guilty?" Every choice feels like it could unravel everything.`,
+    'Crime Thriller':        `DECISION CRAFT: Pivot on information asymmetry, risk calibration, and moral compromise. Examples: "Go to the police now or dig deeper first?" / "Use the evidence as leverage or hand it over clean?" / "Protect the witness or follow the lead that puts them at risk?" Choices should feel like procedural chess with real stakes.`,
+    'Mystery':               `DECISION CRAFT: Decisions drive the investigation — which lead to follow, who to confront, what to reveal and to whom. Examples: "Question the butler or search the study first?" / "Share the discovery with the inspector or keep it close until she's sure?" The reader should feel the satisfaction of directing the detective's instincts.`,
+    'True Crime':            `DECISION CRAFT: Mirror the real agonies of investigation — who to trust, what to publish, when silence protects and when it enables. Examples: "Publish the source's name or protect them and lose credibility?" / "Go to the family with the new evidence or wait until it's confirmed?" Choices carry moral weight, not just plot weight.`,
+    'Whodunit':              `DECISION CRAFT: Decisions direct the case — who to press, what to search, when to reveal a suspicion. Examples: "Accuse the solicitor openly or set a trap and wait?" / "Search the east wing first or confront the groundskeeper before he disappears?" The reader should feel like the detective, choosing how to crack the case.`,
+    'Suspense Thriller':     `DECISION CRAFT: Compress the protagonist's options and raise the temperature — act now on incomplete information or wait and risk being too late. Examples: "Trust the contact or assume the meet is compromised?" / "Use the exit she prepared or improvise a new one?" Every choice should feel like the clock is running.`,
+    'Dark Fantasy':          `DECISION CRAFT: Decisions carry moral and magical cost — use the dark power or refuse and be weaker for it, make the morally grey choice or stay clean and pay for it. Examples: "Make the blood pact or face the enemy without it?" / "Spare the betrayer or make an example of them?" Options should never be clean — every choice has a price.`,
+    'Epic Fantasy':          `DECISION CRAFT: Weigh individual against world — loyalty to a person vs. duty to a cause, use power now vs. preserve it for worse to come, sacrifice one to save many. Examples: "March on the fortress now or wait for the alliance that may not arrive?" / "Tell the company the truth about the prophecy or protect their hope a little longer?" Choices should feel historic.`,
+    'Urban Fantasy':         `DECISION CRAFT: Decisions live at the collision of the mundane and the magical. Examples: "Call in a mundane favour or use the magic and owe a supernatural debt?" / "Expose the creature to the police or handle it in-world?" Choices should feel like navigating two different rule systems at once.`,
+    'Science Fiction':       `DECISION CRAFT: Decisions carry philosophical and technological weight — individual freedom vs. collective safety, use the technology or refuse its cost. Examples: "Upload the data and risk exposure or destroy it and lose the only lead?" / "Accept the augmentation or stay human and vulnerable?" Choices should feel like they're about something larger than the plot.`,
+    'Cyberpunk':             `DECISION CRAFT: Leverage, loyalty, and survival in a world where everything is for sale. Examples: "Sell the data to the corporation or burn it and go dark?" / "Trust the fixer or run the job alone?" Every option should carry the weight of a world where the wrong choice gets you killed — or owned.`,
+    'Dystopian':             `DECISION CRAFT: Force the protagonist to choose between survival and conscience — comply to stay safe or resist and put others at risk. Examples: "Report the violation or look away and protect her family?" / "Take the offered safety or refuse and stay with those who have nothing?" Choices should feel like they cost the protagonist a piece of who they are.`,
+    'Supernatural Horror':   `DECISION CRAFT: Survival calculus wrapped in dread — flee or investigate, warn others or protect them from the truth, trust the uncanny or fight it. Examples: "Go back into the house or leave and abandon what's inside?" / "Tell the others what she saw or keep them ignorant and hope?" Options should feel like there's no good answer — only less bad ones.`,
+    'Psychological Horror':  `DECISION CRAFT: Exploit the protagonist's uncertain grip on reality — trust their perception or question it, act on what they believe they saw or wait for proof that may never come. Examples: "Confront him with what she remembers or say nothing until she's certain?" / "Leave before it gets worse or stay and find out if she's right?" Every choice should feel like a coin toss in the dark.`,
+    'Historical Fiction':    `DECISION CRAFT: Shaped by the specific constraints of the period — what was possible, what was permitted, what the cost of deviation actually was. Examples: "Sign the document under his name or refuse and lose the position entirely?" / "Speak at the assembly or let the moment pass?" Choices should feel historically authentic, not modern.`,
+    'Adventure':             `DECISION CRAFT: Drive momentum — which path, which risk, when to push and when to regroup. Examples: "Take the mountain pass now or wait out the storm and lose the lead?" / "Bluff their way through the checkpoint or find another route?" Options should feel energetic — readers want to steer the action.`,
+    'Light Novel':           `DECISION CRAFT: Give decisions the energy of genre fiction — skills, alliances, social stakes as much as combat. Examples: "Challenge the guild leader now or grind for one more level first?" / "Side with Ren or stay neutral and see how it plays out?" Choices should feel like RPG branch points — satisfying to pick, curious to see play out.`,
+  };
 
+  const decisionBlock = !noDecisions && decisionGuides[genre]
+    ? `\n\n${decisionGuides[genre]}`
+    : '';
+
+  return `You are narrating an original ${genre} novel — ${chapters} chapters total.
+${languageBlock}
 ${charactersBlock}
 
 THEMES & SETTING: ${themes}
@@ -849,7 +885,7 @@ ${proseStyle}
 - Chapter length: 1000–1400 words of prose
 ${avoidBlock}${sequelBlock}${seriesBlock}${namesBlock}
 
-GENRE PALETTE for this story (use these exact colors for primaryColor in mood JSON, shifting hue and lightness per chapter emotional beat): ${paletteHint}${noDecisions ? `
+GENRE PALETTE for this story (use these exact colors for primaryColor in mood JSON, shifting hue and lightness per chapter emotional beat): ${paletteHint}${decisionBlock}${noDecisions ? `
 
 STORY TYPE: LINEAR — this story has no reader choices. Always return an empty decisions array ([]). Do NOT write choice-soliciting cliffhangers, "what should she do?" prompts, or any language inviting the reader to decide. End each chapter as a standard novel chapter — a scene close, a revelation, or forward narrative momentum.` : ''}`;
 }

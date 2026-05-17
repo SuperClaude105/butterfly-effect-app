@@ -587,6 +587,58 @@ input[type=range]::-webkit-slider-thumb:hover { box-shadow:0 0 18px rgba(196,162
     </div>
   </div>
 
+  <!-- ── Language ── -->
+  <div class="section">
+    <div class="section-label">Story Language</div>
+    <select id="story-language" style="
+      width:100%;padding:10px 14px;background:#0f0d09;color:var(--text);
+      border:1px solid var(--border2);border-radius:3px;font-family:'Inter',sans-serif;
+      font-size:0.85rem;appearance:none;cursor:pointer;outline:none;
+      background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23c9a84c' d='M6 8L0 0h12z'/%3E%3C/svg%3E\");
+      background-repeat:no-repeat;background-position:right 14px center;padding-right:36px;
+    ">
+      <option value="English">🇬🇧 English</option>
+      <option value="Spanish">🇪🇸 Spanish — Español</option>
+      <option value="French">🇫🇷 French — Français</option>
+      <option value="German">🇩🇪 German — Deutsch</option>
+      <option value="Italian">🇮🇹 Italian — Italiano</option>
+      <option value="Portuguese">🇵🇹 Portuguese — Português</option>
+      <option value="Dutch">🇳🇱 Dutch — Nederlands</option>
+      <option value="Polish">🇵🇱 Polish — Polski</option>
+      <option value="Swedish">🇸🇪 Swedish — Svenska</option>
+      <option value="Norwegian">🇳🇴 Norwegian — Norsk</option>
+      <option value="Danish">🇩🇰 Danish — Dansk</option>
+      <option value="Finnish">🇫🇮 Finnish — Suomi</option>
+      <option value="Russian">🇷🇺 Russian — Русский</option>
+      <option value="Ukrainian">🇺🇦 Ukrainian — Українська</option>
+      <option value="Arabic">🇸🇦 Arabic — العربية</option>
+      <option value="Hebrew">🇮🇱 Hebrew — עברית</option>
+      <option value="Turkish">🇹🇷 Turkish — Türkçe</option>
+      <option value="Japanese">🇯🇵 Japanese — 日本語</option>
+      <option value="Korean">🇰🇷 Korean — 한국어</option>
+      <option value="Simplified Chinese">🇨🇳 Chinese (Simplified) — 简体中文</option>
+      <option value="Traditional Chinese">🇹🇼 Chinese (Traditional) — 繁體中文</option>
+      <option value="Hindi">🇮🇳 Hindi — हिन्दी</option>
+      <option value="Bengali">🇧🇩 Bengali — বাংলা</option>
+      <option value="Urdu">🇵🇰 Urdu — اردو</option>
+      <option value="Indonesian">🇮🇩 Indonesian — Bahasa Indonesia</option>
+      <option value="Malay">🇲🇾 Malay — Bahasa Melayu</option>
+      <option value="Thai">🇹🇭 Thai — ภาษาไทย</option>
+      <option value="Vietnamese">🇻🇳 Vietnamese — Tiếng Việt</option>
+      <option value="Greek">🇬🇷 Greek — Ελληνικά</option>
+      <option value="Romanian">🇷🇴 Romanian — Română</option>
+      <option value="Hungarian">🇭🇺 Hungarian — Magyar</option>
+      <option value="Czech">🇨🇿 Czech — Čeština</option>
+      <option value="Slovak">🇸🇰 Slovak — Slovenčina</option>
+      <option value="Croatian">🇭🇷 Croatian — Hrvatski</option>
+      <option value="Serbian">🇷🇸 Serbian — Српски</option>
+      <option value="Bulgarian">🇧🇬 Bulgarian — Български</option>
+      <option value="Catalan">Catalan — Català</option>
+      <option value="Swahili">🇰🇪 Swahili — Kiswahili</option>
+      <option value="Afrikaans">🇿🇦 Afrikaans</option>
+    </select>
+  </div>
+
   <!-- ── Begin ── -->
   <div class="begin-wrap">
     <div id="credit-display" style="margin-bottom:1rem;font-size:0.85rem;color:var(--text-dim);text-align:center;min-height:1.3em;"></div>
@@ -1184,12 +1236,15 @@ async function beginStory() {
     parentBookBible = parent.progress?.bible || '';
   }
 
+  const language = document.getElementById('story-language')?.value || 'English';
+
   const config = {
     genre, storyIdea, bookTitleInput, protagonistName, loveInterestName, victimName, victimDescription,
     ageRange, themes, targetChapters, triggerAvoid,
     isSeries, isSequel, noDecisions, isRomance,
     parentBookId: parentId || null, parentBookTitle, parentBookBible,
     usedNames: [...new Set(usedNames)],
+    language,
   };
 
   const storyId = (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
