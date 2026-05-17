@@ -381,41 +381,6 @@ let _isLoggedIn = false;
 // Check auth state
 _SB.auth.getSession().then(({ data: { session } }) => { _isLoggedIn = !!session; });
 
-// Genre default covers — picsum.photos with stable seeds (deterministic, always loads)
-const GENRE_DEFAULT_COVERS = {
-  'Dark Romance':                  'https://picsum.photos/seed/dark-romance-1/400/600',
-  'Fantasy Romance':               'https://picsum.photos/seed/fantasy-romance-1/400/600',
-  'Contemporary Romance':          'https://picsum.photos/seed/contemp-romance-1/400/600',
-  'Paranormal Romance':            'https://picsum.photos/seed/paranormal-romance-1/400/600',
-  'Romantic Thriller':             'https://picsum.photos/seed/romantic-thriller-1/400/600',
-  'Historical Romance':            'https://picsum.photos/seed/historical-romance-1/400/600',
-  'Psychological Thriller':        'https://picsum.photos/seed/psych-thriller-1/400/600',
-  'Crime Thriller':                'https://picsum.photos/seed/crime-thriller-1/400/600',
-  'Mystery':                       'https://picsum.photos/seed/mystery-genre-1/400/600',
-  'Whodunit':                      'https://picsum.photos/seed/whodunit-manor-1/400/600',
-  'Suspense Thriller':             'https://picsum.photos/seed/suspense-thriller-1/400/600',
-  'True Crime':                    'https://picsum.photos/seed/true-crime-1/400/600',
-  'Dark Fantasy':                  'https://picsum.photos/seed/dark-fantasy-1/400/600',
-  'Epic Fantasy':                  'https://picsum.photos/seed/epic-fantasy-1/400/600',
-  'Urban Fantasy':                 'https://picsum.photos/seed/urban-fantasy-1/400/600',
-  'Science Fiction':               'https://picsum.photos/seed/science-fiction-1/400/600',
-  'Cyberpunk':                     'https://picsum.photos/seed/cyberpunk-genre-1/400/600',
-  'Dystopian':                     'https://picsum.photos/seed/dystopian-genre-1/400/600',
-  'Supernatural Horror':           'https://picsum.photos/seed/supernatural-horror-1/400/600',
-  'Psychological Horror':          'https://picsum.photos/seed/psych-horror-1/400/600',
-  'Horror':                        'https://picsum.photos/seed/horror-genre-1/400/600',
-  'Historical Fiction':            'https://picsum.photos/seed/historical-fiction-1/400/600',
-  'Adventure':                     'https://picsum.photos/seed/adventure-genre-1/400/600',
-  'Light Novel':                   'https://picsum.photos/seed/light-novel-1/400/600',
-  'Literary':                      'https://picsum.photos/seed/literary-fiction-1/400/600',
-  'Romantasy':                     'https://picsum.photos/seed/romantasy-genre-1/400/600',
-  'Dark Academia':                 'https://picsum.photos/seed/dark-academia-1/400/600',
-  'Cozy Fantasy':                  'https://picsum.photos/seed/cozy-fantasy-1/400/600',
-  'Cozy Mystery':                  'https://picsum.photos/seed/cozy-mystery-1/400/600',
-  'Gaslamp Fantasy':               'https://picsum.photos/seed/gaslamp-fantasy-1/400/600',
-  'Climate Thriller':              'https://picsum.photos/seed/climate-thriller-1/400/600',
-  'Historical Adventure Romance':  'https://picsum.photos/seed/hist-adventure-romance-1/400/600',
-};
 
 const GENRE_GRADIENTS = {
   'Fantasy':       'linear-gradient(145deg,#1a0a2e 0%,#3d1a6e 50%,#6b2fa0 100%)',
@@ -486,7 +451,7 @@ function render() {
     const genre = d.config?.genre || 'Fiction';
     const r = _ratings[s.id] || { avg: 0, count: 0 };
     const blurb = getBlurb(d);
-    const photoUrl = d.coverImage || GENRE_DEFAULT_COVERS[genre] || `https://picsum.photos/seed/${s.id}/400/600`;
+    const photoUrl = d.coverImage || `https://picsum.photos/seed/${encodeURIComponent(title || s.id)}/400/600`;
     const coverBg = `background:url('${photoUrl}') center top / cover no-repeat, ${genreGradient(genre)}`;
     return `<a class="book-card" href="#" onclick="openBookDetail(event,'${s.id}')" style="color:inherit;">
       <div class="cover-wrap">
@@ -592,7 +557,7 @@ function openBookDetail(evt, id) {
   const themes   = (d.config?.themes || []).slice(0, 5);
   const chapters = (d.progress?.chapters || []).length;
   const r        = _ratings[id] || { avg: 0, count: 0 };
-  const photoUrl = d.coverImage || GENRE_DEFAULT_COVERS[genre] || `https://picsum.photos/seed/${s.id}/400/600`;
+  const photoUrl = d.coverImage || `https://picsum.photos/seed/${encodeURIComponent(title || s.id)}/400/600`;
   const longBlurb = getLongBlurb(d);
 
   // Cover
