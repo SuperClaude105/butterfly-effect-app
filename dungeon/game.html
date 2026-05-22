@@ -33,17 +33,17 @@
     .brand-dot{width:5px;height:5px;border-radius:50%;background:var(--primary);box-shadow:0 0 6px var(--primary);}
     .brand-name{font-family:'Playfair Display',serif;font-style:italic;font-size:1rem;color:var(--accent);letter-spacing:-0.02em;}
     .header-sep{width:1px;height:20px;background:rgba(255,255,255,0.07);}
-    .campaign-name{font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--dim);}
+    .campaign-name{font-family:'Cinzel',serif;font-size:0.75rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--dim);}
     .header-spacer{flex:1;}
     .turn-counter{display:flex;align-items:center;gap:10px;}
-    .turn-label{font-family:'Cinzel',serif;font-size:0.55rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--dim);}
-    .turn-track{width:120px;height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;}
+    .turn-label{font-family:'Cinzel',serif;font-size:0.7rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--dim);}
+    .turn-track{width:140px;height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;}
     .turn-fill{height:100%;background:linear-gradient(to right,rgba(196,162,100,0.6),rgba(139,0,0,0.8));border-radius:2px;}
-    .turn-num{font-family:'Cinzel',serif;font-size:0.6rem;color:var(--accent);letter-spacing:0.05em;white-space:nowrap;}
+    .turn-num{font-family:'Cinzel',serif;font-size:0.75rem;color:var(--accent);letter-spacing:0.05em;white-space:nowrap;}
     .header-credit{
       display:flex;align-items:center;gap:6px;
       padding:4px 10px;border:1px solid rgba(196,162,100,0.15);border-radius:2px;
-      font-family:'Cinzel',serif;font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--dim);
+      font-family:'Cinzel',serif;font-size:0.7rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--dim);
     }
     .credit-dot{width:5px;height:5px;border-radius:50%;background:rgba(196,162,100,0.6);}
 
@@ -54,28 +54,53 @@
       overflow:hidden;
     }
 
+    /* ── EXPAND TOGGLE BUTTONS ── */
+    .col-expand-btn{
+      position:absolute;top:10px;z-index:20;
+      width:26px;height:26px;
+      background:rgba(0,0,0,0.5);
+      border:1px solid rgba(255,255,255,0.1);
+      border-radius:3px;
+      color:var(--dim);
+      cursor:pointer;
+      display:flex;align-items:center;justify-content:center;
+      font-size:0.7rem;
+      transition:color 0.15s,border-color 0.15s,background 0.15s;
+    }
+    .col-expand-btn:hover{color:var(--accent);border-color:rgba(196,162,100,0.35);background:rgba(0,0,0,0.7);}
+    .table-expand-btn{right:10px;}
+    .chat-expand-btn{left:10px;}
+
+    /* Fullscreen states */
+    .game-layout.table-full .table-col{width:100%;}
+    .game-layout.table-full .narrative-col{display:none;}
+    .game-layout.chat-full .table-col{display:none;}
+    .game-layout.chat-full .narrative-col{flex:1;}
+
     /* ── LEFT: TABLE COLUMN ── */
     .table-col{
-      width:370px;flex-shrink:0;
+      width:50%;flex-shrink:0;
       display:flex;flex-direction:column;align-items:center;justify-content:center;
       padding:12px 10px;
       border-right:1px solid rgba(255,255,255,0.05);
       gap:0;
+      position:relative;
+      transition:width 0.3s ease;
     }
 
     /* Player strips around table */
     .players-wrap{
       display:grid;
-      grid-template-columns:60px 240px 60px;
-      grid-template-rows:58px 240px 58px;
+      grid-template-columns:80px 320px 80px;
+      grid-template-rows:72px 320px 72px;
       gap:0;
-      width:360px;
+      width:480px;
     }
 
     /* Table frame (compact) */
     .table-frame-sm{
       grid-column:2;grid-row:2;
-      width:240px;height:240px;
+      width:320px;height:320px;
       border-radius:12px;
       background:
         repeating-linear-gradient(91deg,transparent 0px,transparent 3px,rgba(0,0,0,0.07) 3px,rgba(0,0,0,0.07) 4px),
@@ -114,9 +139,9 @@
     .p-east{grid-column:3;grid-row:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;}
 
     .p-avatar{
-      width:36px;height:36px;border-radius:50%;
+      width:48px;height:48px;border-radius:50%;
       display:flex;align-items:center;justify-content:center;
-      font-family:'Cinzel',serif;font-size:0.7rem;
+      font-family:'Cinzel',serif;font-size:0.85rem;
       position:relative;flex-shrink:0;
     }
     .p-avatar.waiting{border:2px solid rgba(196,162,100,0.3);background:rgba(196,162,100,0.06);}
@@ -131,8 +156,8 @@
     .turn-pip.your-turn{background:var(--primary);animation:blink-pip 0.8s ease-in-out infinite;}
     @keyframes blink-pip{0%,100%{opacity:1;}50%{opacity:0.3;}}
 
-    .p-name{font-family:'Cinzel',serif;font-size:0.45rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--dim);white-space:nowrap;}
-    .p-hp-bar{width:32px;height:3px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;}
+    .p-name{font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--dim);white-space:nowrap;}
+    .p-hp-bar{width:44px;height:4px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;}
     .p-hp-fill{height:100%;border-radius:2px;transition:width 0.5s ease;}
     .hp-high{background:rgba(60,170,60,0.7);}
     .hp-med{background:rgba(196,162,100,0.7);}
@@ -140,7 +165,7 @@
 
     /* Encounter strip */
     .encounter-strip{
-      width:360px;margin-top:12px;
+      width:480px;margin-top:12px;
       padding:8px 10px;
       background:rgba(139,0,0,0.08);
       border:1px solid rgba(139,0,0,0.2);
@@ -148,7 +173,7 @@
       display:flex;align-items:center;gap:8px;
     }
     .encounter-dot{width:6px;height:6px;border-radius:50%;background:var(--primary);box-shadow:0 0 6px rgba(139,0,0,0.6);animation:pulse-turn 1.2s ease-in-out infinite;flex-shrink:0;}
-    .encounter-label{font-family:'Cinzel',serif;font-size:0.55rem;letter-spacing:0.18em;text-transform:uppercase;color:rgba(196,100,100,0.8);}
+    .encounter-label{font-family:'Cinzel',serif;font-size:0.7rem;letter-spacing:0.18em;text-transform:uppercase;color:rgba(196,100,100,0.8);}
     .encounter-enemies{margin-left:auto;display:flex;gap:4px;align-items:center;}
     .enemy-token{width:14px;height:14px;border-radius:50%;background:rgba(139,0,0,0.6);border:1px solid rgba(200,80,80,0.4);display:flex;align-items:center;justify-content:center;font-size:0.4rem;color:rgba(255,200,200,0.8);}
 
@@ -157,6 +182,7 @@
       flex:1;display:flex;flex-direction:column;
       overflow:hidden;
       min-width:0;
+      position:relative;
     }
 
     /* Narrative feed */
@@ -172,7 +198,7 @@
 
     /* Message types */
     .msg-system{
-      text-align:center;font-family:'Cinzel',serif;font-size:0.55rem;
+      text-align:center;font-family:'Cinzel',serif;font-size:0.7rem;
       letter-spacing:0.28em;text-transform:uppercase;color:var(--dim);
       opacity:0.6;padding:4px 0;
       display:flex;align-items:center;gap:12px;
@@ -186,9 +212,9 @@
       border-radius:0 3px 3px 0;
       position:relative;
     }
-    .msg-label{font-family:'Cinzel',serif;font-size:0.52rem;letter-spacing:0.22em;text-transform:uppercase;margin-bottom:6px;}
+    .msg-label{font-family:'Cinzel',serif;font-size:0.68rem;letter-spacing:0.22em;text-transform:uppercase;margin-bottom:6px;}
     .msg-dm .msg-label{color:rgba(196,100,100,0.7);}
-    .msg-dm .msg-text{font-style:italic;font-size:0.92rem;line-height:1.75;color:var(--text);}
+    .msg-dm .msg-text{font-style:italic;font-size:1.1rem;line-height:1.8;color:var(--text);}
     .msg-dm .msg-text strong{font-style:normal;color:var(--accent);}
 
     .msg-player{
@@ -199,16 +225,16 @@
       display:flex;gap:10px;align-items:flex-start;
     }
     .player-av{
-      width:28px;height:28px;border-radius:50%;flex-shrink:0;
+      width:34px;height:34px;border-radius:50%;flex-shrink:0;
       display:flex;align-items:center;justify-content:center;
-      font-family:'Cinzel',serif;font-size:0.6rem;margin-top:1px;
+      font-family:'Cinzel',serif;font-size:0.72rem;margin-top:1px;
     }
     .player-av.aldric{background:rgba(196,162,100,0.15);border:1px solid rgba(196,162,100,0.3);}
     .player-av.mira{background:rgba(40,120,40,0.15);border:1px solid rgba(60,170,60,0.3);}
     .player-av.garen{background:rgba(139,0,0,0.15);border:1px solid rgba(139,0,0,0.35);}
     .msg-player-body{}
     .msg-player .msg-label{color:var(--accent);opacity:0.8;}
-    .msg-player .msg-text{font-size:0.88rem;line-height:1.6;color:var(--text);opacity:0.85;}
+    .msg-player .msg-text{font-size:1.05rem;line-height:1.65;color:var(--text);opacity:0.85;}
 
     .msg-dice{
       display:flex;align-items:center;gap:8px;
@@ -254,28 +280,28 @@
     .your-turn-panel{padding:14px 20px;}
     .turn-header{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
     .turn-indicator{width:7px;height:7px;border-radius:50%;background:var(--primary);box-shadow:0 0 8px rgba(139,0,0,0.6);animation:pulse-turn 1s ease-in-out infinite;}
-    .turn-title{font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.28em;text-transform:uppercase;color:rgba(196,100,100,0.85);}
-    .turn-char{font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.1em;color:var(--accent);margin-left:4px;}
+    .turn-title{font-family:'Cinzel',serif;font-size:0.75rem;letter-spacing:0.28em;text-transform:uppercase;color:rgba(196,100,100,0.85);}
+    .turn-char{font-family:'Cinzel',serif;font-size:0.75rem;letter-spacing:0.1em;color:var(--accent);margin-left:4px;}
 
     .action-input-row{display:flex;gap:10px;align-items:flex-end;}
     .action-textarea{
       flex:1;background:rgba(255,255,255,0.03);
       border:1px solid rgba(255,255,255,0.09);border-radius:2px;
-      padding:10px 12px;
-      font-family:'EB Garamond',serif;font-size:0.92rem;color:var(--text);
-      line-height:1.6;resize:none;outline:none;
+      padding:12px 14px;
+      font-family:'EB Garamond',serif;font-size:1.05rem;color:var(--text);
+      line-height:1.65;resize:none;outline:none;
       transition:border-color 0.15s,background 0.15s;
-      min-height:70px;
+      min-height:80px;
     }
     .action-textarea:focus{border-color:rgba(196,162,100,0.3);background:rgba(255,255,255,0.04);}
     .action-textarea::placeholder{color:var(--dim);opacity:0.5;font-style:italic;}
 
     .action-btns{display:flex;flex-direction:column;gap:6px;flex-shrink:0;}
     .submit-btn{
-      padding:10px 18px;
+      padding:12px 22px;
       background:linear-gradient(140deg,#7A0000,#5A0000);
       border:1px solid rgba(139,0,0,0.45);border-radius:2px;
-      font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.25em;text-transform:uppercase;
+      font-family:'Cinzel',serif;font-size:0.75rem;letter-spacing:0.25em;text-transform:uppercase;
       color:var(--accent);cursor:pointer;white-space:nowrap;
       box-shadow:0 4px 16px rgba(139,0,0,0.2),inset 0 1px 0 rgba(255,255,255,0.04);
       transition:opacity 0.2s,transform 0.1s;
@@ -295,9 +321,9 @@
     .char-quick-ref{
       display:flex;gap:12px;margin-top:8px;align-items:center;
     }
-    .quick-stat{font-family:'Cinzel',serif;font-size:0.52rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--dim);}
+    .quick-stat{font-family:'Cinzel',serif;font-size:0.68rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--dim);}
     .quick-stat strong{color:var(--text);}
-    .quick-hp{font-family:'Cinzel',serif;font-size:0.55rem;letter-spacing:0.1em;color:rgba(60,170,60,0.65);}
+    .quick-hp{font-family:'Cinzel',serif;font-size:0.7rem;letter-spacing:0.1em;color:rgba(60,170,60,0.65);}
 
     /* Waiting panel */
     .waiting-panel{
@@ -348,7 +374,7 @@
 
     /* ── INITIATIVE TRACKER ── */
     .init-track{
-      width:360px;margin-top:8px;
+      width:480px;margin-top:8px;
       padding:6px 10px;
       background:rgba(0,0,0,0.35);
       border:1px solid rgba(255,255,255,0.05);
@@ -825,6 +851,7 @@
 
   <!-- ── LEFT: TABLE + PLAYERS ── -->
   <div class="table-col">
+    <button class="col-expand-btn table-expand-btn" title="Expand table" onclick="togglePane('table')">⤢</button>
     <div class="players-wrap">
 
       <!-- NORTH: Aldric (waiting) -->
@@ -964,6 +991,7 @@
 
   <!-- ── RIGHT: NARRATIVE + INPUT ── -->
   <div class="narrative-col">
+    <button class="col-expand-btn chat-expand-btn" title="Expand chat" onclick="togglePane('chat')">⤢</button>
 
     <div class="narrative-feed" id="feed">
 
@@ -2081,6 +2109,23 @@
         .subscribe();
     }
   });
+
+  // ── PANE TOGGLE (fullscreen table or chat) ────────────────────────
+  window.togglePane = function(pane) {
+    const layout = document.querySelector('.game-layout');
+    if (pane === 'table') {
+      layout.classList.remove('chat-full');
+      layout.classList.toggle('table-full');
+    } else {
+      layout.classList.remove('table-full');
+      layout.classList.toggle('chat-full');
+    }
+    // update button icons
+    const tableBtn = document.querySelector('.table-expand-btn');
+    const chatBtn  = document.querySelector('.chat-expand-btn');
+    if (tableBtn) tableBtn.textContent = layout.classList.contains('table-full') ? '⤡' : '⤢';
+    if (chatBtn)  chatBtn.textContent  = layout.classList.contains('chat-full')  ? '⤡' : '⤢';
+  };
 </script>
 
 <script>
