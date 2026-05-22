@@ -614,52 +614,64 @@
         <p class="step-sub">Select a portrait for your character card, or upload your own artwork.</p>
       </div>
       <div class="portrait-grid" id="portraitGrid">
-        <div class="portrait-option selected" data-value="https://picsum.photos/seed/warrior-bold/280/220">
-          <img src="https://picsum.photos/seed/warrior-bold/280/220" alt="Portrait 1">
+        <!-- 0: Knight/Fighter -->
+        <div class="portrait-option selected" data-value="https://images.unsplash.com/photo-1595433707802-6b2626ef1c91?w=300&h=400&fit=crop&crop=faces&q=80" data-classes="fighter,paladin">
+          <img src="https://images.unsplash.com/photo-1595433707802-6b2626ef1c91?w=300&h=400&fit=crop&crop=faces&q=80" alt="Knight">
           <div class="portrait-check">✓</div>
         </div>
-        <div class="portrait-option" data-value="https://picsum.photos/seed/rogue-shadow/280/220">
-          <img src="https://picsum.photos/seed/rogue-shadow/280/220" alt="Portrait 2">
+        <!-- 1: Armoured Warrior -->
+        <div class="portrait-option" data-value="https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=300&h=400&fit=crop&crop=faces&q=80" data-classes="fighter,barbarian">
+          <img src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=300&h=400&fit=crop&crop=faces&q=80" alt="Warrior">
           <div class="portrait-check">✓</div>
         </div>
-        <div class="portrait-option" data-value="https://picsum.photos/seed/mage-arcane/280/220">
-          <img src="https://picsum.photos/seed/mage-arcane/280/220" alt="Portrait 3">
+        <!-- 2: Viking Barbarian -->
+        <div class="portrait-option" data-value="https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=300&h=400&fit=crop&crop=faces&q=80" data-classes="barbarian,ranger">
+          <img src="https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=300&h=400&fit=crop&crop=faces&q=80" alt="Barbarian">
           <div class="portrait-check">✓</div>
         </div>
-        <div class="portrait-option" data-value="https://picsum.photos/seed/ranger-forest/280/220">
-          <img src="https://picsum.photos/seed/ranger-forest/280/220" alt="Portrait 4">
+        <!-- 3: Ranger Woman with Sword -->
+        <div class="portrait-option" data-value="https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?w=300&h=400&fit=crop&crop=faces&q=80" data-classes="ranger,rogue">
+          <img src="https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?w=300&h=400&fit=crop&crop=faces&q=80" alt="Ranger">
           <div class="portrait-check">✓</div>
         </div>
-        <div class="portrait-option" data-value="https://picsum.photos/seed/paladin-holy/280/220">
-          <img src="https://picsum.photos/seed/paladin-holy/280/220" alt="Portrait 5">
+        <!-- 4: Rogue / Assassin -->
+        <div class="portrait-option" data-value="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=300&h=400&fit=crop&crop=faces&q=80" data-classes="rogue,monk">
+          <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=300&h=400&fit=crop&crop=faces&q=80" alt="Rogue">
           <div class="portrait-check">✓</div>
         </div>
-        <div class="portrait-option" data-value="https://picsum.photos/seed/cleric-divine/280/220">
-          <img src="https://picsum.photos/seed/cleric-divine/280/220" alt="Portrait 6">
+        <!-- 5: Masked Assassin -->
+        <div class="portrait-option" data-value="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&h=400&fit=crop&crop=faces&q=80" data-classes="rogue,monk,bard">
+          <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&h=400&fit=crop&crop=faces&q=80" alt="Assassin">
           <div class="portrait-check">✓</div>
         </div>
-        <div class="portrait-option" data-value="https://picsum.photos/seed/druid-nature/280/220">
-          <img src="https://picsum.photos/seed/druid-nature/280/220" alt="Portrait 7">
+        <!-- 6: Wizard with Glowing Orb -->
+        <div class="portrait-option" data-value="https://images.unsplash.com/photo-1614680376573-df3480f0c6ff?w=300&h=400&fit=crop&crop=faces&q=80" data-classes="wizard,sorcerer">
+          <img src="https://images.unsplash.com/photo-1614680376573-df3480f0c6ff?w=300&h=400&fit=crop&crop=faces&q=80" alt="Wizard">
           <div class="portrait-check">✓</div>
         </div>
-        <div class="portrait-option" data-value="https://picsum.photos/seed/barbarian-fierce/280/220">
-          <img src="https://picsum.photos/seed/barbarian-fierce/280/220" alt="Portrait 8">
+        <!-- 7: Mage in Robes -->
+        <div class="portrait-option" data-value="https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?w=300&h=400&fit=crop&crop=faces&q=80" data-classes="wizard,druid,cleric">
+          <img src="https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?w=300&h=400&fit=crop&crop=faces&q=80" alt="Mage">
           <div class="portrait-check">✓</div>
         </div>
-        <div class="portrait-option" data-value="https://picsum.photos/seed/bard-charm/280/220">
-          <img src="https://picsum.photos/seed/bard-charm/280/220" alt="Portrait 9">
+        <!-- 8: Sorcerer / Fire Magic -->
+        <div class="portrait-option" data-value="https://images.unsplash.com/photo-1627483262268-9c2b5b2834b5?w=300&h=400&fit=crop&crop=faces&q=80" data-classes="sorcerer,warlock,bard">
+          <img src="https://images.unsplash.com/photo-1627483262268-9c2b5b2834b5?w=300&h=400&fit=crop&crop=faces&q=80" alt="Sorcerer">
           <div class="portrait-check">✓</div>
         </div>
-        <div class="portrait-option" data-value="https://picsum.photos/seed/warlock-pact/280/220">
-          <img src="https://picsum.photos/seed/warlock-pact/280/220" alt="Portrait 10">
+        <!-- 9: Warlock with Lantern -->
+        <div class="portrait-option" data-value="https://images.unsplash.com/photo-1509631179647-0177331693ae?w=300&h=400&fit=crop&crop=faces&q=80" data-classes="warlock,cleric,druid">
+          <img src="https://images.unsplash.com/photo-1509631179647-0177331693ae?w=300&h=400&fit=crop&crop=faces&q=80" alt="Warlock">
           <div class="portrait-check">✓</div>
         </div>
-        <div class="portrait-option" data-value="https://picsum.photos/seed/monk-spirit/280/220">
-          <img src="https://picsum.photos/seed/monk-spirit/280/220" alt="Portrait 11">
+        <!-- 10: Cleric / Holy -->
+        <div class="portrait-option" data-value="https://images.unsplash.com/photo-1601412436009-d964bd02edbc?w=300&h=400&fit=crop&crop=faces&q=80" data-classes="cleric,paladin,druid">
+          <img src="https://images.unsplash.com/photo-1601412436009-d964bd02edbc?w=300&h=400&fit=crop&crop=faces&q=80" alt="Cleric">
           <div class="portrait-check">✓</div>
         </div>
-        <div class="portrait-option" data-value="https://picsum.photos/seed/sorcerer-wild/280/220">
-          <img src="https://picsum.photos/seed/sorcerer-wild/280/220" alt="Portrait 12">
+        <!-- 11: Bard / Charismatic -->
+        <div class="portrait-option" data-value="https://images.unsplash.com/photo-1548142813-c348350df52b?w=300&h=400&fit=crop&crop=faces&q=80" data-classes="bard,warlock,sorcerer">
+          <img src="https://images.unsplash.com/photo-1548142813-c348350df52b?w=300&h=400&fit=crop&crop=faces&q=80" alt="Bard">
           <div class="portrait-check">✓</div>
         </div>
       </div>
@@ -691,7 +703,7 @@
 <script>
   let currentStep = 1;
   const totalSteps = 5;
-  const state = { race: null, cls: null, name: '', background: '', alignment: null, stats: null, portrait: 'https://picsum.photos/seed/warrior-bold/280/220' };
+  const state = { race: null, cls: null, name: '', background: '', alignment: null, stats: null, portrait: 'https://images.unsplash.com/photo-1595433707802-6b2626ef1c91?w=300&h=400&fit=crop&crop=faces&q=80' };
 
   // Race bonuses lookup
   const raceBonuses = {
@@ -741,6 +753,15 @@
     nextBtn.textContent = currentStep === totalSteps ? 'Create Character ✦' : 'Next →';
     nextBtn.className = 'nav-next-btn' + (currentStep === totalSteps ? ' finish' : '');
     if (step === 4) { initPointBuy(); updateStatBonuses(); }
+    if (step === 5 && state.cls) {
+      const opts = document.querySelectorAll('.portrait-option');
+      const match = Array.from(opts).find(o => (o.dataset.classes||'').split(',').includes(state.cls));
+      if (match && !document.querySelector('.portrait-option.selected')) {
+        opts.forEach(o => o.classList.remove('selected'));
+        match.classList.add('selected');
+        state.portrait = match.dataset.value;
+      }
+    }
     window.scrollTo(0,0);
   }
 
