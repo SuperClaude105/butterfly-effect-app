@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Character — The Unwritten Table</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Playfair+Display:ital,wght@0,700;0,900;1,400;1,700&family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="supabase-client.js"></script>
+  <style>
+    :root {
+      --primary:#8B0000; --accent:#c4a264;
+      --bg:#080404; --surface:#110707; --surface2:#180909;
+      --border:rgba(255,255,255,0.08); --text:#e8d5b7;
+      --dim:rgba(232,213,183,0.45);
+    }
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'EB Garamond',Georgia,serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+    body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='250' height='250'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");pointer-events:none;z-index:9999;opacity:0.6;}
+    body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 60% 50% at 50% 40%,rgba(139,0,0,0.1) 0%,transparent 70%);pointer-events:none;z-index:0;}
+
+    .page{position:relative;z-index:10;max-width:840px;margin:0 auto;padding:24px 24px 80px;display:flex;flex-direction:column;min-height:100vh;}
+
+    /* Header */
+    .site-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;padding-bottom:14px;border-bottom:1px solid rgba(196,162,100,0.12);}
+    .brand{display:flex;align-items:center;gap:10px;}
+    .brand-dot{width:6px;height:6px;border-radius:50%;background:var(--primary);box-shadow:0 0 8px var(--primary);}
+    .brand-title{font-family:'Playfair Display',serif;font-style:italic;font-size:1.3rem;color:var(--accent);letter-spacing:-0.02em;}
+    .nav-back{font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.25em;text-transform:uppercase;color:var(--dim);text-decoration:none;padding:6px 12px;border:1px solid rgba(255,255,255,0.07);border-radius:2px;transition:color 0.15s,border-color 0.15s;}
+    .nav-back:hover{color:var(--accent);border-color:rgba(196,162,100,0.3);}
+
+    /* Step progress */
+    .step-progress{display:flex;align-items:center;margin-bottom:32px;gap:0;}
+    .step-item{display:flex;flex-direction:column;align-items:center;gap:5px;flex:1;position:relative;}
+    .step-item:not(:last-child)::after{content:'';position:absolute;top:13px;left:calc(50% + 16px);right:calc(-50% + 16px);height:1px;background:rgba(255,255,255,0.08);}
+    .step-item.done:not(:last-child)::after{background:rgba(196,162,100,0.3);}
+    .step-num{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-size:0.6rem;font-weight:600;border:1px solid rgba(255,255,255,0.1);color:var(--dim);background:rgba(255,255,255,0.03);transition:all 0.3s ease;}
+    .step-item.active .step-num{border-color:var(--accent);color:var(--accent);background:rgba(196,162,100,0.1);box-shadow:0 0 12px rgba(196,162,100,0.15);}
+    .step-item.done .step-num{border-color:rgba(196,162,100,0.5);color:var(--bg);background:rgba(196,162,100,0.7);font-size:0.55rem;}
+    .step-name{font-family:'Cinzel',serif;font-size:0.55rem;letter-spacing:0.16em;text-transform:uppercase;color:var(--dim);transition:color 0.3s;}
+    .step-item.active .step-name{color:var(--accent);}
+    .step-item.done .step-name{color:rgba(196,162,100,0.55);}
+
+    /* Steps container */
+    .steps-wrap{flex:1;position:relative;overflow:hidden;}
+    .step-panel{display:none;animation:fadeSlideIn 0.3s ease;}
+    .step-panel.active{display:block;}
+    @keyframes fadeSlideIn{from{opacity:0;transform:translateX(20px);}to{opacity:1;transform:translateX(0);}}
+
+    /* Step heading */
+    .step-heading{margin-bottom:6px;}
+    .step-title{font-family:'Playfair Display',serif;font-style:italic;font-size:1.7rem;color:var(--text);letter-spacing:-0.02em;line-height:1.1;}
+    .step-title span{color:var(--accent);}
+    .step-sub{font-size:0.8rem;color:var(--dim);margin-top:5px;line-height:1.6;margin-bottom:20px;}
+
+    /* RACE / CLASS GRID */
+    .option-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+    .option-grid.cols4{grid-template-columns:repeat(4,1fr);}
+
+    .option-card{
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:3px;padding:12px 11px;cursor:pointer;
+      position:relative;overflow:hidden;
+      transition:border-color 0.15s,background 0.15s,transform 0.12s,box-shadow 0.15s;
+    }
+    .option-card:hover{border-color:rgba(196,162,100,0.35);background:rgba(196,162,100,0.04);transform:translateY(-1px);}
+    .option-card:active{transform:translateY(0);}
+    .option-card.selected{
+      border-color:var(--accent);background:rgba(196,162,100,0.08);
+      box-shadow:0 0 0 1px rgba(196,162,100,0.2), 0 4px 20px rgba(196,162,100,0.08);
+    }
+    .option-card.selected::after{
+      content:'✓';position:absolute;top:7px;right:7px;
+      width:17px;height:17px;border-radius:50%;
+      background:rgba(196,162,100,0.85);color:var(--bg);
+      font-size:0.55rem;font-weight:700;
+      display:flex;align-items:center;justify-content:center;
+      font-family:'Cinzel',serif;
+    }
+
+    .opt-icon{font-size:1.4rem;margin-bottom:6px;opacity:0.75;line-height:1;}
+    .opt-name{font-family:'Cinzel',serif;font-size:0.68rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text);margin-bottom:4px;}
+    .opt-bonus{font-size:0.6rem;color:var(--accent);opacity:0.8;margin-bottom:5px;font-family:'Cinzel',serif;letter-spacing:0.05em;}
+    .opt-traits{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:5px;}
+    .opt-trait{font-size:0.52rem;letter-spacing:0.08em;color:var(--dim);padding:1px 5px;border:1px solid rgba(255,255,255,0.07);border-radius:1px;}
+    .opt-desc{font-size:0.65rem;color:var(--dim);line-height:1.45;font-style:italic;display:none;}
+    .option-card:hover .opt-desc,.option-card.selected .opt-desc{display:block;}
+    .opt-die{font-family:'Cinzel',serif;font-size:0.58rem;color:rgba(196,162,100,0.6);margin-bottom:3px;}
+
+    /* STEP 3 — Name / Background / Alignment */
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px 24px;}
+    .form-group{display:flex;flex-direction:column;gap:6px;}
+    .form-group.full{grid-column:1/-1;}
+    .form-label{font-family:'Cinzel',serif;font-size:0.58rem;letter-spacing:0.25em;text-transform:uppercase;color:var(--accent);opacity:0.7;}
+    .form-input,.form-select,.form-textarea{
+      background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.09);
+      border-radius:2px;padding:9px 12px;
+      font-family:'EB Garamond',serif;font-size:0.9rem;color:var(--text);
+      outline:none;transition:border-color 0.15s,background 0.15s;
+      width:100%;
+    }
+    .form-input:focus,.form-select:focus,.form-textarea:focus{border-color:rgba(196,162,100,0.35);background:rgba(255,255,255,0.05);}
+    .form-input::placeholder,.form-textarea::placeholder{color:var(--dim);opacity:0.6;font-style:italic;}
+    .form-select{cursor:pointer;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='rgba(196,162,100,0.4)'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;}
+    .form-select option{background:#110707;color:#e8d5b7;}
+    .form-textarea{resize:vertical;min-height:80px;line-height:1.6;}
+
+    /* Alignment grid (3x3) */
+    .alignment-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+    .align-card{
+      padding:8px 6px;text-align:center;cursor:pointer;
+      border:1px solid rgba(255,255,255,0.07);border-radius:2px;
+      background:rgba(255,255,255,0.02);
+      transition:border-color 0.15s,background 0.15s;
+    }
+    .align-card:hover{border-color:rgba(196,162,100,0.25);background:rgba(196,162,100,0.04);}
+    .align-card.selected{border-color:var(--accent);background:rgba(196,162,100,0.08);}
+    .align-name{font-family:'Cinzel',serif;font-size:0.55rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text);}
+    .align-sub{font-size:0.5rem;color:var(--dim);margin-top:1px;}
+
+    /* STEP 4 — Stats */
+    .stats-method{display:flex;gap:8px;margin-bottom:20px;}
+    .method-btn{
+      flex:1;padding:8px 12px;text-align:center;cursor:pointer;
+      border:1px solid rgba(255,255,255,0.08);border-radius:2px;
+      background:rgba(255,255,255,0.02);
+      font-family:'Cinzel',serif;font-size:0.58rem;letter-spacing:0.15em;text-transform:uppercase;
+      color:var(--dim);transition:all 0.15s;
+    }
+    .method-btn:hover{border-color:rgba(196,162,100,0.25);color:rgba(196,162,100,0.7);}
+    .method-btn.active{border-color:var(--accent);background:rgba(196,162,100,0.08);color:var(--accent);}
+
+    .stats-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:20px;}
+    .stat-block{
+      background:var(--surface);border:1px solid var(--border);border-radius:3px;
+      padding:12px 8px;text-align:center;
+    }
+    .stat-name{font-family:'Cinzel',serif;font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--accent);opacity:0.7;margin-bottom:6px;}
+    .stat-value{font-family:'Cinzel',serif;font-size:1.6rem;color:var(--text);line-height:1;margin-bottom:4px;}
+    .stat-mod{font-size:0.65rem;color:var(--dim);}
+    .stat-bonus{font-size:0.55rem;color:rgba(196,162,100,0.6);margin-top:2px;font-family:'Cinzel',serif;}
+
+    .roll-btn{
+      width:100%;padding:13px;
+      background:linear-gradient(140deg,#5a3218,#3d2010);
+      border:1px solid rgba(90,50,24,0.6);border-radius:2px;
+      font-family:'Cinzel',serif;font-size:0.68rem;letter-spacing:0.3em;text-transform:uppercase;
+      color:var(--accent);cursor:pointer;
+      box-shadow:0 4px 20px rgba(0,0,0,0.3),inset 0 1px 0 rgba(255,255,255,0.04);
+      transition:opacity 0.2s,transform 0.1s;
+      display:flex;align-items:center;justify-content:center;gap:10px;
+    }
+    .roll-btn:hover{opacity:0.88;}
+    .roll-btn:active{transform:scale(0.99);}
+    .roll-icon{font-size:1.1rem;animation:none;}
+    .roll-btn.rolling .roll-icon{animation:spin 0.5s linear;}
+    @keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+
+    .stat-note{font-size:0.68rem;color:var(--dim);font-style:italic;text-align:center;margin-top:10px;}
+
+    /* Point Buy pool tracker */
+    .pb-pool{margin-bottom:16px;padding:11px 14px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.07);border-radius:2px;display:none;}
+    .pb-pool.visible{display:block;}
+    .pb-pool-info{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:9px;}
+    .pb-pool-label{font-family:'Cinzel',serif;font-size:0.58rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--dim);}
+    .pb-pool-count{font-family:'Cinzel',serif;font-size:0.72rem;color:var(--accent);}
+    .pb-pool-count strong{font-size:1.1rem;}
+    .pb-pool-bar{height:3px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;}
+    .pb-pool-fill{height:100%;background:linear-gradient(90deg,var(--primary),var(--accent));border-radius:2px;transition:width 0.2s ease;}
+    .pb-pool-fill.empty{background:var(--primary);}
+
+    /* Stat controls (+/- buttons) */
+    .stat-controls{display:flex;align-items:center;justify-content:center;gap:5px;margin-bottom:3px;}
+    .stat-btn{
+      width:22px;height:22px;border-radius:2px;cursor:pointer;
+      background:rgba(196,162,100,0.07);border:1px solid rgba(196,162,100,0.18);
+      color:var(--accent);font-size:1rem;font-weight:700;line-height:1;
+      display:none;align-items:center;justify-content:center;
+      transition:background 0.1s,border-color 0.1s,transform 0.08s;
+      padding:0;font-family:monospace;
+    }
+    .stat-btn:hover:not(:disabled){background:rgba(196,162,100,0.16);border-color:rgba(196,162,100,0.4);}
+    .stat-btn:active:not(:disabled){transform:scale(0.88);}
+    .stat-btn:disabled{opacity:0.2;cursor:not-allowed;transform:none;}
+    .stats-grid.pb-mode .stat-btn{display:flex;}
+    .stats-grid.pb-mode .stat-value{font-size:1.4rem;}
+    .stat-block.pb-spending .stat-value{color:var(--accent);}
+
+    /* STEP 5 — Portrait */
+    .portrait-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;}
+    .portrait-option{
+      border-radius:3px;overflow:hidden;cursor:pointer;position:relative;
+      border:2px solid transparent;transition:border-color 0.15s,transform 0.12s;
+    }
+    .portrait-option:hover{border-color:rgba(196,162,100,0.4);transform:scale(1.02);}
+    .portrait-option.selected{border-color:var(--accent);box-shadow:0 0 16px rgba(196,162,100,0.2);}
+    .portrait-option img{width:100%;height:110px;object-fit:cover;display:block;}
+    .portrait-option .portrait-check{
+      position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+      background:rgba(8,4,4,0.5);opacity:0;transition:opacity 0.15s;
+      font-size:1.5rem;
+    }
+    .portrait-option.selected .portrait-check{opacity:1;}
+
+    .portrait-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+    .portrait-action-btn{
+      padding:12px;border-radius:2px;cursor:pointer;text-align:center;
+      display:flex;flex-direction:column;align-items:center;gap:5px;
+    }
+    .upload-btn{background:rgba(255,255,255,0.03);border:2px dashed rgba(255,255,255,0.1);transition:border-color 0.15s,background 0.15s;}
+    .upload-btn:hover{border-color:rgba(196,162,100,0.3);background:rgba(196,162,100,0.04);}
+    .ai-btn{background:rgba(139,0,0,0.06);border:1px solid rgba(139,0,0,0.2);opacity:0.55;cursor:not-allowed;}
+    .action-icon{font-size:1.2rem;opacity:0.5;}
+    .action-label{font-family:'Cinzel',serif;font-size:0.58rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--dim);}
+    .action-sub{font-size:0.58rem;color:var(--dim);opacity:0.6;font-style:italic;}
+    .coming-soon-badge{font-size:0.5rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--primary);border:1px solid rgba(139,0,0,0.3);padding:1px 5px;border-radius:1px;}
+
+    /* Navigation */
+    .step-nav{
+      position:fixed;bottom:0;left:0;right:0;z-index:100;
+      background:rgba(8,4,4,0.95);
+      border-top:1px solid rgba(255,255,255,0.07);
+      backdrop-filter:blur(12px);
+      padding:14px 24px;
+      display:flex;align-items:center;justify-content:space-between;gap:16px;
+    }
+    .nav-back-btn{
+      padding:10px 20px;background:transparent;
+      border:1px solid rgba(255,255,255,0.1);border-radius:2px;
+      font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.25em;text-transform:uppercase;
+      color:var(--dim);cursor:pointer;transition:all 0.15s;
+    }
+    .nav-back-btn:hover{border-color:rgba(255,255,255,0.2);color:var(--text);}
+    .nav-back-btn:disabled{opacity:0.3;cursor:not-allowed;}
+    .step-counter{font-family:'Cinzel',serif;font-size:0.58rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--dim);}
+    .step-counter strong{color:var(--accent);}
+    .nav-next-btn{
+      padding:10px 28px;
+      background:linear-gradient(140deg,#7A0000,#5A0000);
+      border:1px solid rgba(139,0,0,0.45);border-radius:2px;
+      font-family:'Cinzel',serif;font-size:0.62rem;letter-spacing:0.3em;text-transform:uppercase;
+      color:var(--accent);cursor:pointer;
+      box-shadow:0 4px 16px rgba(139,0,0,0.25),inset 0 1px 0 rgba(255,255,255,0.04);
+      transition:opacity 0.2s,transform 0.1s;
+    }
+    .nav-next-btn:hover{opacity:0.88;}
+    .nav-next-btn:active{transform:scale(0.98);}
+    .nav-next-btn.finish{background:linear-gradient(140deg,#2d5a1a,#1a3a0a);border-color:rgba(80,150,40,0.4);box-shadow:0 4px 16px rgba(60,120,20,0.25),inset 0 1px 0 rgba(255,255,255,0.04);}
+
+    /* Selection required hint */
+    .select-hint{font-size:0.62rem;color:var(--primary);font-style:italic;display:none;}
+    .select-hint.visible{display:block;}
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="brand">
+      <div class="brand-dot"></div>
+      <div class="brand-title">The Unwritten Table</div>
+    </div>
+    <a href="characters.html" class="nav-back">← My Characters</a>
+  </header>
+
+  <!-- Step progress -->
+  <div class="step-progress" id="stepProgress">
+    <div class="step-item active" data-step="1">
+      <div class="step-num">1</div>
+      <div class="step-name">Race</div>
+    </div>
+    <div class="step-item" data-step="2">
+      <div class="step-num">2</div>
+      <div class="step-name">Class</div>
+    </div>
+    <div class="step-item" data-step="3">
+      <div class="step-num">3</div>
+      <div class="step-name">Character</div>
+    </div>
+    <div class="step-item" data-step="4">
+      <div class="step-num">4</div>
+      <div class="step-name">Stats</div>
+    </div>
+    <div class="step-item" data-step="5">
+      <div class="step-num">5</div>
+      <div class="step-name">Portrait</div>
+    </div>
+  </div>
+
+  <!-- Steps -->
+  <div class="steps-wrap">
+
+    <!-- STEP 1: RACE -->
+    <div class="step-panel active" id="step1">
+      <div class="step-heading">
+        <h2 class="step-title">Choose your <span>Race</span></h2>
+        <p class="step-sub">Your race shapes your natural abilities and how the world perceives you.</p>
+      </div>
+      <div class="option-grid" id="raceGrid">
+        <div class="option-card" data-value="human">
+          <div class="opt-icon">🧑</div>
+          <div class="opt-name">Human</div>
+          <div class="opt-bonus">+1 All Abilities</div>
+          <div class="opt-traits"><span class="opt-trait">Versatile</span><span class="opt-trait">Extra Feat</span></div>
+          <div class="opt-desc">Adaptable and ambitious. Humans master any path they choose.</div>
+        </div>
+        <div class="option-card" data-value="elf">
+          <div class="opt-icon">🧝</div>
+          <div class="opt-name">Elf</div>
+          <div class="opt-bonus">+2 DEX</div>
+          <div class="opt-traits"><span class="opt-trait">Darkvision</span><span class="opt-trait">Fey Ancestry</span><span class="opt-trait">Trance</span></div>
+          <div class="opt-desc">Ancient and graceful, elves live for centuries and remember it all.</div>
+        </div>
+        <div class="option-card" data-value="dwarf">
+          <div class="opt-icon">⛏️</div>
+          <div class="opt-name">Dwarf</div>
+          <div class="opt-bonus">+2 CON</div>
+          <div class="opt-traits"><span class="opt-trait">Darkvision</span><span class="opt-trait">Stonecunning</span><span class="opt-trait">Resilience</span></div>
+          <div class="opt-desc">Stout and unyielding. Dwarves are masters of stone, war, and grudges.</div>
+        </div>
+        <div class="option-card" data-value="half-orc">
+          <div class="opt-icon">💪</div>
+          <div class="opt-name">Half-Orc</div>
+          <div class="opt-bonus">+2 STR · +1 CON</div>
+          <div class="opt-traits"><span class="opt-trait">Relentless</span><span class="opt-trait">Savage Attacks</span></div>
+          <div class="opt-desc">Fierce and powerful. Half-orcs rise above all adversity through sheer force.</div>
+        </div>
+        <div class="option-card" data-value="halfling">
+          <div class="opt-icon">🌿</div>
+          <div class="opt-name">Halfling</div>
+          <div class="opt-bonus">+2 DEX</div>
+          <div class="opt-traits"><span class="opt-trait">Lucky</span><span class="opt-trait">Brave</span><span class="opt-trait">Nimble</span></div>
+          <div class="opt-desc">Small but fearless. Halflings make their own luck and charm everyone they meet.</div>
+        </div>
+        <div class="option-card" data-value="half-elf">
+          <div class="opt-icon">✨</div>
+          <div class="opt-name">Half-Elf</div>
+          <div class="opt-bonus">+2 CHA · +1 Any ×2</div>
+          <div class="opt-traits"><span class="opt-trait">Darkvision</span><span class="opt-trait">Fey Ancestry</span><span class="opt-trait">Versatile</span></div>
+          <div class="opt-desc">Elven grace meets human ambition. Half-elves belong everywhere and nowhere.</div>
+        </div>
+        <div class="option-card" data-value="gnome">
+          <div class="opt-icon">🔮</div>
+          <div class="opt-name">Gnome</div>
+          <div class="opt-bonus">+2 INT</div>
+          <div class="opt-traits"><span class="opt-trait">Darkvision</span><span class="opt-trait">Gnome Cunning</span></div>
+          <div class="opt-desc">Brilliant and curious. Gnomes find wonder in everything and tinker with the rest.</div>
+        </div>
+        <div class="option-card" data-value="dragonborn">
+          <div class="opt-icon">🐉</div>
+          <div class="opt-name">Dragonborn</div>
+          <div class="opt-bonus">+2 STR · +1 CHA</div>
+          <div class="opt-traits"><span class="opt-trait">Breath Weapon</span><span class="opt-trait">Draconic Ancestry</span></div>
+          <div class="opt-desc">Proud descendants of dragons. They walk in scales and command awe.</div>
+        </div>
+        <div class="option-card" data-value="tiefling">
+          <div class="opt-icon">😈</div>
+          <div class="opt-name">Tiefling</div>
+          <div class="opt-bonus">+2 CHA · +1 INT</div>
+          <div class="opt-traits"><span class="opt-trait">Darkvision</span><span class="opt-trait">Hellish Resistance</span><span class="opt-trait">Infernal Legacy</span></div>
+          <div class="opt-desc">Touched by infernal power. Tieflings carry a dark inheritance they never asked for.</div>
+        </div>
+      </div>
+      <div class="select-hint" id="raceHint">Please select a race to continue.</div>
+    </div>
+
+    <!-- STEP 2: CLASS -->
+    <div class="step-panel" id="step2">
+      <div class="step-heading">
+        <h2 class="step-title">Choose your <span>Class</span></h2>
+        <p class="step-sub">Your class defines your fighting style, abilities, and role in the party.</p>
+      </div>
+      <div class="option-grid cols4" id="classGrid">
+        <div class="option-card" data-value="barbarian">
+          <div class="opt-icon">🪓</div>
+          <div class="opt-name">Barbarian</div>
+          <div class="opt-die">d12 · STR</div>
+          <div class="opt-traits"><span class="opt-trait">Rage</span><span class="opt-trait">Unarmored Defense</span></div>
+          <div class="opt-desc">Primal fury. Rage through battle ignoring pain and doubt.</div>
+        </div>
+        <div class="option-card" data-value="bard">
+          <div class="opt-icon">🎵</div>
+          <div class="opt-name">Bard</div>
+          <div class="opt-die">d8 · CHA</div>
+          <div class="opt-traits"><span class="opt-trait">Bardic Inspiration</span><span class="opt-trait">Spellcasting</span></div>
+          <div class="opt-desc">Magic through music. Inspire allies and weave spells with charisma.</div>
+        </div>
+        <div class="option-card" data-value="cleric">
+          <div class="opt-icon">✝</div>
+          <div class="opt-name">Cleric</div>
+          <div class="opt-die">d8 · WIS</div>
+          <div class="opt-traits"><span class="opt-trait">Channel Divinity</span><span class="opt-trait">Spellcasting</span></div>
+          <div class="opt-desc">Divine conduit. Heal allies, smite enemies, and channel your deity's will.</div>
+        </div>
+        <div class="option-card" data-value="druid">
+          <div class="opt-icon">🌙</div>
+          <div class="opt-name">Druid</div>
+          <div class="opt-die">d8 · WIS</div>
+          <div class="opt-traits"><span class="opt-trait">Wild Shape</span><span class="opt-trait">Spellcasting</span></div>
+          <div class="opt-desc">Nature's chosen. Transform into beasts and command the forces of the wild.</div>
+        </div>
+        <div class="option-card" data-value="fighter">
+          <div class="opt-icon">⚔️</div>
+          <div class="opt-name">Fighter</div>
+          <div class="opt-die">d10 · STR/DEX</div>
+          <div class="opt-traits"><span class="opt-trait">Action Surge</span><span class="opt-trait">Fighting Style</span></div>
+          <div class="opt-desc">Master of combat. Unmatched in weapons, tactics, and battlefield control.</div>
+        </div>
+        <div class="option-card" data-value="monk">
+          <div class="opt-icon">🥋</div>
+          <div class="opt-name">Monk</div>
+          <div class="opt-die">d8 · DEX/WIS</div>
+          <div class="opt-traits"><span class="opt-trait">Martial Arts</span><span class="opt-trait">Ki Points</span></div>
+          <div class="opt-desc">Body as weapon. Channel mystical ki to strike fast and move unseen.</div>
+        </div>
+        <div class="option-card" data-value="paladin">
+          <div class="opt-icon">🛡️</div>
+          <div class="opt-name">Paladin</div>
+          <div class="opt-die">d10 · STR/CHA</div>
+          <div class="opt-traits"><span class="opt-trait">Divine Smite</span><span class="opt-trait">Lay on Hands</span></div>
+          <div class="opt-desc">Holy warrior. Bind yourself to a sacred oath and smite evil with righteous power.</div>
+        </div>
+        <div class="option-card" data-value="ranger">
+          <div class="opt-icon">🏹</div>
+          <div class="opt-name">Ranger</div>
+          <div class="opt-die">d10 · DEX/WIS</div>
+          <div class="opt-traits"><span class="opt-trait">Favored Enemy</span><span class="opt-trait">Natural Explorer</span></div>
+          <div class="opt-desc">Hunter and tracker. Master of wilderness, beast, and the deadly arrow.</div>
+        </div>
+        <div class="option-card" data-value="rogue">
+          <div class="opt-icon">🗡️</div>
+          <div class="opt-name">Rogue</div>
+          <div class="opt-die">d8 · DEX</div>
+          <div class="opt-traits"><span class="opt-trait">Sneak Attack</span><span class="opt-trait">Cunning Action</span></div>
+          <div class="opt-desc">Strike from shadow. Exploit every weakness with precision and cunning.</div>
+        </div>
+        <div class="option-card" data-value="sorcerer">
+          <div class="opt-icon">💫</div>
+          <div class="opt-name">Sorcerer</div>
+          <div class="opt-die">d6 · CHA</div>
+          <div class="opt-traits"><span class="opt-trait">Sorcerous Origin</span><span class="opt-trait">Metamagic</span></div>
+          <div class="opt-desc">Magic in the blood. Bend and reshape spells with innate arcane power.</div>
+        </div>
+        <div class="option-card" data-value="warlock">
+          <div class="opt-icon">🌑</div>
+          <div class="opt-name">Warlock</div>
+          <div class="opt-die">d8 · CHA</div>
+          <div class="opt-traits"><span class="opt-trait">Eldritch Blast</span><span class="opt-trait">Pact Magic</span></div>
+          <div class="opt-desc">Power through a pact. Your patron grants dark gifts with strings attached.</div>
+        </div>
+        <div class="option-card" data-value="wizard">
+          <div class="opt-icon">📜</div>
+          <div class="opt-name">Wizard</div>
+          <div class="opt-die">d6 · INT</div>
+          <div class="opt-traits"><span class="opt-trait">Arcane Recovery</span><span class="opt-trait">Spellbook</span></div>
+          <div class="opt-desc">Master of arcane study. Command the most powerful spells through knowledge and discipline.</div>
+        </div>
+      </div>
+      <div class="select-hint" id="classHint">Please select a class to continue.</div>
+    </div>
+
+    <!-- STEP 3: NAME / BACKGROUND / ALIGNMENT -->
+    <div class="step-panel" id="step3">
+      <div class="step-heading">
+        <h2 class="step-title">Your <span>Character</span></h2>
+        <p class="step-sub">Name your adventurer, choose a background, and define their place in the world.</p>
+      </div>
+      <div class="form-grid">
+        <div class="form-group full">
+          <label class="form-label">Character Name</label>
+          <input class="form-input" id="charName" type="text" placeholder="What do they call you?" maxlength="40">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Background</label>
+          <select class="form-select" id="charBackground">
+            <option value="">Select a background…</option>
+            <option value="acolyte">Acolyte — Insight, Religion</option>
+            <option value="charlatan">Charlatan — Deception, Sleight of Hand</option>
+            <option value="criminal">Criminal — Deception, Stealth</option>
+            <option value="entertainer">Entertainer — Acrobatics, Performance</option>
+            <option value="folk-hero">Folk Hero — Animal Handling, Survival</option>
+            <option value="guild-artisan">Guild Artisan — Insight, Perception</option>
+            <option value="hermit">Hermit — Medicine, Religion</option>
+            <option value="haunted-one">Haunted One — Investigation, Survival</option>
+            <option value="knight">Knight — Animal Handling, Insight</option>
+            <option value="noble">Noble — Deception, Insight</option>
+            <option value="outlander">Outlander — Athletics, Survival</option>
+            <option value="sage">Sage — Arcana, History</option>
+            <option value="sailor">Sailor — Athletics, Perception</option>
+            <option value="soldier">Soldier — Athletics, Intimidation</option>
+            <option value="urchin">Urchin — Sleight of Hand, Stealth</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Alignment</label>
+          <div class="alignment-grid" id="alignmentGrid">
+            <div class="align-card" data-value="lawful-good"><div class="align-name">Lawful Good</div><div class="align-sub">The Crusader</div></div>
+            <div class="align-card" data-value="neutral-good"><div class="align-name">Neutral Good</div><div class="align-sub">The Benefactor</div></div>
+            <div class="align-card" data-value="chaotic-good"><div class="align-name">Chaotic Good</div><div class="align-sub">The Rebel</div></div>
+            <div class="align-card" data-value="lawful-neutral"><div class="align-name">Lawful Neutral</div><div class="align-sub">The Judge</div></div>
+            <div class="align-card" data-value="true-neutral"><div class="align-name">True Neutral</div><div class="align-sub">The Undecided</div></div>
+            <div class="align-card" data-value="chaotic-neutral"><div class="align-name">Chaotic Neutral</div><div class="align-sub">The Free Spirit</div></div>
+            <div class="align-card" data-value="lawful-evil"><div class="align-name">Lawful Evil</div><div class="align-sub">The Dominator</div></div>
+            <div class="align-card" data-value="neutral-evil"><div class="align-name">Neutral Evil</div><div class="align-sub">The Malefactor</div></div>
+            <div class="align-card" data-value="chaotic-evil"><div class="align-name">Chaotic Evil</div><div class="align-sub">The Destroyer</div></div>
+          </div>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Backstory <span style="opacity:0.4;font-size:0.9em">(optional — the DM will use this)</span></label>
+          <textarea class="form-textarea" id="charBackstory" placeholder="A sentence or two about who they are, where they came from, and what drives them. The Dungeon Master will weave this into the adventure…" rows="3"></textarea>
+        </div>
+      </div>
+      <div class="select-hint" id="nameHint">Please enter a name to continue.</div>
+    </div>
+
+    <!-- STEP 4: STATS -->
+    <div class="step-panel" id="step4">
+      <div class="step-heading">
+        <h2 class="step-title">Ability <span>Scores</span></h2>
+        <p class="step-sub">Distribute your points freely — take from one, add to another. Racial bonuses apply on top.</p>
+      </div>
+      <div class="stats-method">
+        <div class="method-btn active" data-method="pointbuy" id="methodPointbuy">Assign Points</div>
+        <div class="method-btn" data-method="roll" id="methodRoll">Roll 4d6</div>
+        <div class="method-btn" data-method="array" id="methodArray">Standard Array</div>
+      </div>
+
+      <!-- Point pool tracker (Point Buy mode only) -->
+      <div class="pb-pool visible" id="pbPool">
+        <div class="pb-pool-info">
+          <span class="pb-pool-label">Points to Distribute</span>
+          <span class="pb-pool-count"><strong id="pbRemaining">27</strong> / 27 remaining</span>
+        </div>
+        <div class="pb-pool-bar"><div class="pb-pool-fill" id="pbFill" style="width:100%"></div></div>
+      </div>
+
+      <div class="stats-grid pb-mode" id="statsGrid">
+        <div class="stat-block" data-stat="str" id="sb-str">
+          <div class="stat-name">STR</div>
+          <div class="stat-controls">
+            <button class="stat-btn" data-stat="str" data-dir="-">−</button>
+            <div class="stat-value" id="val-str">8</div>
+            <button class="stat-btn" data-stat="str" data-dir="+">+</button>
+          </div>
+          <div class="stat-mod" id="mod-str">−1</div>
+          <div class="stat-bonus" id="bonus-str"></div>
+        </div>
+        <div class="stat-block" data-stat="dex" id="sb-dex">
+          <div class="stat-name">DEX</div>
+          <div class="stat-controls">
+            <button class="stat-btn" data-stat="dex" data-dir="-">−</button>
+            <div class="stat-value" id="val-dex">8</div>
+            <button class="stat-btn" data-stat="dex" data-dir="+">+</button>
+          </div>
+          <div class="stat-mod" id="mod-dex">−1</div>
+          <div class="stat-bonus" id="bonus-dex"></div>
+        </div>
+        <div class="stat-block" data-stat="con" id="sb-con">
+          <div class="stat-name">CON</div>
+          <div class="stat-controls">
+            <button class="stat-btn" data-stat="con" data-dir="-">−</button>
+            <div class="stat-value" id="val-con">8</div>
+            <button class="stat-btn" data-stat="con" data-dir="+">+</button>
+          </div>
+          <div class="stat-mod" id="mod-con">−1</div>
+          <div class="stat-bonus" id="bonus-con"></div>
+        </div>
+        <div class="stat-block" data-stat="int" id="sb-int">
+          <div class="stat-name">INT</div>
+          <div class="stat-controls">
+            <button class="stat-btn" data-stat="int" data-dir="-">−</button>
+            <div class="stat-value" id="val-int">8</div>
+            <button class="stat-btn" data-stat="int" data-dir="+">+</button>
+          </div>
+          <div class="stat-mod" id="mod-int">−1</div>
+          <div class="stat-bonus" id="bonus-int"></div>
+        </div>
+        <div class="stat-block" data-stat="wis" id="sb-wis">
+          <div class="stat-name">WIS</div>
+          <div class="stat-controls">
+            <button class="stat-btn" data-stat="wis" data-dir="-">−</button>
+            <div class="stat-value" id="val-wis">8</div>
+            <button class="stat-btn" data-stat="wis" data-dir="+">+</button>
+          </div>
+          <div class="stat-mod" id="mod-wis">−1</div>
+          <div class="stat-bonus" id="bonus-wis"></div>
+        </div>
+        <div class="stat-block" data-stat="cha" id="sb-cha">
+          <div class="stat-name">CHA</div>
+          <div class="stat-controls">
+            <button class="stat-btn" data-stat="cha" data-dir="-">−</button>
+            <div class="stat-value" id="val-cha">8</div>
+            <button class="stat-btn" data-stat="cha" data-dir="+">+</button>
+          </div>
+          <div class="stat-mod" id="mod-cha">−1</div>
+          <div class="stat-bonus" id="bonus-cha"></div>
+        </div>
+      </div>
+
+      <button class="roll-btn" id="rollBtn" style="display:none">
+        <span class="roll-icon">⚄</span>
+        Roll Dice (4d6 drop lowest)
+      </button>
+      <div class="stat-note" id="statNote">All stats start at 8. Use your 27 points to raise them — max 15 per stat before racial bonus.</div>
+      <div class="select-hint" id="statsHint">Distribute at least some of your points to continue.</div>
+    </div>
+
+    <!-- STEP 5: PORTRAIT -->
+    <div class="step-panel" id="step5">
+      <div class="step-heading">
+        <h2 class="step-title">Choose your <span>Portrait</span></h2>
+        <p class="step-sub">Select a portrait for your character card, or upload your own artwork.</p>
+      </div>
+      <div class="portrait-grid" id="portraitGrid">
+        <div class="portrait-option selected" data-value="https://picsum.photos/seed/warrior-bold/280/220">
+          <img src="https://picsum.photos/seed/warrior-bold/280/220" alt="Portrait 1">
+          <div class="portrait-check">✓</div>
+        </div>
+        <div class="portrait-option" data-value="https://picsum.photos/seed/rogue-shadow/280/220">
+          <img src="https://picsum.photos/seed/rogue-shadow/280/220" alt="Portrait 2">
+          <div class="portrait-check">✓</div>
+        </div>
+        <div class="portrait-option" data-value="https://picsum.photos/seed/mage-arcane/280/220">
+          <img src="https://picsum.photos/seed/mage-arcane/280/220" alt="Portrait 3">
+          <div class="portrait-check">✓</div>
+        </div>
+        <div class="portrait-option" data-value="https://picsum.photos/seed/ranger-forest/280/220">
+          <img src="https://picsum.photos/seed/ranger-forest/280/220" alt="Portrait 4">
+          <div class="portrait-check">✓</div>
+        </div>
+        <div class="portrait-option" data-value="https://picsum.photos/seed/paladin-holy/280/220">
+          <img src="https://picsum.photos/seed/paladin-holy/280/220" alt="Portrait 5">
+          <div class="portrait-check">✓</div>
+        </div>
+        <div class="portrait-option" data-value="https://picsum.photos/seed/cleric-divine/280/220">
+          <img src="https://picsum.photos/seed/cleric-divine/280/220" alt="Portrait 6">
+          <div class="portrait-check">✓</div>
+        </div>
+        <div class="portrait-option" data-value="https://picsum.photos/seed/druid-nature/280/220">
+          <img src="https://picsum.photos/seed/druid-nature/280/220" alt="Portrait 7">
+          <div class="portrait-check">✓</div>
+        </div>
+        <div class="portrait-option" data-value="https://picsum.photos/seed/barbarian-fierce/280/220">
+          <img src="https://picsum.photos/seed/barbarian-fierce/280/220" alt="Portrait 8">
+          <div class="portrait-check">✓</div>
+        </div>
+        <div class="portrait-option" data-value="https://picsum.photos/seed/bard-charm/280/220">
+          <img src="https://picsum.photos/seed/bard-charm/280/220" alt="Portrait 9">
+          <div class="portrait-check">✓</div>
+        </div>
+        <div class="portrait-option" data-value="https://picsum.photos/seed/warlock-pact/280/220">
+          <img src="https://picsum.photos/seed/warlock-pact/280/220" alt="Portrait 10">
+          <div class="portrait-check">✓</div>
+        </div>
+        <div class="portrait-option" data-value="https://picsum.photos/seed/monk-spirit/280/220">
+          <img src="https://picsum.photos/seed/monk-spirit/280/220" alt="Portrait 11">
+          <div class="portrait-check">✓</div>
+        </div>
+        <div class="portrait-option" data-value="https://picsum.photos/seed/sorcerer-wild/280/220">
+          <img src="https://picsum.photos/seed/sorcerer-wild/280/220" alt="Portrait 12">
+          <div class="portrait-check">✓</div>
+        </div>
+      </div>
+      <div class="portrait-actions">
+        <div class="portrait-action-btn upload-btn">
+          <div class="action-icon">📁</div>
+          <div class="action-label">Upload Your Own</div>
+          <div class="action-sub">JPG or PNG, square recommended</div>
+        </div>
+        <div class="portrait-action-btn ai-btn">
+          <div class="action-icon">✨</div>
+          <div class="action-label">Generate with AI</div>
+          <div class="coming-soon-badge">Coming Soon</div>
+          <div class="action-sub">Describe your character, get a unique portrait</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /steps-wrap -->
+</div><!-- /page -->
+
+<!-- Fixed nav -->
+<div class="step-nav">
+  <button class="nav-back-btn" id="navBack" disabled>← Back</button>
+  <div class="step-counter">Step <strong id="currentStepNum">1</strong> of 5</div>
+  <button class="nav-next-btn" id="navNext">Next →</button>
+</div>
+
+<script>
+  let currentStep = 1;
+  const totalSteps = 5;
+  const state = { race: null, cls: null, name: '', background: '', alignment: null, stats: null, portrait: 'https://picsum.photos/seed/warrior-bold/280/220' };
+
+  // Race bonuses lookup
+  const raceBonuses = {
+    human:     { str:1,dex:1,con:1,int:1,wis:1,cha:1 },
+    elf:       { dex:2 },
+    dwarf:     { con:2 },
+    'half-orc':{ str:2,con:1 },
+    halfling:  { dex:2 },
+    'half-elf':{ cha:2 },
+    gnome:     { int:2 },
+    dragonborn:{ str:2,cha:1 },
+    tiefling:  { cha:2,int:1 },
+  };
+
+  const standardArray = [15,14,13,12,10,8];
+  const statKeys = ['str','dex','con','int','wis','cha'];
+  const PB_TOTAL = 27;
+  const PB_MIN = 8;
+  const PB_MAX = 15;
+
+  // Current stat method
+  let currentMethod = 'pointbuy';
+  let hasRolled = false;
+
+  // Point Buy state
+  let pbBase = { str:8, dex:8, con:8, int:8, wis:8, cha:8 };
+
+  function pbPointsSpent() {
+    return statKeys.reduce((sum, k) => sum + (pbBase[k] - PB_MIN), 0);
+  }
+  function pbRemaining() { return PB_TOTAL - pbPointsSpent(); }
+
+  function goTo(step) {
+    document.getElementById('step' + currentStep).classList.remove('active');
+    document.querySelectorAll('.step-item').forEach(el => {
+      const s = parseInt(el.dataset.step);
+      el.classList.remove('active','done');
+      if (s < step) el.classList.add('done');
+      if (s === step) el.classList.add('active');
+      el.querySelector('.step-num').textContent = s < step ? '✓' : s;
+    });
+    currentStep = step;
+    document.getElementById('step' + currentStep).classList.add('active');
+    document.getElementById('currentStepNum').textContent = currentStep;
+    document.getElementById('navBack').disabled = currentStep === 1;
+    const nextBtn = document.getElementById('navNext');
+    nextBtn.textContent = currentStep === totalSteps ? 'Create Character ✦' : 'Next →';
+    nextBtn.className = 'nav-next-btn' + (currentStep === totalSteps ? ' finish' : '');
+    if (step === 4) { initPointBuy(); updateStatBonuses(); }
+    window.scrollTo(0,0);
+  }
+
+  function validateStep(step) {
+    if (step === 1) {
+      if (!state.race) { document.getElementById('raceHint').classList.add('visible'); return false; }
+      document.getElementById('raceHint').classList.remove('visible'); return true;
+    }
+    if (step === 2) {
+      if (!state.cls) { document.getElementById('classHint').classList.add('visible'); return false; }
+      document.getElementById('classHint').classList.remove('visible'); return true;
+    }
+    if (step === 3) {
+      const n = document.getElementById('charName').value.trim();
+      if (!n) { document.getElementById('nameHint').classList.add('visible'); return false; }
+      state.name = n;
+      document.getElementById('nameHint').classList.remove('visible'); return true;
+    }
+    if (step === 4) {
+      if (currentMethod === 'pointbuy') {
+        // Allow through — starting at all 8s is a valid (if unoptimised) spread
+        document.getElementById('statsHint').classList.remove('visible'); return true;
+      }
+      if (!hasRolled) { document.getElementById('statsHint').classList.add('visible'); return false; }
+      document.getElementById('statsHint').classList.remove('visible'); return true;
+    }
+    return true;
+  }
+
+  document.getElementById('navNext').addEventListener('click', () => {
+    if (!validateStep(currentStep)) return;
+    if (currentStep < totalSteps) { goTo(currentStep + 1); }
+    else { saveCharacter(); }
+  });
+  document.getElementById('navBack').addEventListener('click', () => {
+    if (currentStep > 1) goTo(currentStep - 1);
+  });
+
+  // Generic card selection
+  function setupCardSelection(gridId, stateKey, hintId) {
+    document.getElementById(gridId).addEventListener('click', e => {
+      const card = e.target.closest('.option-card');
+      if (!card) return;
+      document.querySelectorAll('#' + gridId + ' .option-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      state[stateKey] = card.dataset.value;
+      if (hintId) document.getElementById(hintId).classList.remove('visible');
+    });
+  }
+  setupCardSelection('raceGrid', 'race', 'raceHint');
+  setupCardSelection('classGrid', 'cls', 'classHint');
+
+  // Portrait selection
+  document.getElementById('portraitGrid').addEventListener('click', e => {
+    const opt = e.target.closest('.portrait-option');
+    if (!opt) return;
+    document.querySelectorAll('.portrait-option').forEach(o => o.classList.remove('selected'));
+    opt.classList.add('selected');
+    state.portrait = opt.dataset.value;
+  });
+
+  // Alignment selection
+  document.getElementById('alignmentGrid').addEventListener('click', e => {
+    const card = e.target.closest('.align-card');
+    if (!card) return;
+    document.querySelectorAll('.align-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    state.alignment = card.dataset.value;
+  });
+
+  // ── Stat helpers ──────────────────────────────────────────────
+  function modifier(score) {
+    const m = Math.floor((score - 10) / 2);
+    return (m >= 0 ? '+' : '') + m;
+  }
+
+  function updateStatDisplay(key, base) {
+    const bonus = (raceBonuses[state.race] || {})[key] || 0;
+    const total = base + bonus;
+    document.getElementById('val-' + key).textContent = total;
+    document.getElementById('mod-' + key).textContent = modifier(total);
+    const bonusEl = document.getElementById('bonus-' + key);
+    bonusEl.textContent = bonus ? '+' + bonus + ' racial' : '';
+    document.getElementById('sb-' + key).classList.toggle('pb-spending', base > PB_MIN);
+  }
+
+  function updateStatBonuses() {
+    if (currentMethod === 'pointbuy') {
+      statKeys.forEach(k => updateStatDisplay(k, pbBase[k]));
+    } else {
+      statKeys.forEach(k => {
+        const val = document.getElementById('val-' + k).textContent;
+        if (val !== '—') {
+          const bonus = (raceBonuses[state.race] || {})[k] || 0;
+          const base = parseInt(val) - bonus;
+          updateStatDisplay(k, base);
+        }
+      });
+    }
+  }
+
+  function resetStats() {
+    statKeys.forEach(k => {
+      document.getElementById('val-' + k).textContent = '—';
+      document.getElementById('mod-' + k).textContent = '—';
+      document.getElementById('bonus-' + k).textContent = '';
+      document.getElementById('sb-' + k).classList.remove('pb-spending');
+    });
+  }
+
+  // ── Point Buy UI ──────────────────────────────────────────────
+  function renderPbPool() {
+    const rem = pbRemaining();
+    const pct = (rem / PB_TOTAL) * 100;
+    document.getElementById('pbRemaining').textContent = rem;
+    const fill = document.getElementById('pbFill');
+    fill.style.width = Math.max(0, pct) + '%';
+    fill.classList.toggle('empty', rem === 0);
+    // Enable/disable + buttons based on pool
+    document.querySelectorAll('.stat-btn[data-dir="+"]').forEach(btn => {
+      const k = btn.dataset.stat;
+      btn.disabled = rem <= 0 || pbBase[k] >= PB_MAX;
+    });
+    document.querySelectorAll('.stat-btn[data-dir="-"]').forEach(btn => {
+      const k = btn.dataset.stat;
+      btn.disabled = pbBase[k] <= PB_MIN;
+    });
+  }
+
+  // Class-optimised starting builds — each uses exactly 27 points above base 8
+  const CLASS_PRESETS = {
+    barbarian: { str:15, dex:13, con:14, int:10, wis:12, cha:11 },
+    fighter:   { str:15, dex:14, con:14, int:10, wis:12, cha:10 },
+    paladin:   { str:15, dex:11, con:13, int:10, wis:12, cha:14 },
+    ranger:    { str:12, dex:15, con:14, int:10, wis:14, cha:10 },
+    rogue:     { str:10, dex:15, con:14, int:14, wis:10, cha:12 },
+    wizard:    { str:10, dex:14, con:14, int:15, wis:12, cha:10 },
+    cleric:    { str:14, dex:10, con:14, int:10, wis:15, cha:12 },
+    druid:     { str:10, dex:12, con:14, int:14, wis:15, cha:10 },
+    monk:      { str:12, dex:15, con:14, int:10, wis:14, cha:10 },
+    bard:      { str:10, dex:14, con:14, int:12, wis:10, cha:15 },
+    sorcerer:  { str:10, dex:14, con:14, int:10, wis:12, cha:15 },
+    warlock:   { str:10, dex:14, con:14, int:10, wis:12, cha:15 },
+  };
+
+  function initPointBuy() {
+    const preset = state.cls && CLASS_PRESETS[state.cls];
+    pbBase = preset ? { ...preset } : { str:8, dex:8, con:8, int:8, wis:8, cha:8 };
+    document.getElementById('statsGrid').classList.add('pb-mode');
+    document.getElementById('pbPool').classList.add('visible');
+    document.getElementById('rollBtn').style.display = 'none';
+    const clsLabel = state.cls ? state.cls.charAt(0).toUpperCase() + state.cls.slice(1) : null;
+    document.getElementById('statNote').textContent = preset
+      ? `Pre-loaded for ${clsLabel} — adjust freely. You have ${PB_TOTAL} points to distribute (max 15 per stat before racial bonus).`
+      : 'All stats start at 8. Use your 27 points to raise them — max 15 before racial bonus.';
+    statKeys.forEach(k => updateStatDisplay(k, pbBase[k]));
+    renderPbPool();
+  }
+
+  // +/- button handler
+  document.getElementById('statsGrid').addEventListener('click', e => {
+    const btn = e.target.closest('.stat-btn');
+    if (!btn || currentMethod !== 'pointbuy') return;
+    const k = btn.dataset.stat;
+    const dir = btn.dataset.dir;
+    if (dir === '+') {
+      if (pbBase[k] >= PB_MAX || pbRemaining() <= 0) return;
+      pbBase[k]++;
+    } else {
+      if (pbBase[k] <= PB_MIN) return;
+      pbBase[k]--;
+    }
+    updateStatDisplay(k, pbBase[k]);
+    renderPbPool();
+  });
+
+  // ── Method tab switching ───────────────────────────────────────
+  document.querySelectorAll('.method-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.method-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentMethod = btn.dataset.method;
+      const grid = document.getElementById('statsGrid');
+      const rollBtn = document.getElementById('rollBtn');
+
+      if (currentMethod === 'pointbuy') {
+        grid.classList.add('pb-mode');
+        hasRolled = false;
+        initPointBuy();
+      } else {
+        grid.classList.remove('pb-mode');
+        document.getElementById('pbPool').classList.remove('visible');
+        rollBtn.style.display = '';
+        hasRolled = false;
+        resetStats();
+        if (currentMethod === 'roll') {
+          rollBtn.innerHTML = '<span class="roll-icon">⚄</span> Roll Dice (4d6 drop lowest)';
+          document.getElementById('statNote').textContent = 'Click to roll your ability scores. You can re-roll as many times as you like.';
+        } else {
+          rollBtn.innerHTML = '<span class="roll-icon">📋</span> Apply Standard Array';
+          document.getElementById('statNote').textContent = 'Standard Array: 15, 14, 13, 12, 10, 8 — assigned in order: STR, DEX, CON, INT, WIS, CHA.';
+          applyStandardArray();
+        }
+      }
+    });
+  });
+
+  // ── Roll / Array actions ──────────────────────────────────────
+  function roll4d6() {
+    const rolls = [0,1,2,3].map(() => Math.floor(Math.random() * 6) + 1);
+    return rolls.sort((a, b) => b - a).slice(0, 3).reduce((s, v) => s + v, 0);
+  }
+
+  function applyStandardArray() {
+    statKeys.forEach((k, i) => updateStatDisplay(k, standardArray[i]));
+    hasRolled = true;
+  }
+
+  document.getElementById('rollBtn').addEventListener('click', function() {
+    if (currentMethod === 'array') { applyStandardArray(); return; }
+    const btn = this;
+    btn.classList.add('rolling');
+    let ticks = 0;
+    const interval = setInterval(() => {
+      statKeys.forEach(k => {
+        document.getElementById('val-' + k).textContent = Math.floor(Math.random() * 13) + 3;
+      });
+      ticks++;
+      if (ticks > 8) {
+        clearInterval(interval);
+        btn.classList.remove('rolling');
+        const rolled = statKeys.map(() => roll4d6());
+        statKeys.forEach((k, i) => updateStatDisplay(k, rolled[i]));
+        hasRolled = true;
+        document.getElementById('statsHint').classList.remove('visible');
+        document.getElementById('statNote').textContent = 'Looking good! Roll again for a different spread, or press Next.';
+      }
+    }, 60);
+  });
+
+  // Initialise Point Buy on load
+  initPointBuy();
+
+  // ── HP calc ───────────────────────────────────────────────────
+  function calcHP(cls, conTotal) {
+    const hitDie = { barbarian:12, fighter:10, paladin:10, ranger:10, bard:8, cleric:8, druid:8, monk:8, rogue:8, warlock:8, sorcerer:6, wizard:6 };
+    const die = hitDie[cls] || 8;
+    const conMod = Math.floor((conTotal - 10) / 2);
+    return die + conMod;
+  }
+
+  // ── Save character (Supabase + localStorage) ─────────────────
+  async function saveCharacter() {
+    // Build flat stats object: { str:15, dex:13, ... } (totals including racial)
+    const flatStats = {};
+    statKeys.forEach(k => {
+      const bonus = (raceBonuses[state.race] || {})[k] || 0;
+      const base  = currentMethod === 'pointbuy' ? pbBase[k] : (parseInt(document.getElementById('val-'+k).textContent) - bonus);
+      flatStats[k] = base + bonus;
+    });
+
+    const hp = calcHP(state.cls, flatStats.con);
+
+    const nextBtn = document.getElementById('navNext');
+    nextBtn.disabled = true;
+    nextBtn.textContent = 'Saving…';
+
+    // Save to Supabase
+    const { data, error } = await sbClient
+      .from('rpg_characters')
+      .insert({
+        user_id:    currentUser.id,
+        name:       state.name,
+        race:       state.race,
+        cls:        state.cls,
+        background: state.background || 'Folk Hero',
+        alignment:  state.alignment  || 'Neutral Good',
+        stats:      flatStats,
+        portrait:   state.portrait,
+        level:      1,
+        xp:         0,
+        hp:         hp,
+        max_hp:     hp,
+        gold:       50,
+        inventory:  [],
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error saving character:', error);
+      nextBtn.disabled = false;
+      nextBtn.textContent = 'Create Character ✦';
+      alert('Could not save your character. Please try again.\n' + error.message);
+      return;
+    }
+
+    // Sync to localStorage so game screens can read it
+    const existing = JSON.parse(localStorage.getItem('uwt_characters') || '[]');
+    existing.push(data);
+    localStorage.setItem('uwt_characters', JSON.stringify(existing));
+
+    window.location.href = 'characters.html';
+  }
+
+  // ── Auth guard & init ─────────────────────────────────────────
+  let currentUser = null;
+
+  function waitForSb(cb) {
+    if (window.sbClient) { cb(); return; }
+    setTimeout(() => waitForSb(cb), 50);
+  }
+
+  waitForSb(async () => {
+    currentUser = await requireAuth();
+
+    // Check slot limit before letting user start (redirect early if full)
+    const { count } = await sbClient
+      .from('rpg_characters')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', currentUser.id);
+
+    if (count >= 2) {
+      alert('You have reached the maximum of 2 characters on the free tier. Delete a character to create a new one.');
+      window.location.href = 'characters.html';
+    }
+  });
+</script>
+</body>
+</html>

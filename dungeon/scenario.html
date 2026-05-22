@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Choose Your Campaign — The Unwritten Table</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Playfair+Display:ital,wght@0,700;0,900;1,400;1,700&family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="supabase-client.js"></script>
+  <style>
+    :root {
+      --primary:#8B0000; --accent:#c4a264;
+      --bg:#080404; --text:#e8d5b7; --dim:rgba(232,213,183,0.45);
+    }
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+    html,body{height:100%;overflow:hidden;font-family:'EB Garamond',Georgia,serif;background:var(--bg);color:var(--text);}
+
+    /* Grain overlay */
+    body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='250' height='250'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:9999;opacity:0.55;}
+
+    /* ══════════════════════════════════════════
+       OVERVIEW — 2×2 full-viewport grid
+    ══════════════════════════════════════════ */
+    #overview{
+      position:fixed;inset:0;z-index:5;
+      display:flex;flex-direction:column;
+      transition:opacity 0.45s ease,transform 0.45s ease;
+    }
+    #overview.hidden{opacity:0;pointer-events:none;transform:scale(1.03);}
+
+    .ov-bar{
+      position:absolute;top:0;left:0;right:0;z-index:10;
+      display:flex;align-items:center;justify-content:space-between;
+      padding:16px 28px;
+      background:linear-gradient(to bottom, rgba(8,4,4,0.85) 0%, transparent 100%);
+    }
+    .brand{display:flex;align-items:center;gap:10px;}
+    .brand-dot{width:6px;height:6px;border-radius:50%;background:var(--primary);box-shadow:0 0 8px var(--primary);}
+    .brand-title{font-family:'Playfair Display',serif;font-style:italic;font-size:1.25rem;color:var(--accent);letter-spacing:-0.02em;}
+    .nav-back{font-family:'Cinzel',serif;font-size:0.56rem;letter-spacing:0.22em;text-transform:uppercase;color:var(--dim);text-decoration:none;padding:6px 12px;border:1px solid rgba(255,255,255,0.07);border-radius:2px;transition:color 0.15s,border-color 0.15s;}
+    .nav-back:hover{color:var(--accent);border-color:rgba(196,162,100,0.3);}
+
+    .ov-grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;flex:1;height:100vh;}
+
+    .sc-thumb{
+      position:relative;overflow:hidden;cursor:pointer;
+      display:flex;flex-direction:column;justify-content:flex-end;padding:28px 32px;
+    }
+    /* Atmospheric backgrounds per scenario */
+    .sc-thumb[data-s="vault"]{background:#030e14;}
+    .sc-thumb[data-s="court"]{background:#0f0508;}
+    .sc-thumb[data-s="dark"]{background:#06060f;}
+    .sc-thumb[data-s="custom"]{background:#080604;}
+
+    .sc-thumb::before{
+      content:'';position:absolute;inset:0;
+      background:var(--thumb-glow);
+      opacity:0.85;transition:opacity 0.4s;
+    }
+    .sc-thumb[data-s="vault"]::before{--thumb-glow:radial-gradient(ellipse 80% 90% at 40% -10%,rgba(0,180,210,0.35) 0%,transparent 65%);}
+    .sc-thumb[data-s="court"]::before{--thumb-glow:radial-gradient(ellipse 80% 90% at 60% -10%,rgba(180,20,40,0.4) 0%,transparent 65%);}
+    .sc-thumb[data-s="dark"]::before{--thumb-glow:radial-gradient(ellipse 80% 90% at 50% -10%,rgba(90,40,170,0.38) 0%,transparent 65%);}
+    .sc-thumb[data-s="custom"]::before{--thumb-glow:radial-gradient(ellipse 80% 90% at 50% -10%,rgba(196,162,100,0.22) 0%,transparent 65%);}
+
+    /* Hover intensifier */
+    .sc-thumb::after{content:'';position:absolute;inset:0;background:rgba(255,255,255,0);transition:background 0.3s;}
+    .sc-thumb:hover::after{background:rgba(255,255,255,0.025);}
+
+    /* Dividing lines between cells */
+    .sc-thumb[data-s="vault"]{border-right:1px solid rgba(255,255,255,0.05);border-bottom:1px solid rgba(255,255,255,0.05);}
+    .sc-thumb[data-s="court"]{border-bottom:1px solid rgba(255,255,255,0.05);}
+    .sc-thumb[data-s="dark"]{border-right:1px solid rgba(255,255,255,0.05);}
+
+    /* Floating ambient icon in each card */
+    .thumb-ambient{
+      position:absolute;top:30%;left:50%;transform:translate(-50%,-50%);
+      font-size:5rem;opacity:0.08;pointer-events:none;
+      filter:blur(2px);
+      transition:opacity 0.4s,transform 0.4s;
+    }
+    .sc-thumb:hover .thumb-ambient{opacity:0.14;transform:translate(-50%,-50%) scale(1.08);}
+
+    .thumb-content{position:relative;z-index:2;}
+    .thumb-credits-badge{
+      position:absolute;top:20px;right:24px;z-index:3;
+      font-family:'Cinzel',serif;font-size:0.5rem;letter-spacing:0.18em;text-transform:uppercase;
+      padding:4px 10px;border-radius:12px;border:1px solid;
+    }
+    .sc-thumb[data-s="vault"] .thumb-credits-badge{color:rgba(58,181,200,0.8);border-color:rgba(58,181,200,0.25);background:rgba(0,30,40,0.5);}
+    .sc-thumb[data-s="court"] .thumb-credits-badge{color:rgba(212,145,90,0.8);border-color:rgba(212,145,90,0.25);background:rgba(30,5,10,0.5);}
+    .sc-thumb[data-s="dark"] .thumb-credits-badge{color:rgba(155,114,212,0.8);border-color:rgba(155,114,212,0.25);background:rgba(10,5,20,0.5);}
+    .sc-thumb[data-s="custom"] .thumb-credits-badge{color:rgba(196,162,100,0.8);border-color:rgba(196,162,100,0.2);background:rgba(20,15,5,0.5);}
+
+    .thumb-scenario-type{
+      font-family:'Cinzel',serif;font-size:0.5rem;letter-spacing:0.3em;text-transform:uppercase;
+      margin-bottom:8px;opacity:0.6;
+    }
+    .sc-thumb[data-s="vault"] .thumb-scenario-type{color:#3ab5c8;}
+    .sc-thumb[data-s="court"] .thumb-scenario-type{color:#d4915a;}
+    .sc-thumb[data-s="dark"] .thumb-scenario-type{color:#9b72d4;}
+    .sc-thumb[data-s="custom"] .thumb-scenario-type{color:#c4a264;}
+
+    .thumb-name{
+      font-family:'Playfair Display',serif;font-weight:700;font-size:1.7rem;
+      letter-spacing:-0.02em;line-height:1;margin-bottom:8px;color:var(--text);
+    }
+    .thumb-tagline{font-size:0.78rem;color:var(--dim);font-style:italic;line-height:1.45;margin-bottom:14px;}
+    .thumb-tags{display:flex;flex-wrap:wrap;gap:5px;}
+    .thumb-tag{
+      font-family:'Cinzel',serif;font-size:0.46rem;letter-spacing:0.12em;text-transform:uppercase;
+      padding:3px 7px;border:1px solid rgba(255,255,255,0.07);border-radius:1px;
+      color:var(--dim);opacity:0.8;
+    }
+    .thumb-enter{
+      position:absolute;bottom:28px;right:32px;z-index:3;
+      font-family:'Cinzel',serif;font-size:0.5rem;letter-spacing:0.25em;text-transform:uppercase;
+      color:var(--dim);opacity:0;transition:opacity 0.3s;
+      display:flex;align-items:center;gap:6px;
+    }
+    .thumb-enter::after{content:'→';font-size:0.7rem;}
+    .sc-thumb:hover .thumb-enter{opacity:0.6;}
+
+
+    /* ══════════════════════════════════════════
+       SCENARIO PANELS — full-screen immersive
+    ══════════════════════════════════════════ */
+    .sc-panel{
+      position:fixed;inset:0;z-index:20;
+      display:flex;flex-direction:column;
+      overflow-y:auto;
+      opacity:0;pointer-events:none;
+      transition:opacity 0.45s ease;
+    }
+    .sc-panel.active{opacity:1;pointer-events:all;}
+
+    /* Per-panel atmospheric backgrounds */
+    #panel-vault{background:#030e14;}
+    #panel-court{background:#0f0508;}
+    #panel-dark{background:#06060f;}
+    #panel-custom{background:#080604;}
+
+    /* Large ambient glow element (fixed so it doesn't scroll) */
+    .panel-glow{
+      position:fixed;top:-15%;left:50%;transform:translateX(-50%);
+      width:90%;height:65%;pointer-events:none;z-index:0;
+      opacity:0;transition:opacity 0.6s 0.2s;
+      border-radius:50%;filter:blur(60px);
+    }
+    .sc-panel.active .panel-glow{opacity:1;}
+    #panel-vault .panel-glow{background:radial-gradient(ellipse,rgba(0,180,210,0.2) 0%,transparent 70%);}
+    #panel-court .panel-glow{background:radial-gradient(ellipse,rgba(180,20,40,0.25) 0%,transparent 70%);}
+    #panel-dark .panel-glow{background:radial-gradient(ellipse,rgba(90,40,170,0.22) 0%,transparent 70%);}
+    #panel-custom .panel-glow{background:radial-gradient(ellipse,rgba(196,162,100,0.14) 0%,transparent 70%);}
+
+    /* Panel header */
+    .panel-header{
+      position:sticky;top:0;z-index:30;
+      display:flex;align-items:center;justify-content:space-between;
+      padding:16px 28px;
+      backdrop-filter:blur(16px);
+      border-bottom:1px solid;
+      flex-shrink:0;
+    }
+    #panel-vault .panel-header{background:rgba(3,14,20,0.82);border-color:rgba(58,181,200,0.12);}
+    #panel-court .panel-header{background:rgba(15,5,8,0.82);border-color:rgba(212,145,90,0.12);}
+    #panel-dark .panel-header{background:rgba(6,6,15,0.82);border-color:rgba(155,114,212,0.12);}
+    #panel-custom .panel-header{background:rgba(8,6,4,0.82);border-color:rgba(196,162,100,0.12);}
+
+    .panel-back{
+      font-family:'Cinzel',serif;font-size:0.56rem;letter-spacing:0.22em;text-transform:uppercase;
+      background:none;border:1px solid;border-radius:2px;padding:7px 14px;cursor:pointer;
+      transition:opacity 0.15s,background 0.15s;opacity:0.65;
+    }
+    .panel-back:hover{opacity:1;background:rgba(255,255,255,0.03);}
+    #panel-vault .panel-back{color:#3ab5c8;border-color:rgba(58,181,200,0.2);}
+    #panel-court .panel-back{color:#d4915a;border-color:rgba(212,145,90,0.2);}
+    #panel-dark .panel-back{color:#9b72d4;border-color:rgba(155,114,212,0.2);}
+    #panel-custom .panel-back{color:#c4a264;border-color:rgba(196,162,100,0.2);}
+
+    .panel-brand{font-family:'Playfair Display',serif;font-style:italic;font-size:1.1rem;color:rgba(232,213,183,0.35);}
+
+    /* Panel body — centered content */
+    .panel-body{
+      display:flex;flex-direction:column;align-items:center;
+      padding:48px 28px 60px;
+      position:relative;z-index:1;
+      min-height:calc(100vh - 60px);
+    }
+
+    .panel-floating-icon{
+      font-size:4.5rem;margin-bottom:22px;line-height:1;
+      animation:float 5s ease-in-out infinite;
+    }
+    #panel-vault .panel-floating-icon{filter:drop-shadow(0 0 28px rgba(0,180,210,0.4));}
+    #panel-court .panel-floating-icon{filter:drop-shadow(0 0 28px rgba(180,20,40,0.4));}
+    #panel-dark .panel-floating-icon{filter:drop-shadow(0 0 28px rgba(90,40,170,0.4));}
+    #panel-custom .panel-floating-icon{filter:drop-shadow(0 0 28px rgba(196,162,100,0.3));}
+    @keyframes float{0%,100%{transform:translateY(0);}50%{transform:translateY(-10px);}}
+
+    .panel-scenario-label{
+      font-family:'Cinzel',serif;font-size:0.56rem;letter-spacing:0.4em;text-transform:uppercase;
+      margin-bottom:12px;opacity:0.6;
+    }
+    #panel-vault .panel-scenario-label{color:#3ab5c8;}
+    #panel-court .panel-scenario-label{color:#d4915a;}
+    #panel-dark .panel-scenario-label{color:#9b72d4;}
+    #panel-custom .panel-scenario-label{color:#c4a264;}
+
+    .panel-title{
+      font-family:'Playfair Display',serif;font-weight:900;font-size:3.4rem;
+      letter-spacing:-0.03em;color:var(--text);text-align:center;line-height:1;margin-bottom:10px;
+    }
+    .panel-tagline{
+      font-family:'Playfair Display',serif;font-style:italic;font-size:1.05rem;
+      color:var(--dim);text-align:center;margin-bottom:36px;
+    }
+
+    /* Info card */
+    .panel-info{
+      width:100%;max-width:620px;
+      border:1px solid;border-radius:3px;
+      padding:24px 28px;margin-bottom:28px;
+      backdrop-filter:blur(8px);
+    }
+    #panel-vault .panel-info{background:rgba(0,25,35,0.5);border-color:rgba(58,181,200,0.18);}
+    #panel-court .panel-info{background:rgba(30,5,10,0.5);border-color:rgba(212,145,90,0.18);}
+    #panel-dark .panel-info{background:rgba(8,5,20,0.5);border-color:rgba(155,114,212,0.18);}
+    #panel-custom .panel-info{background:rgba(15,12,5,0.5);border-color:rgba(196,162,100,0.15);}
+
+    .panel-desc{font-size:0.92rem;color:rgba(232,213,183,0.72);line-height:1.75;margin-bottom:18px;font-style:italic;}
+    .panel-focus-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px;}
+    .panel-focus-tag{
+      font-family:'Cinzel',serif;font-size:0.52rem;letter-spacing:0.14em;text-transform:uppercase;
+      padding:4px 10px;border:1px solid;border-radius:2px;
+    }
+    #panel-vault .panel-focus-tag{color:rgba(58,181,200,0.85);border-color:rgba(58,181,200,0.2);background:rgba(58,181,200,0.06);}
+    #panel-court .panel-focus-tag{color:rgba(212,145,90,0.85);border-color:rgba(212,145,90,0.2);background:rgba(212,145,90,0.06);}
+    #panel-dark .panel-focus-tag{color:rgba(155,114,212,0.85);border-color:rgba(155,114,212,0.2);background:rgba(155,114,212,0.06);}
+    #panel-custom .panel-focus-tag{color:rgba(196,162,100,0.85);border-color:rgba(196,162,100,0.18);background:rgba(196,162,100,0.06);}
+
+    .panel-elem-row{display:flex;gap:5px;flex-wrap:wrap;}
+    .panel-elem-tag{font-size:0.6rem;color:var(--dim);padding:2px 7px;border:1px solid rgba(255,255,255,0.06);border-radius:1px;}
+
+    /* Difficulty selector */
+    .diff-section{width:100%;max-width:620px;margin-bottom:24px;}
+    .diff-label{
+      font-family:'Cinzel',serif;font-size:0.54rem;letter-spacing:0.3em;text-transform:uppercase;
+      margin-bottom:10px;text-align:center;opacity:0.55;
+    }
+    #panel-vault .diff-label{color:#3ab5c8;}
+    #panel-court .diff-label{color:#d4915a;}
+    #panel-dark .diff-label{color:#9b72d4;}
+    #panel-custom .diff-label{color:#c4a264;}
+
+    .diff-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+    .diff-card{
+      padding:13px 14px;border:1px solid rgba(255,255,255,0.07);border-radius:3px;
+      background:rgba(255,255,255,0.02);cursor:pointer;text-align:center;
+      transition:border-color 0.15s,background 0.15s,transform 0.1s;
+    }
+    .diff-card:hover{background:rgba(255,255,255,0.04);transform:translateY(-1px);}
+    .diff-card.selected{border-color:var(--d-accent)!important;background:var(--d-bg)!important;}
+    .diff-icon{font-size:1.1rem;margin-bottom:5px;opacity:0.7;}
+    .diff-name{font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--text);margin-bottom:3px;}
+    .diff-sub{font-size:0.6rem;color:var(--dim);line-height:1.35;}
+
+    #panel-vault .diff-card.selected{--d-accent:rgba(58,181,200,0.6);--d-bg:rgba(58,181,200,0.07);}
+    #panel-court .diff-card.selected{--d-accent:rgba(212,145,90,0.6);--d-bg:rgba(212,145,90,0.07);}
+    #panel-dark .diff-card.selected{--d-accent:rgba(155,114,212,0.6);--d-bg:rgba(155,114,212,0.07);}
+    #panel-custom .diff-card.selected{--d-accent:rgba(196,162,100,0.55);--d-bg:rgba(196,162,100,0.07);}
+
+    /* Credit row */
+    .panel-credit-row{display:flex;align-items:center;gap:10px;margin-bottom:28px;}
+    .credit-pill{
+      display:flex;align-items:center;gap:7px;
+      padding:8px 18px;border:1px solid;border-radius:20px;
+    }
+    #panel-vault .credit-pill{background:rgba(58,181,200,0.06);border-color:rgba(58,181,200,0.2);}
+    #panel-court .credit-pill{background:rgba(212,145,90,0.06);border-color:rgba(212,145,90,0.2);}
+    #panel-dark .credit-pill{background:rgba(155,114,212,0.06);border-color:rgba(155,114,212,0.2);}
+    #panel-custom .credit-pill{background:rgba(196,162,100,0.05);border-color:rgba(196,162,100,0.18);}
+
+    .credit-icon{font-size:0.85rem;opacity:0.6;}
+    .credit-text{font-family:'Cinzel',serif;font-size:0.58rem;letter-spacing:0.18em;text-transform:uppercase;}
+    #panel-vault .credit-text{color:#3ab5c8;}
+    #panel-court .credit-text{color:#d4915a;}
+    #panel-dark .credit-text{color:#9b72d4;}
+    #panel-custom .credit-text{color:#c4a264;}
+
+    .credit-sub{font-size:0.6rem;color:var(--dim);}
+
+    /* Launch button */
+    .panel-launch{
+      padding:14px 48px;border-radius:2px;cursor:pointer;
+      font-family:'Cinzel',serif;font-size:0.68rem;letter-spacing:0.32em;text-transform:uppercase;
+      transition:opacity 0.2s,transform 0.1s;
+      box-shadow:0 4px 28px var(--l-shadow,rgba(139,0,0,0.25)),inset 0 1px 0 rgba(255,255,255,0.05);
+    }
+    .panel-launch:hover{opacity:0.88;}
+    .panel-launch:active{transform:scale(0.98);}
+    #panel-vault .panel-launch{background:linear-gradient(140deg,#0a3a48,#052535);border:1px solid rgba(58,181,200,0.3);color:#3ab5c8;--l-shadow:rgba(0,150,190,0.2);}
+    #panel-court .panel-launch{background:linear-gradient(140deg,#4a1a08,#2a0c04);border:1px solid rgba(212,145,90,0.3);color:#d4915a;--l-shadow:rgba(180,80,20,0.2);}
+    #panel-dark .panel-launch{background:linear-gradient(140deg,#1a0d35,#0d0625);border:1px solid rgba(155,114,212,0.3);color:#9b72d4;--l-shadow:rgba(90,40,170,0.25);}
+    #panel-custom .panel-launch{background:linear-gradient(140deg,#3a2a08,#201604);border:1px solid rgba(196,162,100,0.3);color:#c4a264;--l-shadow:rgba(196,162,100,0.15);}
+
+
+    /* ══════════════════════════════════════════
+       CUSTOM BUILDER — inside panel-custom
+    ══════════════════════════════════════════ */
+    .custom-wrap{width:100%;max-width:760px;padding-bottom:80px;}
+
+    .csec{margin-bottom:30px;}
+    .csec-label{
+      font-family:'Cinzel',serif;font-size:0.54rem;letter-spacing:0.32em;text-transform:uppercase;
+      color:#c4a264;opacity:0.6;margin-bottom:12px;
+      display:flex;align-items:center;gap:10px;
+    }
+    .csec-label::after{content:'';flex:1;height:1px;background:rgba(196,162,100,0.12);}
+    .csec-num{
+      width:18px;height:18px;border-radius:50%;
+      background:rgba(196,162,100,0.07);border:1px solid rgba(196,162,100,0.2);
+      display:flex;align-items:center;justify-content:center;
+      font-size:0.48rem;color:#c4a264;flex-shrink:0;
+    }
+
+    /* Setting 4-col grid */
+    .setting-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;}
+    .setting-card{
+      background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.07);
+      border-radius:3px;padding:11px 8px;text-align:center;cursor:pointer;
+      transition:border-color 0.15s,background 0.15s,transform 0.1s;
+    }
+    .setting-card:hover{border-color:rgba(196,162,100,0.25);background:rgba(196,162,100,0.03);transform:translateY(-1px);}
+    .setting-card.sel{border-color:#c4a264;background:rgba(196,162,100,0.07);}
+    .setting-icon{font-size:1.2rem;margin-bottom:5px;opacity:0.7;}
+    .setting-name{font-family:'Cinzel',serif;font-size:0.52rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text);line-height:1.3;}
+
+    /* Tone chips */
+    .tone-row{display:flex;flex-wrap:wrap;gap:6px;}
+    .tone-chip{
+      padding:6px 13px;border:1px solid rgba(255,255,255,0.08);border-radius:20px;
+      font-family:'Cinzel',serif;font-size:0.54rem;letter-spacing:0.12em;text-transform:uppercase;
+      color:var(--dim);cursor:pointer;transition:all 0.13s;
+    }
+    .tone-chip:hover{border-color:rgba(196,162,100,0.3);color:var(--text);}
+    .tone-chip.sel{border-color:#c4a264;color:#c4a264;background:rgba(196,162,100,0.07);}
+    .tone-chip.locked{opacity:0.35;cursor:not-allowed;}
+
+    /* Focus / Conflict 2×2 */
+    .fc-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+    .fc-card{
+      background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.07);
+      border-radius:3px;padding:13px 15px;cursor:pointer;
+      display:flex;align-items:flex-start;gap:11px;
+      transition:all 0.13s;
+    }
+    .fc-card:hover{border-color:rgba(196,162,100,0.25);background:rgba(196,162,100,0.03);}
+    .fc-card.sel{border-color:#c4a264;background:rgba(196,162,100,0.07);}
+    .fc-icon{font-size:1.2rem;opacity:0.7;line-height:1.2;flex-shrink:0;}
+    .fc-name{font-family:'Cinzel',serif;font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text);margin-bottom:2px;}
+    .fc-sub{font-size:0.62rem;color:var(--dim);line-height:1.4;}
+
+    /* Hook textarea */
+    .hook-wrap{position:relative;}
+    .hook-field{
+      width:100%;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.08);
+      border-radius:2px;padding:11px 14px;
+      font-family:'EB Garamond',serif;font-style:italic;font-size:0.95rem;
+      color:var(--text);resize:none;min-height:78px;outline:none;line-height:1.6;
+      transition:border-color 0.15s;
+    }
+    .hook-field:focus{border-color:rgba(196,162,100,0.3);}
+    .hook-field::placeholder{color:var(--dim);opacity:0.55;}
+    .hook-counter{position:absolute;bottom:8px;right:12px;font-size:0.5rem;color:var(--dim);font-family:'Cinzel',serif;opacity:0.45;}
+    .hook-hint{font-size:0.62rem;color:var(--dim);font-style:italic;margin-top:5px;opacity:0.7;}
+
+    /* Element tags */
+    .elem-row{display:flex;flex-wrap:wrap;gap:5px;}
+    .elem-tag{
+      padding:4px 10px;border:1px solid rgba(255,255,255,0.07);border-radius:2px;
+      font-size:0.6rem;color:var(--dim);cursor:pointer;
+      transition:all 0.12s;font-family:'EB Garamond',serif;
+    }
+    .elem-tag:hover{border-color:rgba(196,162,100,0.25);color:var(--text);}
+    .elem-tag.sel{border-color:#c4a264;color:#c4a264;background:rgba(196,162,100,0.06);}
+
+    /* Scale */
+    .scale-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;}
+    .scale-card{
+      background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.07);
+      border-radius:3px;padding:14px 12px;cursor:pointer;text-align:center;
+      transition:all 0.13s;
+    }
+    .scale-card:hover{border-color:rgba(196,162,100,0.25);background:rgba(196,162,100,0.03);}
+    .scale-card.sel{border-color:#c4a264;background:rgba(196,162,100,0.07);}
+    .scale-icon{font-size:1.1rem;margin-bottom:5px;opacity:0.7;}
+    .scale-name{font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--text);margin-bottom:3px;}
+    .scale-credit{font-family:'Cinzel',serif;font-size:0.72rem;color:#c4a264;margin-bottom:2px;}
+    .scale-sub{font-size:0.58rem;color:var(--dim);}
+
+    /* Custom difficulty inline */
+    .cdiff-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+    .cdiff-card{
+      padding:12px 10px;border:1px solid rgba(255,255,255,0.07);border-radius:3px;
+      background:rgba(255,255,255,0.02);cursor:pointer;text-align:center;
+      transition:all 0.13s;
+    }
+    .cdiff-card:hover{background:rgba(255,255,255,0.04);}
+    .cdiff-card.sel{border-color:#c4a264;background:rgba(196,162,100,0.07);}
+    .cdiff-icon{font-size:1rem;margin-bottom:5px;opacity:0.7;}
+    .cdiff-name{font-family:'Cinzel',serif;font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--text);margin-bottom:2px;}
+    .cdiff-sub{font-size:0.58rem;color:var(--dim);line-height:1.35;}
+
+    /* Campaign Brief */
+    .brief-card{
+      background:rgba(0,0,0,0.3);border:1px solid rgba(196,162,100,0.12);
+      border-radius:3px;padding:18px 20px;
+    }
+    .brief-label{font-family:'Cinzel',serif;font-size:0.5rem;letter-spacing:0.28em;text-transform:uppercase;color:#c4a264;opacity:0.5;margin-bottom:10px;}
+    .brief-text{font-family:'EB Garamond',serif;font-size:0.88rem;color:rgba(232,213,183,0.6);line-height:1.75;font-style:italic;white-space:pre-wrap;min-height:56px;}
+
+    /* Custom sticky footer */
+    .custom-footer{
+      position:sticky;bottom:0;z-index:30;
+      background:rgba(8,6,4,0.94);border-top:1px solid rgba(196,162,100,0.1);
+      backdrop-filter:blur(14px);padding:13px 28px;
+      display:flex;align-items:center;justify-content:space-between;gap:16px;
+    }
+    .footer-scale-info{font-size:0.7rem;color:var(--dim);font-style:italic;}
+    .footer-scale-info strong{color:#c4a264;font-style:normal;font-family:'Cinzel',serif;font-size:0.58rem;letter-spacing:0.1em;}
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════════
+     OVERVIEW — 2×2 grid
+══════════════════════════════════════════════════════════════ -->
+<section id="overview">
+
+  <div class="ov-bar">
+    <div class="brand">
+      <div class="brand-dot"></div>
+      <div class="brand-title">The Unwritten Table</div>
+    </div>
+    <a href="characters.html" class="nav-back">← My Characters</a>
+  </div>
+
+  <div class="ov-grid">
+
+    <!-- The Sunken Vault -->
+    <div class="sc-thumb" data-s="vault" onclick="openPanel('vault')">
+      <div class="thumb-ambient">🗡️</div>
+      <span class="thumb-credits-badge">1–2 Credits</span>
+      <span class="thumb-enter">Enter Campaign</span>
+      <div class="thumb-content">
+        <div class="thumb-scenario-type">Dungeon Crawl · Preset</div>
+        <div class="thumb-name">The Sunken Vault</div>
+        <div class="thumb-tagline">Ancient depths hide great peril — and greater treasure.</div>
+        <div class="thumb-tags">
+          <span class="thumb-tag">Combat</span>
+          <span class="thumb-tag">Exploration</span>
+          <span class="thumb-tag">Traps</span>
+          <span class="thumb-tag">Boss Encounter</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- The Crimson Court -->
+    <div class="sc-thumb" data-s="court" onclick="openPanel('court')">
+      <div class="thumb-ambient">👑</div>
+      <span class="thumb-credits-badge">2–3 Credits</span>
+      <span class="thumb-enter">Enter Campaign</span>
+      <div class="thumb-content">
+        <div class="thumb-scenario-type">Political Intrigue · Preset</div>
+        <div class="thumb-name">The Crimson Court</div>
+        <div class="thumb-tagline">Every smile hides a dagger. Every toast a test.</div>
+        <div class="thumb-tags">
+          <span class="thumb-tag">Roleplay</span>
+          <span class="thumb-tag">Intrigue</span>
+          <span class="thumb-tag">Betrayal</span>
+          <span class="thumb-tag">Time Pressure</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- The Hollow Dark -->
+    <div class="sc-thumb" data-s="dark" onclick="openPanel('dark')">
+      <div class="thumb-ambient">🕯️</div>
+      <span class="thumb-credits-badge">2 Credits</span>
+      <span class="thumb-enter">Enter Campaign</span>
+      <div class="thumb-content">
+        <div class="thumb-scenario-type">Survival Horror · Preset</div>
+        <div class="thumb-name">The Hollow Dark</div>
+        <div class="thumb-tagline">A village slowly forgetting itself. Something feeds in the fog.</div>
+        <div class="thumb-tags">
+          <span class="thumb-tag">Horror</span>
+          <span class="thumb-tag">Survival</span>
+          <span class="thumb-tag">Mystery</span>
+          <span class="thumb-tag">Curse</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Forge Your Own -->
+    <div class="sc-thumb" data-s="custom" onclick="openPanel('custom')">
+      <div class="thumb-ambient">📜</div>
+      <span class="thumb-credits-badge">You Decide</span>
+      <span class="thumb-enter">Start Building</span>
+      <div class="thumb-content">
+        <div class="thumb-scenario-type">Custom · Build Your Own</div>
+        <div class="thumb-name">Forge Your Own</div>
+        <div class="thumb-tagline">Shape the world before the dice fall. Any setting. Any story.</div>
+        <div class="thumb-tags">
+          <span class="thumb-tag">Custom Setting</span>
+          <span class="thumb-tag">Any Tone</span>
+          <span class="thumb-tag">Your Story</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════════════════════════════════
+     PANEL: THE SUNKEN VAULT
+══════════════════════════════════════════════════════════════ -->
+<div class="sc-panel" id="panel-vault">
+  <div class="panel-glow"></div>
+  <div class="panel-header">
+    <button class="panel-back" onclick="closePanel()">← All Campaigns</button>
+    <div class="panel-brand">The Unwritten Table</div>
+    <div style="width:140px"></div>
+  </div>
+  <div class="panel-body">
+    <div class="panel-floating-icon">🗡️</div>
+    <div class="panel-scenario-label">Preset Campaign · Dungeon Crawl</div>
+    <h2 class="panel-title">The Sunken Vault</h2>
+    <p class="panel-tagline">"Ancient depths hide great peril — and greater treasure."</p>
+
+    <div class="panel-info">
+      <p class="panel-desc">Beneath a flooded city, a vault sealed by a dead empire still guards its secrets. The party descends through submerged corridors riddled with traps, spectral wardens, and rival treasure hunters who got there first. The artifact is real. So is whatever is protecting it.</p>
+      <div class="panel-focus-row">
+        <span class="panel-focus-tag">⚔ Combat-Heavy</span>
+        <span class="panel-focus-tag">🔍 Exploration</span>
+        <span class="panel-focus-tag">🏛 Ancient Ruins</span>
+      </div>
+      <div class="panel-elem-row">
+        <span class="panel-elem-tag">Traps</span>
+        <span class="panel-elem-tag">Undead</span>
+        <span class="panel-elem-tag">Rival Party</span>
+        <span class="panel-elem-tag">Treasure</span>
+        <span class="panel-elem-tag">Boss Encounter</span>
+        <span class="panel-elem-tag">Ancient Magic</span>
+      </div>
+    </div>
+
+    <div class="diff-section">
+      <div class="diff-label">Campaign Difficulty</div>
+      <div class="diff-grid" id="diff-vault">
+        <div class="diff-card selected" data-diff="guided" onclick="selectDiff('vault',this,'Guided')">
+          <div class="diff-icon">🕊️</div>
+          <div class="diff-name">Guided</div>
+          <div class="diff-sub">The story bends for you. Consequences are narrative, not lethal.</div>
+        </div>
+        <div class="diff-card" data-diff="balanced" onclick="selectDiff('vault',this,'Balanced')">
+          <div class="diff-icon">⚖️</div>
+          <div class="diff-name">Balanced</div>
+          <div class="diff-sub">Classic D&D. Smart play survives. Mistakes cost.</div>
+        </div>
+        <div class="diff-card" data-diff="merciless" onclick="selectDiff('vault',this,'Merciless')">
+          <div class="diff-icon">💀</div>
+          <div class="diff-name">Merciless</div>
+          <div class="diff-sub">The dungeon doesn't care if you live. Play accordingly.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-credit-row">
+      <div class="credit-pill">
+        <span class="credit-icon">💰</span>
+        <span class="credit-text">1 Credit Recommended</span>
+      </div>
+      <span class="credit-sub">~60 turns · extend for $6.99 if the depths run further</span>
+    </div>
+
+    <button class="panel-launch" onclick="launchCampaign('vault')">Begin The Sunken Vault ──────→</button>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════
+     PANEL: THE CRIMSON COURT
+══════════════════════════════════════════════════════════════ -->
+<div class="sc-panel" id="panel-court">
+  <div class="panel-glow"></div>
+  <div class="panel-header">
+    <button class="panel-back" onclick="closePanel()">← All Campaigns</button>
+    <div class="panel-brand">The Unwritten Table</div>
+    <div style="width:140px"></div>
+  </div>
+  <div class="panel-body">
+    <div class="panel-floating-icon">👑</div>
+    <div class="panel-scenario-label">Preset Campaign · Political Intrigue</div>
+    <h2 class="panel-title">The Crimson Court</h2>
+    <p class="panel-tagline">"Every smile hides a dagger. Every toast a test."</p>
+
+    <div class="panel-info">
+      <p class="panel-desc">An invitation to a noble's grand feast. By midnight, the host will be dead — unless the party uncovers which of the assembled lords gave the order. No dungeon. No obvious enemy. Just silk, slow poison, and a room full of people with everything to hide.</p>
+      <div class="panel-focus-row">
+        <span class="panel-focus-tag">🎭 Social & Roleplay</span>
+        <span class="panel-focus-tag">🔍 Investigation</span>
+        <span class="panel-focus-tag">👑 Royal Court</span>
+      </div>
+      <div class="panel-elem-row">
+        <span class="panel-elem-tag">Political Factions</span>
+        <span class="panel-elem-tag">Betrayal</span>
+        <span class="panel-elem-tag">Hidden Enemies</span>
+        <span class="panel-elem-tag">Time Pressure</span>
+        <span class="panel-elem-tag">Moral Dilemmas</span>
+        <span class="panel-elem-tag">Poison</span>
+      </div>
+    </div>
+
+    <div class="diff-section">
+      <div class="diff-label">Campaign Difficulty</div>
+      <div class="diff-grid" id="diff-court">
+        <div class="diff-card selected" data-diff="guided" onclick="selectDiff('court',this,'Guided')">
+          <div class="diff-icon">🕊️</div>
+          <div class="diff-name">Guided</div>
+          <div class="diff-sub">NPCs drop clues generously. The plot threads stay visible.</div>
+        </div>
+        <div class="diff-card" data-diff="balanced" onclick="selectDiff('court',this,'Balanced')">
+          <div class="diff-icon">⚖️</div>
+          <div class="diff-name">Balanced</div>
+          <div class="diff-sub">Lies feel like lies. Wrong accusations have consequences.</div>
+        </div>
+        <div class="diff-card" data-diff="merciless" onclick="selectDiff('court',this,'Merciless')">
+          <div class="diff-icon">💀</div>
+          <div class="diff-name">Merciless</div>
+          <div class="diff-sub">Everyone has a perfect alibi. The killer is watching you back.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-credit-row">
+      <div class="credit-pill">
+        <span class="credit-icon">💰</span>
+        <span class="credit-text">2 Credits Recommended</span>
+      </div>
+      <span class="credit-sub">~120 turns · the web of lies unravels slowly</span>
+    </div>
+
+    <button class="panel-launch" onclick="launchCampaign('court')">Enter The Crimson Court ──────→</button>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════
+     PANEL: THE HOLLOW DARK
+══════════════════════════════════════════════════════════════ -->
+<div class="sc-panel" id="panel-dark">
+  <div class="panel-glow"></div>
+  <div class="panel-header">
+    <button class="panel-back" onclick="closePanel()">← All Campaigns</button>
+    <div class="panel-brand">The Unwritten Table</div>
+    <div style="width:140px"></div>
+  </div>
+  <div class="panel-body">
+    <div class="panel-floating-icon">🕯️</div>
+    <div class="panel-scenario-label">Preset Campaign · Survival Horror</div>
+    <h2 class="panel-title">The Hollow Dark</h2>
+    <p class="panel-tagline">"A village slowly forgetting itself. Something feeds in the fog."</p>
+
+    <div class="panel-info">
+      <p class="panel-desc">The village of Ashveil has gone silent. The party arrives to find people who no longer remember their own names, streets that loop back without warning, and a spreading darkness that erases what it touches. Resources are finite. The curse spreads. Not everyone makes it out.</p>
+      <div class="panel-focus-row">
+        <span class="panel-focus-tag">💀 Horror & Dread</span>
+        <span class="panel-focus-tag">🔍 Survival</span>
+        <span class="panel-focus-tag">🌑 Cursed Village</span>
+      </div>
+      <div class="panel-elem-row">
+        <span class="panel-elem-tag">Cursed Items</span>
+        <span class="panel-elem-tag">Undead</span>
+        <span class="panel-elem-tag">Resource Management</span>
+        <span class="panel-elem-tag">Body Horror</span>
+        <span class="panel-elem-tag">Hidden Traitor</span>
+        <span class="panel-elem-tag">Spreading Corruption</span>
+      </div>
+    </div>
+
+    <div class="diff-section">
+      <div class="diff-label">Campaign Difficulty</div>
+      <div class="diff-grid" id="diff-dark">
+        <div class="diff-card selected" data-diff="guided" onclick="selectDiff('dark',this,'Guided')">
+          <div class="diff-icon">🕊️</div>
+          <div class="diff-name">Guided</div>
+          <div class="diff-sub">The horror is atmospheric. Character death is a last resort.</div>
+        </div>
+        <div class="diff-card" data-diff="balanced" onclick="selectDiff('dark',this,'Balanced')">
+          <div class="diff-icon">⚖️</div>
+          <div class="diff-name">Balanced</div>
+          <div class="diff-sub">The darkness costs something real. Loss shapes the story.</div>
+        </div>
+        <div class="diff-card" data-diff="merciless" onclick="selectDiff('dark',this,'Merciless')">
+          <div class="diff-icon">💀</div>
+          <div class="diff-name">Merciless</div>
+          <div class="diff-sub">Resources deplete. The curse spreads to the party. Survival is earned.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-credit-row">
+      <div class="credit-pill">
+        <span class="credit-icon">💰</span>
+        <span class="credit-text">2 Credits Recommended</span>
+      </div>
+      <span class="credit-sub">~120 turns · survival is not guaranteed</span>
+    </div>
+
+    <button class="panel-launch" onclick="launchCampaign('dark')">Descend into The Hollow Dark ──→</button>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════
+     PANEL: FORGE YOUR OWN (Custom Builder)
+══════════════════════════════════════════════════════════════ -->
+<div class="sc-panel" id="panel-custom">
+  <div class="panel-glow"></div>
+  <div class="panel-header">
+    <button class="panel-back" onclick="closePanel()">← All Campaigns</button>
+    <div class="panel-brand">The Unwritten Table</div>
+    <div style="width:140px"></div>
+  </div>
+
+  <div class="panel-body" style="align-items:center;padding-bottom:0;">
+
+    <div class="panel-floating-icon" style="margin-bottom:14px;">📜</div>
+    <div class="panel-scenario-label">Custom Campaign Builder</div>
+    <h2 class="panel-title" style="font-size:2.6rem;margin-bottom:8px;">Forge Your Campaign</h2>
+    <p class="panel-tagline" style="margin-bottom:32px;">"Shape the world before the dice fall."</p>
+
+    <div class="custom-wrap">
+
+      <!-- 1. Setting -->
+      <div class="csec">
+        <div class="csec-label"><div class="csec-num">1</div>World & Setting</div>
+        <div class="setting-grid" id="settingGrid">
+          <div class="setting-card" onclick="selectSetting(this,'Ancient Ruins')"><div class="setting-icon">🏛️</div><div class="setting-name">Ancient Ruins</div></div>
+          <div class="setting-card" onclick="selectSetting(this,'Dark Forest')"><div class="setting-icon">🌲</div><div class="setting-name">Dark Forest</div></div>
+          <div class="setting-card" onclick="selectSetting(this,'Coastal Port')"><div class="setting-icon">⚓</div><div class="setting-name">Coastal Port</div></div>
+          <div class="setting-card" onclick="selectSetting(this,'Royal Court')"><div class="setting-icon">👑</div><div class="setting-name">Royal Court</div></div>
+          <div class="setting-card" onclick="selectSetting(this,'Underground Depths')"><div class="setting-icon">⛏️</div><div class="setting-name">Underground Depths</div></div>
+          <div class="setting-card" onclick="selectSetting(this,'Celestial Realm')"><div class="setting-icon">✨</div><div class="setting-name">Celestial Realm</div></div>
+          <div class="setting-card" onclick="selectSetting(this,'Frontier Wasteland')"><div class="setting-icon">🏜️</div><div class="setting-name">Frontier Wasteland</div></div>
+          <div class="setting-card" onclick="selectSetting(this,'Haunted Village')"><div class="setting-icon">🕯️</div><div class="setting-name">Haunted Village</div></div>
+        </div>
+      </div>
+
+      <!-- 2. Tone -->
+      <div class="csec">
+        <div class="csec-label"><div class="csec-num">2</div>Tone & Atmosphere <span style="opacity:0.4;font-size:0.85em;margin-left:4px;text-transform:none;letter-spacing:0">(pick up to 3)</span></div>
+        <div class="tone-row" id="toneRow">
+          <div class="tone-chip" onclick="toggleTone(this,'Heroic & Epic')">Heroic & Epic</div>
+          <div class="tone-chip" onclick="toggleTone(this,'Dark & Gritty')">Dark & Gritty</div>
+          <div class="tone-chip" onclick="toggleTone(this,'Political & Deceptive')">Political & Deceptive</div>
+          <div class="tone-chip" onclick="toggleTone(this,'Horror & Dread')">Horror & Dread</div>
+          <div class="tone-chip" onclick="toggleTone(this,'Swashbuckling')">Swashbuckling</div>
+          <div class="tone-chip" onclick="toggleTone(this,'Comedic & Absurd')">Comedic & Absurd</div>
+        </div>
+      </div>
+
+      <!-- 3. Gameplay Focus -->
+      <div class="csec">
+        <div class="csec-label"><div class="csec-num">3</div>Gameplay Focus</div>
+        <div class="fc-grid" id="focusGrid">
+          <div class="fc-card" onclick="selectFC('focusGrid',this,'focus','Combat-Heavy')"><div class="fc-icon">⚔️</div><div><div class="fc-name">Combat-Heavy</div><div class="fc-sub">Frequent battles, tactical encounters, varied monsters</div></div></div>
+          <div class="fc-card" onclick="selectFC('focusGrid',this,'focus','Social & Roleplay')"><div class="fc-icon">🎭</div><div><div class="fc-name">Social & Roleplay</div><div class="fc-sub">Persuasion, deception, NPC relationships, alliances</div></div></div>
+          <div class="fc-card" onclick="selectFC('focusGrid',this,'focus','Exploration')"><div class="fc-icon">🔍</div><div><div class="fc-name">Exploration</div><div class="fc-sub">Maps, hidden secrets, ancient lore, discovery</div></div></div>
+          <div class="fc-card" onclick="selectFC('focusGrid',this,'focus','Balanced')"><div class="fc-icon">⚖️</div><div><div class="fc-name">Balanced</div><div class="fc-sub">Equal mix of combat, roleplay, and exploration</div></div></div>
+        </div>
+      </div>
+
+      <!-- 4. Conflict -->
+      <div class="csec">
+        <div class="csec-label"><div class="csec-num">4</div>Central Conflict</div>
+        <div class="fc-grid" id="conflictGrid">
+          <div class="fc-card" onclick="selectFC('conflictGrid',this,'conflict','Personal Stakes')"><div class="fc-icon">🏰</div><div><div class="fc-name">Personal Stakes</div><div class="fc-sub">Rescue, revenge, or redemption drives the party</div></div></div>
+          <div class="fc-card" onclick="selectFC('conflictGrid',this,'conflict','Power & Intrigue')"><div class="fc-icon">👑</div><div><div class="fc-name">Power & Intrigue</div><div class="fc-sub">Factions, betrayal, and competing agendas</div></div></div>
+          <div class="fc-card" onclick="selectFC('conflictGrid',this,'conflict','World Threat')"><div class="fc-icon">🌑</div><div><div class="fc-name">World Threat</div><div class="fc-sub">Something ancient stirs — stop it or lose everything</div></div></div>
+          <div class="fc-card" onclick="selectFC('conflictGrid',this,'conflict','Survival & Odds')"><div class="fc-icon">🎲</div><div><div class="fc-name">Survival & Odds</div><div class="fc-sub">A heist, escape, or desperate gamble against all odds</div></div></div>
+        </div>
+      </div>
+
+      <!-- 5. Opening Hook -->
+      <div class="csec">
+        <div class="csec-label"><div class="csec-num">5</div>The Opening Hook</div>
+        <div class="hook-wrap">
+          <textarea class="hook-field" id="hookField" maxlength="250" rows="3"
+            placeholder="Describe the opening scene or the central mystery in a sentence or two. The Dungeon Master will use this as the spark that sets your campaign in motion…"
+            oninput="onHookInput()"></textarea>
+          <span class="hook-counter" id="hookCounter">0 / 250</span>
+        </div>
+        <p class="hook-hint">e.g. "A dying merchant clutches a map to the Vault of Echoes and whispers a single name before going still…"</p>
+      </div>
+
+      <!-- 6. Notable Elements -->
+      <div class="csec">
+        <div class="csec-label"><div class="csec-num">6</div>Notable Elements <span style="opacity:0.4;font-size:0.85em;margin-left:4px;text-transform:none;letter-spacing:0">(optional — the DM will weave these in)</span></div>
+        <div class="elem-row" id="elemRow">
+          <div class="elem-tag" onclick="toggleElem(this)">Dragons</div>
+          <div class="elem-tag" onclick="toggleElem(this)">Undead</div>
+          <div class="elem-tag" onclick="toggleElem(this)">Ancient Magic</div>
+          <div class="elem-tag" onclick="toggleElem(this)">Naval Encounters</div>
+          <div class="elem-tag" onclick="toggleElem(this)">Rival Party</div>
+          <div class="elem-tag" onclick="toggleElem(this)">Love Interest</div>
+          <div class="elem-tag" onclick="toggleElem(this)">Political Factions</div>
+          <div class="elem-tag" onclick="toggleElem(this)">Heist</div>
+          <div class="elem-tag" onclick="toggleElem(this)">Time Pressure</div>
+          <div class="elem-tag" onclick="toggleElem(this)">Divine Intervention</div>
+          <div class="elem-tag" onclick="toggleElem(this)">Body Horror</div>
+          <div class="elem-tag" onclick="toggleElem(this)">Moral Dilemmas</div>
+          <div class="elem-tag" onclick="toggleElem(this)">Puzzles</div>
+          <div class="elem-tag" onclick="toggleElem(this)">Shapeshifters</div>
+          <div class="elem-tag" onclick="toggleElem(this)">Cursed Items</div>
+          <div class="elem-tag" onclick="toggleElem(this)">Hidden Traitor</div>
+          <div class="elem-tag" onclick="toggleElem(this)">Forbidden Knowledge</div>
+          <div class="elem-tag" onclick="toggleElem(this)">Monster Factions</div>
+        </div>
+      </div>
+
+      <!-- 7. Difficulty -->
+      <div class="csec">
+        <div class="csec-label"><div class="csec-num">7</div>Difficulty</div>
+        <div class="cdiff-grid" id="customDiffGrid">
+          <div class="cdiff-card sel" onclick="selectCDiff(this,'Guided')">
+            <div class="cdiff-icon">🕊️</div>
+            <div class="cdiff-name">Guided</div>
+            <div class="cdiff-sub">The story bends for you. Consequences are narrative, not lethal.</div>
+          </div>
+          <div class="cdiff-card" onclick="selectCDiff(this,'Balanced')">
+            <div class="cdiff-icon">⚖️</div>
+            <div class="cdiff-name">Balanced</div>
+            <div class="cdiff-sub">Classic D&D. Smart play survives. Mistakes cost.</div>
+          </div>
+          <div class="cdiff-card" onclick="selectCDiff(this,'Merciless')">
+            <div class="cdiff-icon">💀</div>
+            <div class="cdiff-name">Merciless</div>
+            <div class="cdiff-sub">The world doesn't care if you live. Play accordingly.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 8. Campaign Scale -->
+      <div class="csec">
+        <div class="csec-label"><div class="csec-num">8</div>Campaign Scale</div>
+        <div class="scale-grid" id="scaleGrid">
+          <div class="scale-card sel" onclick="selectScale(this,'1 credit','1 Credit · ~60 turns')">
+            <div class="scale-icon">⚡</div>
+            <div class="scale-name">Short Run</div>
+            <div class="scale-credit">1 Credit</div>
+            <div class="scale-sub">~60 turns · perfect for a one-shot</div>
+          </div>
+          <div class="scale-card" onclick="selectScale(this,'2 credits','2 Credits · ~120 turns')">
+            <div class="scale-icon">📖</div>
+            <div class="scale-name">Full Campaign</div>
+            <div class="scale-credit">2 Credits</div>
+            <div class="scale-sub">~120 turns · a complete story arc</div>
+          </div>
+          <div class="scale-card" onclick="selectScale(this,'3+ credits','3+ Credits · ~180+ turns')">
+            <div class="scale-icon">🔥</div>
+            <div class="scale-name">Epic Journey</div>
+            <div class="scale-credit">3+ Credits</div>
+            <div class="scale-sub">~180+ turns · a multi-act saga</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Campaign Brief Preview -->
+      <div class="csec">
+        <div class="csec-label"><div class="csec-num" style="font-size:0.55rem">✦</div>Campaign Brief — What the DM Will Know</div>
+        <div class="brief-card">
+          <div class="brief-label">AI Dungeon Master Context Preview</div>
+          <div class="brief-text" id="briefText">Fill in the fields above to preview your campaign brief…</div>
+        </div>
+      </div>
+
+    </div><!-- /custom-wrap -->
+  </div><!-- /panel-body -->
+
+  <!-- Sticky launch footer -->
+  <div class="custom-footer">
+    <div class="footer-scale-info">Scale: <strong id="customScaleDisplay">1 Credit · ~60 turns</strong></div>
+    <button class="panel-launch" onclick="launchCampaign('custom')">Launch Custom Campaign ──────→</button>
+  </div>
+
+</div><!-- /panel-custom -->
+
+
+<script>
+  // ── State ─────────────────────────────────────────────────────
+  const diffState   = { vault:'Guided', court:'Guided', dark:'Guided' };
+  const customState = {
+    setting:'', tones:[], focus:'', conflict:'',
+    hook:'', elements:[], difficulty:'Guided', scale:'1 credit'
+  };
+
+  // ── Overview ↔ Panel transitions ──────────────────────────────
+  function openPanel(id) {
+    document.getElementById('overview').classList.add('hidden');
+    setTimeout(() => {
+      document.getElementById('panel-' + id).classList.add('active');
+    }, 200);
+  }
+
+  function closePanel() {
+    document.querySelectorAll('.sc-panel').forEach(p => {
+      p.classList.remove('active');
+      p.scrollTop = 0;
+    });
+    document.getElementById('overview').classList.remove('hidden');
+  }
+
+  // ── Preset difficulty ─────────────────────────────────────────
+  function selectDiff(panelId, el, val) {
+    document.querySelectorAll('#diff-' + panelId + ' .diff-card').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    diffState[panelId] = val;
+  }
+
+  // ── Custom builder ────────────────────────────────────────────
+  function selectSetting(el, val) {
+    document.querySelectorAll('#settingGrid .setting-card').forEach(c => c.classList.remove('sel'));
+    el.classList.add('sel');
+    customState.setting = val;
+    updateBrief();
+  }
+
+  function toggleTone(el, val) {
+    const on = el.classList.contains('sel');
+    if (!on && customState.tones.length >= 3) return;
+    el.classList.toggle('sel', !on);
+    if (on) {
+      customState.tones = customState.tones.filter(t => t !== val);
+    } else {
+      customState.tones.push(val);
+    }
+    // Lock un-selected chips when at max
+    const atMax = customState.tones.length >= 3;
+    document.querySelectorAll('#toneRow .tone-chip').forEach(c => {
+      c.classList.toggle('locked', atMax && !c.classList.contains('sel'));
+    });
+    updateBrief();
+  }
+
+  function selectFC(gridId, el, key, val) {
+    document.querySelectorAll('#' + gridId + ' .fc-card').forEach(c => c.classList.remove('sel'));
+    el.classList.add('sel');
+    customState[key] = val;
+    updateBrief();
+  }
+
+  function onHookInput() {
+    const v = document.getElementById('hookField').value;
+    customState.hook = v;
+    document.getElementById('hookCounter').textContent = v.length + ' / 250';
+    updateBrief();
+  }
+
+  function toggleElem(el) {
+    el.classList.toggle('sel');
+    const val = el.textContent.trim();
+    if (el.classList.contains('sel')) {
+      customState.elements.push(val);
+    } else {
+      customState.elements = customState.elements.filter(e => e !== val);
+    }
+    updateBrief();
+  }
+
+  function selectCDiff(el, val) {
+    document.querySelectorAll('#customDiffGrid .cdiff-card').forEach(c => c.classList.remove('sel'));
+    el.classList.add('sel');
+    customState.difficulty = val;
+    updateBrief();
+  }
+
+  function selectScale(el, val, label) {
+    document.querySelectorAll('#scaleGrid .scale-card').forEach(c => c.classList.remove('sel'));
+    el.classList.add('sel');
+    customState.scale = val;
+    document.getElementById('customScaleDisplay').textContent = label;
+    updateBrief();
+  }
+
+  // ── Campaign Brief live preview ───────────────────────────────
+  function updateBrief() {
+    const s = customState;
+    const lines = [];
+    if (s.setting)          lines.push('Setting: ' + s.setting + '.');
+    if (s.tones.length)     lines.push('Tone: ' + s.tones.join(' · ') + '.');
+    if (s.focus)            lines.push('Gameplay focus: ' + s.focus + '.');
+    if (s.conflict)         lines.push('Central conflict: ' + s.conflict + '.');
+    if (s.hook)             lines.push('Opening hook: "' + s.hook + '"');
+    if (s.elements.length)  lines.push('Notable elements to weave in: ' + s.elements.join(', ') + '.');
+    lines.push('Difficulty: ' + s.difficulty + '.');
+    const turnMap = { '1 credit':'~60 turns', '2 credits':'~120 turns', '3+ credits':'~180+ turns' };
+    lines.push('Campaign scale: ' + s.scale + ' (' + (turnMap[s.scale] || '') + ').');
+
+    document.getElementById('briefText').textContent =
+      lines.length <= 2
+        ? 'Fill in the fields above to preview your campaign brief…'
+        : lines.join('\n\n');
+  }
+
+  // ── Launch ────────────────────────────────────────────────────
+  function launchCampaign(type) {
+    const presets = {
+      vault: {
+        id:'vault', name:'The Sunken Vault', theme:'teal',
+        difficulty: diffState.vault, creditsRec: 1,
+        context:'Dungeon crawl beneath a flooded ancient city. Traps, undead guardians, rival treasure hunters, boss encounter. Tone: tense, adventurous, combat-heavy with exploration.'
+      },
+      court: {
+        id:'court', name:'The Crimson Court', theme:'crimson',
+        difficulty: diffState.court, creditsRec: 2,
+        context:'Political murder mystery at a noble feast. Host will be assassinated by midnight unless the party uncovers the plot. Tone: political, deceptive, roleplay-driven. Social encounters replace combat.'
+      },
+      dark: {
+        id:'dark', name:'The Hollow Dark', theme:'shadow',
+        difficulty: diffState.dark, creditsRec: 2,
+        context:'Survival horror in a cursed village. Spreading darkness erases memories and identity. Resources are limited. The curse can spread to party members. Tone: dread, horror, survival. Not everyone escapes.'
+      },
+      custom: {
+        id:'custom', name:'Custom Campaign', theme:'parchment',
+        difficulty: customState.difficulty,
+        creditsRec: null,
+        context: buildCustomContext()
+      }
+    };
+    sessionStorage.setItem('campaignScenario', JSON.stringify(presets[type]));
+    window.location.href = 'index.html';
+  }
+
+  function buildCustomContext() {
+    const s = customState;
+    const parts = [];
+    if (s.setting)         parts.push('Setting: ' + s.setting);
+    if (s.tones.length)    parts.push('Tone: ' + s.tones.join(', '));
+    if (s.focus)           parts.push('Gameplay focus: ' + s.focus);
+    if (s.conflict)        parts.push('Central conflict: ' + s.conflict);
+    if (s.hook)            parts.push('Opening hook: ' + s.hook);
+    if (s.elements.length) parts.push('Notable elements: ' + s.elements.join(', '));
+    parts.push('Difficulty: ' + s.difficulty);
+    return parts.join('. ');
+  }
+
+  // Auth guard
+  (function waitForSb(cb) {
+    if (window.sbClient) { cb(); return; }
+    setTimeout(() => waitForSb(cb), 50);
+  })(async () => { await requireAuth(); });
+</script>
+</body>
+</html>

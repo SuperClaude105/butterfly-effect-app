@@ -1,0 +1,2454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Sunless Citadel — The Unwritten Table</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Playfair+Display:ital,wght@0,700;1,400;1,700&family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="supabase-client.js"></script>
+  <style>
+    :root {
+      --primary:#8B0000; --accent:#c4a264;
+      --bg:#070404; --surface:#100606; --surface2:#160808;
+      --border:rgba(255,255,255,0.07); --text:#e8d5b7; --dim:rgba(232,213,183,0.42);
+      --wood-mid:#3A1F0F; --wood-light:#5A3218; --brass:#B8860B;
+    }
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+    html,body{height:100%;overflow:hidden;}
+    body{font-family:'EB Garamond',Georgia,serif;background:var(--bg);color:var(--text);}
+
+    /* grain */
+    body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");pointer-events:none;z-index:9999;opacity:0.55;}
+
+    /* ── HEADER ── */
+    .game-header{
+      display:flex;align-items:center;gap:16px;
+      padding:10px 20px;
+      border-bottom:1px solid rgba(196,162,100,0.1);
+      background:rgba(7,4,4,0.95);
+      flex-shrink:0;
+    }
+    .brand-mark{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+    .brand-dot{width:5px;height:5px;border-radius:50%;background:var(--primary);box-shadow:0 0 6px var(--primary);}
+    .brand-name{font-family:'Playfair Display',serif;font-style:italic;font-size:1rem;color:var(--accent);letter-spacing:-0.02em;}
+    .header-sep{width:1px;height:20px;background:rgba(255,255,255,0.07);}
+    .campaign-name{font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--dim);}
+    .header-spacer{flex:1;}
+    .turn-counter{display:flex;align-items:center;gap:10px;}
+    .turn-label{font-family:'Cinzel',serif;font-size:0.55rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--dim);}
+    .turn-track{width:120px;height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;}
+    .turn-fill{height:100%;background:linear-gradient(to right,rgba(196,162,100,0.6),rgba(139,0,0,0.8));border-radius:2px;}
+    .turn-num{font-family:'Cinzel',serif;font-size:0.6rem;color:var(--accent);letter-spacing:0.05em;white-space:nowrap;}
+    .header-credit{
+      display:flex;align-items:center;gap:6px;
+      padding:4px 10px;border:1px solid rgba(196,162,100,0.15);border-radius:2px;
+      font-family:'Cinzel',serif;font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--dim);
+    }
+    .credit-dot{width:5px;height:5px;border-radius:50%;background:rgba(196,162,100,0.6);}
+
+    /* ── MAIN LAYOUT ── */
+    .game-layout{
+      display:flex;gap:0;
+      height:calc(100vh - 45px);
+      overflow:hidden;
+    }
+
+    /* ── LEFT: TABLE COLUMN ── */
+    .table-col{
+      width:370px;flex-shrink:0;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      padding:12px 10px;
+      border-right:1px solid rgba(255,255,255,0.05);
+      gap:0;
+    }
+
+    /* Player strips around table */
+    .players-wrap{
+      display:grid;
+      grid-template-columns:60px 240px 60px;
+      grid-template-rows:58px 240px 58px;
+      gap:0;
+      width:360px;
+    }
+
+    /* Table frame (compact) */
+    .table-frame-sm{
+      grid-column:2;grid-row:2;
+      width:240px;height:240px;
+      border-radius:12px;
+      background:
+        repeating-linear-gradient(91deg,transparent 0px,transparent 3px,rgba(0,0,0,0.07) 3px,rgba(0,0,0,0.07) 4px),
+        linear-gradient(148deg,#6B3E22 0%,#3A1F0F 20%,#4A2A14 35%,#221009 50%,#3A1F0F 65%,#5A3218 80%,#3A1F0F 100%);
+      border:5px solid #5A3218;
+      box-shadow:
+        0 0 0 1px rgba(184,134,11,0.2),
+        0 0 0 7px #150804,
+        0 0 0 8px rgba(184,134,11,0.1),
+        0 20px 60px rgba(0,0,0,0.9),
+        inset 0 0 60px rgba(0,0,0,0.5),
+        inset 0 1px 0 rgba(255,255,255,0.04);
+      padding:14px;
+      position:relative;
+    }
+    .stud-sm{position:absolute;width:9px;height:9px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#E8B820,#9A6E08);box-shadow:0 1px 3px rgba(0,0,0,0.7);}
+    .stud-sm.tl{top:9px;left:9px;} .stud-sm.tr{top:9px;right:9px;}
+    .stud-sm.bl{bottom:9px;left:9px;} .stud-sm.br{bottom:9px;right:9px;}
+
+    .table-surface-sm{
+      width:100%;height:100%;border-radius:5px;
+      background:radial-gradient(ellipse at 50% 40%,#161210 0%,#0C0A07 100%);
+      box-shadow:inset 0 0 50px rgba(0,0,0,0.9);
+      position:relative;overflow:hidden;
+      display:flex;align-items:center;justify-content:center;
+    }
+    .table-surface-sm::after{content:'';position:absolute;inset:0;background:radial-gradient(circle 60px at 10% 10%,rgba(196,162,100,0.05) 0%,transparent 100%),radial-gradient(circle 60px at 90% 90%,rgba(196,162,100,0.04) 0%,transparent 100%);pointer-events:none;}
+
+    /* Dungeon Map SVG */
+    .dungeon-map{width:100%;height:100%;}
+
+    /* Player position cells */
+    .p-north{grid-column:2;grid-row:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:6px;gap:3px;}
+    .p-south{grid-column:2;grid-row:3;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:6px;gap:3px;}
+    .p-west{grid-column:1;grid-row:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;}
+    .p-east{grid-column:3;grid-row:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;}
+
+    .p-avatar{
+      width:36px;height:36px;border-radius:50%;
+      display:flex;align-items:center;justify-content:center;
+      font-family:'Cinzel',serif;font-size:0.7rem;
+      position:relative;flex-shrink:0;
+    }
+    .p-avatar.waiting{border:2px solid rgba(196,162,100,0.3);background:rgba(196,162,100,0.06);}
+    .p-avatar.ready{border:2px solid rgba(60,170,60,0.5);background:rgba(30,80,30,0.15);}
+    .p-avatar.your-turn{border:2px solid var(--primary);background:rgba(139,0,0,0.15);box-shadow:0 0 10px rgba(139,0,0,0.25);animation:pulse-turn 1.5s ease-in-out infinite;}
+    .p-avatar.empty{border:2px dashed rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.15);}
+    @keyframes pulse-turn{0%,100%{box-shadow:0 0 8px rgba(139,0,0,0.2);}50%{box-shadow:0 0 18px rgba(139,0,0,0.45);}}
+
+    .turn-pip{position:absolute;bottom:-2px;right:-2px;width:10px;height:10px;border-radius:50%;border:1.5px solid var(--bg);}
+    .turn-pip.waiting{background:rgba(196,162,100,0.5);}
+    .turn-pip.ready{background:#3aaa3a;}
+    .turn-pip.your-turn{background:var(--primary);animation:blink-pip 0.8s ease-in-out infinite;}
+    @keyframes blink-pip{0%,100%{opacity:1;}50%{opacity:0.3;}}
+
+    .p-name{font-family:'Cinzel',serif;font-size:0.45rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--dim);white-space:nowrap;}
+    .p-hp-bar{width:32px;height:3px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;}
+    .p-hp-fill{height:100%;border-radius:2px;transition:width 0.5s ease;}
+    .hp-high{background:rgba(60,170,60,0.7);}
+    .hp-med{background:rgba(196,162,100,0.7);}
+    .hp-low{background:rgba(139,0,0,0.9);}
+
+    /* Encounter strip */
+    .encounter-strip{
+      width:360px;margin-top:12px;
+      padding:8px 10px;
+      background:rgba(139,0,0,0.08);
+      border:1px solid rgba(139,0,0,0.2);
+      border-radius:2px;
+      display:flex;align-items:center;gap:8px;
+    }
+    .encounter-dot{width:6px;height:6px;border-radius:50%;background:var(--primary);box-shadow:0 0 6px rgba(139,0,0,0.6);animation:pulse-turn 1.2s ease-in-out infinite;flex-shrink:0;}
+    .encounter-label{font-family:'Cinzel',serif;font-size:0.55rem;letter-spacing:0.18em;text-transform:uppercase;color:rgba(196,100,100,0.8);}
+    .encounter-enemies{margin-left:auto;display:flex;gap:4px;align-items:center;}
+    .enemy-token{width:14px;height:14px;border-radius:50%;background:rgba(139,0,0,0.6);border:1px solid rgba(200,80,80,0.4);display:flex;align-items:center;justify-content:center;font-size:0.4rem;color:rgba(255,200,200,0.8);}
+
+    /* ── RIGHT: NARRATIVE COLUMN ── */
+    .narrative-col{
+      flex:1;display:flex;flex-direction:column;
+      overflow:hidden;
+      min-width:0;
+    }
+
+    /* Narrative feed */
+    .narrative-feed{
+      flex:1;overflow-y:auto;
+      padding:16px 20px;
+      display:flex;flex-direction:column;gap:14px;
+      scroll-behavior:smooth;
+    }
+    .narrative-feed::-webkit-scrollbar{width:3px;}
+    .narrative-feed::-webkit-scrollbar-track{background:transparent;}
+    .narrative-feed::-webkit-scrollbar-thumb{background:rgba(196,162,100,0.15);border-radius:2px;}
+
+    /* Message types */
+    .msg-system{
+      text-align:center;font-family:'Cinzel',serif;font-size:0.55rem;
+      letter-spacing:0.28em;text-transform:uppercase;color:var(--dim);
+      opacity:0.6;padding:4px 0;
+      display:flex;align-items:center;gap:12px;
+    }
+    .msg-system::before,.msg-system::after{content:'';flex:1;height:1px;background:rgba(255,255,255,0.05);}
+
+    .msg-dm{
+      padding:14px 16px;
+      border-left:2px solid rgba(139,0,0,0.4);
+      background:rgba(139,0,0,0.04);
+      border-radius:0 3px 3px 0;
+      position:relative;
+    }
+    .msg-label{font-family:'Cinzel',serif;font-size:0.52rem;letter-spacing:0.22em;text-transform:uppercase;margin-bottom:6px;}
+    .msg-dm .msg-label{color:rgba(196,100,100,0.7);}
+    .msg-dm .msg-text{font-style:italic;font-size:0.92rem;line-height:1.75;color:var(--text);}
+    .msg-dm .msg-text strong{font-style:normal;color:var(--accent);}
+
+    .msg-player{
+      padding:10px 14px;
+      background:rgba(255,255,255,0.02);
+      border:1px solid rgba(255,255,255,0.05);
+      border-radius:3px;
+      display:flex;gap:10px;align-items:flex-start;
+    }
+    .player-av{
+      width:28px;height:28px;border-radius:50%;flex-shrink:0;
+      display:flex;align-items:center;justify-content:center;
+      font-family:'Cinzel',serif;font-size:0.6rem;margin-top:1px;
+    }
+    .player-av.aldric{background:rgba(196,162,100,0.15);border:1px solid rgba(196,162,100,0.3);}
+    .player-av.mira{background:rgba(40,120,40,0.15);border:1px solid rgba(60,170,60,0.3);}
+    .player-av.garen{background:rgba(139,0,0,0.15);border:1px solid rgba(139,0,0,0.35);}
+    .msg-player-body{}
+    .msg-player .msg-label{color:var(--accent);opacity:0.8;}
+    .msg-player .msg-text{font-size:0.88rem;line-height:1.6;color:var(--text);opacity:0.85;}
+
+    .msg-dice{
+      display:flex;align-items:center;gap:8px;
+      padding:8px 14px;
+      background:rgba(196,162,100,0.05);
+      border:1px solid rgba(196,162,100,0.15);
+      border-radius:3px;
+    }
+    .dice-icon-lg{font-size:1.2rem;opacity:0.7;}
+    .dice-who{font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.1em;color:var(--accent);opacity:0.8;}
+    .dice-type{font-size:0.7rem;color:var(--dim);font-style:italic;}
+    .dice-spacer{flex:1;}
+    .dice-result-badge{
+      font-family:'Cinzel',serif;font-size:1.1rem;font-weight:600;
+      color:var(--text);
+      padding:2px 10px;
+      border:1px solid rgba(196,162,100,0.3);
+      border-radius:2px;
+      background:rgba(196,162,100,0.06);
+    }
+    .dice-dc{font-size:0.65rem;color:rgba(80,200,80,0.7);font-family:'Cinzel',serif;letter-spacing:0.1em;}
+    .dice-dc.fail{color:rgba(200,60,60,0.7);}
+
+    .msg-whisper{
+      padding:10px 14px;
+      background:rgba(196,162,100,0.04);
+      border:1px solid rgba(196,162,100,0.18);
+      border-radius:3px;
+      border-left:3px solid rgba(196,162,100,0.4);
+      position:relative;
+    }
+    .whisper-label{font-family:'Cinzel',serif;font-size:0.5rem;letter-spacing:0.22em;text-transform:uppercase;color:rgba(196,162,100,0.5);margin-bottom:5px;display:flex;align-items:center;gap:5px;}
+    .msg-whisper .msg-text{font-size:0.85rem;color:var(--accent);opacity:0.8;font-style:italic;line-height:1.6;}
+
+    /* ── ACTION AREA ── */
+    .action-area{
+      flex-shrink:0;
+      border-top:1px solid rgba(255,255,255,0.06);
+      background:rgba(7,4,4,0.8);
+    }
+
+    /* Your turn */
+    .your-turn-panel{padding:14px 20px;}
+    .turn-header{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+    .turn-indicator{width:7px;height:7px;border-radius:50%;background:var(--primary);box-shadow:0 0 8px rgba(139,0,0,0.6);animation:pulse-turn 1s ease-in-out infinite;}
+    .turn-title{font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.28em;text-transform:uppercase;color:rgba(196,100,100,0.85);}
+    .turn-char{font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.1em;color:var(--accent);margin-left:4px;}
+
+    .action-input-row{display:flex;gap:10px;align-items:flex-end;}
+    .action-textarea{
+      flex:1;background:rgba(255,255,255,0.03);
+      border:1px solid rgba(255,255,255,0.09);border-radius:2px;
+      padding:10px 12px;
+      font-family:'EB Garamond',serif;font-size:0.92rem;color:var(--text);
+      line-height:1.6;resize:none;outline:none;
+      transition:border-color 0.15s,background 0.15s;
+      min-height:70px;
+    }
+    .action-textarea:focus{border-color:rgba(196,162,100,0.3);background:rgba(255,255,255,0.04);}
+    .action-textarea::placeholder{color:var(--dim);opacity:0.5;font-style:italic;}
+
+    .action-btns{display:flex;flex-direction:column;gap:6px;flex-shrink:0;}
+    .submit-btn{
+      padding:10px 18px;
+      background:linear-gradient(140deg,#7A0000,#5A0000);
+      border:1px solid rgba(139,0,0,0.45);border-radius:2px;
+      font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.25em;text-transform:uppercase;
+      color:var(--accent);cursor:pointer;white-space:nowrap;
+      box-shadow:0 4px 16px rgba(139,0,0,0.2),inset 0 1px 0 rgba(255,255,255,0.04);
+      transition:opacity 0.2s,transform 0.1s;
+    }
+    .submit-btn:hover{opacity:0.88;}
+    .submit-btn:active{transform:scale(0.98);}
+    .dice-btn{
+      padding:8px 14px;
+      background:rgba(90,50,24,0.2);
+      border:1px solid rgba(90,50,24,0.4);border-radius:2px;
+      font-family:'Cinzel',serif;font-size:0.58rem;letter-spacing:0.2em;text-transform:uppercase;
+      color:rgba(196,162,100,0.6);cursor:pointer;white-space:nowrap;
+      transition:background 0.15s,color 0.15s;
+    }
+    .dice-btn:hover{background:rgba(90,50,24,0.35);color:var(--accent);}
+
+    .char-quick-ref{
+      display:flex;gap:12px;margin-top:8px;align-items:center;
+    }
+    .quick-stat{font-family:'Cinzel',serif;font-size:0.52rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--dim);}
+    .quick-stat strong{color:var(--text);}
+    .quick-hp{font-family:'Cinzel',serif;font-size:0.55rem;letter-spacing:0.1em;color:rgba(60,170,60,0.65);}
+
+    /* Waiting panel */
+    .waiting-panel{
+      padding:12px 20px;
+      display:flex;align-items:center;gap:14px;
+    }
+    .waiting-text{font-family:'Cinzel',serif;font-size:0.58rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--dim);}
+    .waiting-dots span{display:inline-block;width:3px;height:3px;border-radius:50%;background:var(--accent);opacity:0.4;animation:dot-up 1.3s ease-in-out infinite;margin-left:2px;}
+    .waiting-dots span:nth-child(2){animation-delay:0.18s;}
+    .waiting-dots span:nth-child(3){animation-delay:0.36s;}
+    @keyframes dot-up{0%,80%,100%{transform:translateY(0);opacity:0.4;}40%{transform:translateY(-3px);opacity:0.9;}}
+    .player-submitted{display:flex;align-items:center;gap:5px;padding:4px 10px;border:1px solid rgba(60,170,60,0.2);border-radius:2px;background:rgba(30,80,30,0.1);}
+    .submitted-av{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-size:0.45rem;}
+    .submitted-check{font-size:0.55rem;color:rgba(60,200,60,0.7);}
+    .your-submitted{font-family:'Cinzel',serif;font-size:0.52rem;letter-spacing:0.12em;text-transform:uppercase;color:rgba(60,200,60,0.6);}
+
+    /* ── DICE ROLL OVERLAY ── */
+    .dice-overlay{
+      position:fixed;inset:0;z-index:500;
+      display:flex;align-items:center;justify-content:center;
+      background:rgba(7,4,4,0.88);
+      backdrop-filter:blur(4px);
+      opacity:0;pointer-events:none;
+      transition:opacity 0.25s ease;
+    }
+    .dice-overlay.visible{opacity:1;pointer-events:auto;}
+    .dice-roll-card{
+      background:var(--surface);border:1px solid rgba(196,162,100,0.2);
+      border-radius:4px;padding:32px 40px;
+      text-align:center;
+      box-shadow:0 40px 100px rgba(0,0,0,0.8),0 0 0 1px rgba(196,162,100,0.08);
+      min-width:280px;
+    }
+    .roll-request{font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.3em;text-transform:uppercase;color:var(--dim);margin-bottom:6px;}
+    .roll-stat-name{font-family:'Playfair Display',serif;font-style:italic;font-size:1.5rem;color:var(--accent);margin-bottom:20px;}
+    .dice-face{font-size:4rem;margin-bottom:16px;display:block;animation:dice-spin 0.6s cubic-bezier(0.34,1.56,0.64,1);}
+    @keyframes dice-spin{from{transform:rotate(-180deg) scale(0.3);opacity:0;}to{transform:rotate(0deg) scale(1);opacity:1;}}
+    .roll-value{font-family:'Cinzel',serif;font-size:3rem;color:var(--text);line-height:1;margin-bottom:4px;}
+    .roll-breakdown{font-size:0.75rem;color:var(--dim);margin-bottom:20px;}
+    .roll-dc-line{font-family:'Cinzel',serif;font-size:0.65rem;letter-spacing:0.18em;text-transform:uppercase;padding:6px 14px;border-radius:2px;margin-bottom:16px;display:inline-block;}
+    .roll-dc-line.pass{background:rgba(40,120,40,0.2);border:1px solid rgba(60,200,60,0.3);color:rgba(80,220,80,0.8);}
+    .roll-dismiss{
+      padding:8px 20px;background:transparent;border:1px solid rgba(255,255,255,0.1);border-radius:2px;
+      font-family:'Cinzel',serif;font-size:0.58rem;letter-spacing:0.2em;text-transform:uppercase;
+      color:var(--dim);cursor:pointer;transition:border-color 0.15s,color 0.15s;
+    }
+    .roll-dismiss:hover{border-color:rgba(196,162,100,0.3);color:var(--accent);}
+
+    /* ── INITIATIVE TRACKER ── */
+    .init-track{
+      width:360px;margin-top:8px;
+      padding:6px 10px;
+      background:rgba(0,0,0,0.35);
+      border:1px solid rgba(255,255,255,0.05);
+      border-radius:2px;
+      display:flex;align-items:center;gap:2px;
+      overflow-x:auto;flex-wrap:nowrap;flex-shrink:0;
+    }
+    .init-track::-webkit-scrollbar{height:2px;}
+    .init-track::-webkit-scrollbar-thumb{background:rgba(196,162,100,0.15);}
+    .init-entry{
+      display:flex;flex-direction:column;align-items:center;gap:1px;
+      padding:4px 5px;border-radius:3px;flex-shrink:0;
+      border:1px solid transparent;transition:background 0.2s;
+    }
+    .init-entry.active{background:rgba(139,0,0,0.18);border-color:rgba(139,0,0,0.45);}
+    .init-av{
+      width:22px;height:22px;border-radius:50%;
+      display:flex;align-items:center;justify-content:center;
+      font-family:'Cinzel',serif;font-size:0.58rem;
+    }
+    .init-name{font-family:'Cinzel',serif;font-size:0.4rem;letter-spacing:0.06em;color:var(--dim);white-space:nowrap;max-width:38px;overflow:hidden;text-overflow:ellipsis;}
+    .init-num{font-family:'Cinzel',serif;font-size:0.44rem;color:rgba(196,162,100,0.45);}
+    .init-sep{font-size:0.5rem;color:rgba(255,255,255,0.1);flex-shrink:0;padding:0 1px;}
+
+    /* ── ENEMY HP CARDS ── */
+    .enemy-card{
+      display:flex;flex-direction:column;align-items:center;gap:2px;
+      padding:4px 5px;
+      background:rgba(139,0,0,0.08);border:1px solid rgba(139,0,0,0.2);
+      border-radius:3px;min-width:52px;
+    }
+    .enemy-card.dead{opacity:0.35;}
+    .enemy-icon-sm{font-size:0.8rem;line-height:1;}
+    .enemy-name-sm{font-family:'Cinzel',serif;font-size:0.4rem;letter-spacing:0.08em;color:rgba(200,80,80,0.7);white-space:nowrap;}
+    .enemy-hp-mini{display:flex;align-items:center;gap:3px;}
+    .enemy-hp-track{width:32px;height:3px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;}
+    .enemy-hp-fill-mini{height:100%;background:rgba(200,60,60,0.7);border-radius:2px;transition:width 0.25s ease;}
+    .enemy-hp-num{font-family:'Cinzel',serif;font-size:0.4rem;color:rgba(180,60,60,0.7);white-space:nowrap;}
+    .enemy-dmg-row{display:flex;gap:2px;margin-top:1px;}
+    .enemy-btn{
+      width:16px;height:14px;border-radius:2px;
+      border:1px solid rgba(139,0,0,0.3);background:rgba(0,0,0,0.3);
+      color:rgba(200,100,100,0.8);font-size:0.65rem;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;
+      padding:0;line-height:1;transition:background 0.1s;
+    }
+    .enemy-btn:hover{background:rgba(139,0,0,0.25);}
+    .enemy-btn:disabled{opacity:0.3;cursor:not-allowed;}
+
+    /* ── DM THINKING ANIMATION ── */
+    .msg-dm-thinking .dm-thinking{display:flex;gap:5px;padding:6px 0;}
+    .dm-thinking span{width:6px;height:6px;border-radius:50%;background:rgba(196,100,100,0.5);animation:dm-dot 1.2s ease-in-out infinite;}
+    .dm-thinking span:nth-child(2){animation-delay:0.2s;}
+    .dm-thinking span:nth-child(3){animation-delay:0.4s;}
+    @keyframes dm-dot{0%,80%,100%{transform:scale(0.8);opacity:0.4;}40%{transform:scale(1.2);opacity:1;}}
+
+    /* ── RESOURCE TRACKER ── */
+    .resource-tracker{
+      display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;padding-top:8px;
+      border-top:1px solid rgba(255,255,255,0.05);
+    }
+    .resource-chip{
+      display:flex;align-items:center;gap:4px;
+      font-family:'Cinzel',serif;font-size:0.48rem;letter-spacing:0.1em;text-transform:uppercase;
+      color:var(--dim);
+    }
+    .resource-chip strong{color:var(--accent);}
+    .res-pips{display:flex;gap:2px;}
+    .res-pip{
+      width:9px;height:9px;border-radius:50%;
+      border:1px solid rgba(196,162,100,0.3);
+      cursor:pointer;transition:background 0.1s;
+    }
+    .res-pip.filled{background:rgba(196,162,100,0.6);}
+    .res-pip:hover{border-color:rgba(196,162,100,0.7);}
+    .res-count{color:rgba(196,162,100,0.5);font-size:0.44rem;}
+
+    /* ── ACTION IDEAS PANEL ── */
+    .ideas-panel{
+      background:rgba(10,6,4,0.97);
+      border:1px solid rgba(196,162,100,0.15);
+      border-radius:3px;
+      padding:10px;
+      margin:0 20px 8px;
+      display:none;
+    }
+    .ideas-header{
+      display:flex;align-items:center;justify-content:space-between;
+      font-family:'Cinzel',serif;font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;
+      color:var(--accent);opacity:0.8;margin-bottom:8px;
+    }
+    .ideas-list{display:flex;flex-wrap:wrap;gap:5px;}
+    .idea-chip{
+      padding:5px 10px;background:rgba(255,255,255,0.03);
+      border:1px solid rgba(255,255,255,0.08);border-radius:2px;
+      font-family:'EB Garamond',serif;font-size:0.78rem;color:var(--dim);
+      cursor:pointer;text-align:left;transition:border-color 0.12s,color 0.12s;
+    }
+    .idea-chip:hover{border-color:rgba(196,162,100,0.3);color:var(--text);}
+
+    /* Ideas toggle button */
+    .ideas-btn{
+      padding:8px 12px;background:rgba(196,162,100,0.05);
+      border:1px solid rgba(196,162,100,0.18);border-radius:2px;
+      font-family:'Cinzel',serif;font-size:0.52rem;letter-spacing:0.18em;text-transform:uppercase;
+      color:rgba(196,162,100,0.55);cursor:pointer;white-space:nowrap;
+      transition:background 0.15s,color 0.15s;
+    }
+    .ideas-btn:hover{background:rgba(196,162,100,0.1);color:var(--accent);}
+
+    /* ── CHARACTER SHEET PANEL ── */
+    .char-sheet-panel{
+      position:fixed;top:0;right:-380px;width:360px;height:100vh;
+      background:rgba(10,5,3,0.98);border-left:1px solid rgba(196,162,100,0.15);
+      z-index:200;overflow-y:auto;
+      transition:right 0.3s cubic-bezier(0.4,0,0.2,1);
+      backdrop-filter:blur(8px);
+    }
+    .char-sheet-panel.open{right:0;}
+    .char-sheet-panel::-webkit-scrollbar{width:3px;}
+    .char-sheet-panel::-webkit-scrollbar-thumb{background:rgba(196,162,100,0.15);}
+
+    .sheet-header{
+      display:flex;align-items:flex-start;justify-content:space-between;
+      padding:16px 18px;border-bottom:1px solid rgba(196,162,100,0.12);
+      position:sticky;top:0;background:rgba(10,5,3,0.99);z-index:1;
+    }
+    .sheet-char-name{font-family:'Playfair Display',serif;font-style:italic;font-size:1.2rem;color:var(--text);line-height:1.1;}
+    .sheet-char-sub{font-family:'Cinzel',serif;font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--accent);opacity:0.7;margin-top:3px;}
+    .sheet-close{background:none;border:1px solid rgba(255,255,255,0.1);border-radius:2px;color:var(--dim);cursor:pointer;padding:4px 8px;font-size:0.75rem;transition:color 0.15s,border-color 0.15s;}
+    .sheet-close:hover{color:var(--accent);border-color:rgba(196,162,100,0.3);}
+
+    .sheet-body{padding:14px 18px;}
+    .sheet-stats-row{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin-bottom:12px;}
+    .sheet-stat{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:3px;padding:8px 4px;text-align:center;}
+    .sheet-stat-name{font-family:'Cinzel',serif;font-size:0.44rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent);opacity:0.6;margin-bottom:4px;}
+    .sheet-stat-val{font-family:'Cinzel',serif;font-size:1rem;color:var(--text);line-height:1;}
+    .sheet-stat-mod{font-size:0.6rem;color:var(--dim);margin-top:1px;}
+    .sheet-combat-row{display:flex;gap:8px;margin-bottom:12px;}
+    .sheet-combat-chip{flex:1;background:rgba(255,255,255,0.02);border:1px solid rgba(196,162,100,0.15);border-radius:3px;padding:8px 6px;text-align:center;}
+    .sheet-combat-val{font-family:'Cinzel',serif;font-size:1.1rem;color:var(--accent);line-height:1;}
+    .sheet-combat-lbl{font-family:'Cinzel',serif;font-size:0.44rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--dim);margin-top:2px;}
+    .sheet-xp{margin-bottom:12px;}
+    .sheet-xp-row{display:flex;justify-content:space-between;margin-bottom:4px;}
+    .sheet-xp-bar{height:3px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;}
+    .sheet-xp-fill{height:100%;background:linear-gradient(90deg,rgba(139,0,0,0.7),rgba(196,162,100,0.7));border-radius:2px;transition:width 0.5s ease;}
+    .sheet-section-label{font-family:'Cinzel',serif;font-size:0.52rem;letter-spacing:0.2em;text-transform:uppercase;color:rgba(196,162,100,0.5);margin-bottom:6px;}
+    .sheet-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+    .sheet-col{}
+    .sheet-save{display:flex;align-items:center;gap:5px;font-size:0.7rem;color:var(--dim);margin-bottom:3px;}
+    .sheet-save.proficient{color:var(--text);}
+    .sheet-save-bullet{font-size:0.55rem;color:rgba(196,162,100,0.5);}
+    .sheet-save.proficient .sheet-save-bullet{color:var(--accent);}
+    .sheet-skills-grid{display:flex;flex-direction:column;gap:2px;}
+    .sheet-skill{display:flex;align-items:center;gap:4px;font-size:0.65rem;color:var(--dim);}
+    .sheet-skill-name{font-size:0.65rem;color:var(--dim);}
+    .sheet-rest-row{display:flex;gap:8px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.05);}
+    .rest-btn{flex:1;padding:9px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:2px;font-family:'Cinzel',serif;font-size:0.55rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--dim);cursor:pointer;transition:background 0.15s,color 0.15s;}
+    .rest-btn:hover{background:rgba(196,162,100,0.08);color:var(--accent);border-color:rgba(196,162,100,0.25);}
+    .rest-btn.long{border-color:rgba(139,0,0,0.3);color:rgba(196,100,100,0.6);}
+    .rest-btn.long:hover{background:rgba(139,0,0,0.12);color:rgba(200,100,100,0.9);}
+
+    /* Sheet toggle button in header */
+    .sheet-btn{
+      display:flex;align-items:center;gap:5px;
+      padding:4px 10px;border:1px solid rgba(196,162,100,0.18);border-radius:2px;
+      font-family:'Cinzel',serif;font-size:0.52rem;letter-spacing:0.15em;text-transform:uppercase;
+      color:rgba(196,162,100,0.55);background:none;cursor:pointer;
+      transition:color 0.15s,border-color 0.15s;
+    }
+    .sheet-btn:hover{color:var(--accent);border-color:rgba(196,162,100,0.35);}
+
+    /* XP toast */
+    .xp-toast{
+      position:fixed;bottom:80px;right:24px;z-index:300;
+      font-family:'Cinzel',serif;font-size:0.8rem;letter-spacing:0.15em;text-transform:uppercase;
+      color:var(--accent);background:rgba(10,5,3,0.9);
+      border:1px solid rgba(196,162,100,0.3);border-radius:3px;
+      padding:6px 14px;pointer-events:none;
+      opacity:0;transform:translateY(0);
+      transition:opacity 0.4s ease,transform 0.6s ease;
+    }
+
+    /* ── BATTLE MAP OVERLAY ── */
+    .map-overlay{
+      position:fixed;inset:0;z-index:450;
+      display:flex;flex-direction:column;
+      background:rgba(5,3,2,0.98);
+      opacity:0;pointer-events:none;
+      transition:opacity 0.3s ease;
+    }
+    .map-overlay.visible{opacity:1;pointer-events:auto;}
+    .map-header{
+      display:flex;align-items:center;gap:12px;
+      padding:10px 20px;
+      border-bottom:1px solid rgba(196,162,100,0.12);
+      background:rgba(7,4,4,0.99);
+      flex-shrink:0;
+    }
+    .map-title{font-family:'Cinzel',serif;font-size:0.68rem;letter-spacing:0.25em;text-transform:uppercase;color:var(--accent);}
+    .map-scene-name{font-family:'EB Garamond',serif;font-size:0.85rem;color:var(--dim);font-style:italic;}
+    .map-hint{font-family:'Cinzel',serif;font-size:0.48rem;letter-spacing:0.12em;text-transform:uppercase;color:rgba(196,162,100,0.3);}
+    .map-legend{display:flex;gap:10px;align-items:center;margin-left:auto;}
+    .legend-item{display:flex;align-items:center;gap:5px;font-family:'Cinzel',serif;font-size:0.46rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--dim);}
+    .legend-sw{width:10px;height:10px;border-radius:2px;display:inline-block;flex-shrink:0;}
+    .map-close{
+      padding:4px 12px;background:transparent;
+      border:1px solid rgba(255,255,255,0.1);border-radius:2px;
+      font-family:'Cinzel',serif;font-size:0.56rem;letter-spacing:0.2em;text-transform:uppercase;
+      color:var(--dim);cursor:pointer;margin-left:8px;
+      transition:color 0.15s,border-color 0.15s;
+    }
+    .map-close:hover{color:var(--accent);border-color:rgba(196,162,100,0.3);}
+    .map-body{
+      flex:1;display:flex;align-items:center;justify-content:center;
+      padding:20px;overflow:auto;
+    }
+    .map-wrap{
+      position:relative;
+      border:1px solid rgba(196,162,100,0.18);
+      border-radius:3px;overflow:hidden;
+      box-shadow:0 0 0 1px rgba(0,0,0,0.6),0 40px 80px rgba(0,0,0,0.95),inset 0 0 60px rgba(0,0,0,0.4);
+    }
+    /* Grid */
+    .battle-grid{
+      display:grid;
+      grid-template-columns:repeat(20,34px);
+      grid-template-rows:repeat(16,34px);
+    }
+    /* Base cell */
+    .mc{
+      width:34px;height:34px;
+      position:relative;
+      box-sizing:border-box;
+      display:flex;align-items:center;justify-content:center;
+      border:0.5px solid transparent;
+    }
+    /* Cell states */
+    .mc-wall   { background:#070503; border-color:rgba(255,255,255,0.018); }
+    .mc-floor  { background:#141210; border-color:rgba(196,162,100,0.06); }
+    .mc-fog    { background:#0b0907; border-color:rgba(255,255,255,0.02); }
+    .mc-fog::after{content:'';position:absolute;inset:0;background:rgba(5,3,2,0.78);pointer-events:none;z-index:1;}
+    .mc-current{ background:rgba(196,130,40,0.08); border-color:rgba(196,162,100,0.14); }
+    .mc-hover  { background:rgba(196,162,100,0.14) !important; border-color:rgba(196,162,100,0.4) !important; cursor:pointer; }
+    /* Scenario theme overrides */
+    .theme-court .mc-floor   { background:#111520; border-color:rgba(100,140,200,0.07); }
+    .theme-court .mc-wall    { background:#08090e; }
+    .theme-court .mc-current { background:rgba(80,120,200,0.09); border-color:rgba(100,150,220,0.18); }
+    .theme-dark  .mc-floor   { background:#0f0c07; border-color:rgba(70,110,50,0.07); }
+    .theme-dark  .mc-wall    { background:#070503; }
+    .theme-dark  .mc-current { background:rgba(50,90,35,0.1); border-color:rgba(70,130,50,0.16); }
+    /* Tokens */
+    .map-token{
+      position:absolute;z-index:10;
+      width:26px;height:26px;border-radius:50%;
+      display:flex;align-items:center;justify-content:center;
+      font-family:'Cinzel',serif;font-size:0.62rem;
+      user-select:none;pointer-events:auto;
+      box-shadow:0 2px 10px rgba(0,0,0,0.8);
+      top:50%;left:50%;transform:translate(-50%,-50%);
+    }
+    .map-token-player{
+      background:rgba(139,0,0,0.9);
+      border:2px solid rgba(220,90,90,0.75);
+      color:rgba(255,210,210,0.95);
+      cursor:grab;
+      box-shadow:0 0 12px rgba(139,0,0,0.5),0 2px 10px rgba(0,0,0,0.8);
+      z-index:12;
+    }
+    .map-token-player:active{cursor:grabbing;}
+    .map-token-enemy{
+      background:rgba(70,15,15,0.9);
+      border:2px solid rgba(150,35,35,0.55);
+      color:rgba(255,180,180,0.95);
+      cursor:default;font-size:0.9rem;
+    }
+    .map-token-enemy.dead{opacity:0.28;filter:grayscale(1);}
+    .map-drag-ghost{
+      position:fixed;z-index:9998;
+      width:26px;height:26px;border-radius:50%;
+      background:rgba(139,0,0,0.75);
+      border:2px solid rgba(220,90,90,0.9);
+      display:flex;align-items:center;justify-content:center;
+      font-family:'Cinzel',serif;font-size:0.62rem;
+      color:rgba(255,210,210,0.95);
+      pointer-events:none;opacity:0.82;
+      box-shadow:0 0 16px rgba(139,0,0,0.55),0 4px 14px rgba(0,0,0,0.75);
+    }
+    /* Map button in header */
+    .map-btn{
+      display:flex;align-items:center;gap:5px;
+      padding:4px 10px;border:1px solid rgba(196,162,100,0.18);border-radius:2px;
+      font-family:'Cinzel',serif;font-size:0.52rem;letter-spacing:0.15em;text-transform:uppercase;
+      color:rgba(196,162,100,0.55);background:none;cursor:pointer;
+      transition:color 0.15s,border-color 0.15s;
+    }
+    .map-btn:hover{color:var(--accent);border-color:rgba(196,162,100,0.35);}
+    /* Movement range highlight */
+    .mc-in-range { border-color: rgba(100,200,120,0.35) !important; }
+    .mc-in-range.mc-floor   { background: rgba(40,110,55,0.1) !important; }
+    .mc-in-range.mc-current { background: rgba(70,150,80,0.12) !important; }
+    .mc-out-range.mc-floor,
+    .mc-out-range.mc-current { filter: brightness(0.5); transition: filter 0.15s; }
+
+    /* ── SHOP PANEL ── */
+    .shop-panel {
+      position:fixed;top:0;right:0;height:100%;width:320px;
+      background:rgba(10,5,5,0.98);
+      border-left:1px solid rgba(196,162,100,0.12);
+      z-index:470;transform:translateX(100%);
+      transition:transform 0.3s cubic-bezier(0.16,1,0.3,1);
+      display:flex;flex-direction:column;
+      box-shadow:-8px 0 40px rgba(0,0,0,0.6);
+    }
+    .shop-panel.open { transform:translateX(0); }
+    .shop-header {
+      padding:14px 16px 12px;
+      border-bottom:1px solid rgba(196,162,100,0.1);
+      display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+    }
+    .shop-title { font-family:'Playfair Display',serif;font-style:italic;font-size:1.05rem;color:var(--accent); }
+    .shop-gold-badge {
+      display:flex;align-items:center;gap:5px;
+      font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.15em;
+      color:rgba(196,162,100,0.75);
+      background:rgba(196,162,100,0.06);
+      border:1px solid rgba(196,162,100,0.15);
+      border-radius:2px;padding:3px 8px;
+    }
+    .shop-close { background:none;border:1px solid rgba(255,255,255,0.1);border-radius:2px;color:var(--dim);cursor:pointer;padding:3px 8px;font-size:0.75rem;transition:color 0.15s,border-color 0.15s; }
+    .shop-close:hover { color:var(--accent);border-color:rgba(196,162,100,0.3); }
+    .shop-body { flex:1;overflow-y:auto;padding:10px 12px; }
+    .shop-section-label {
+      font-family:'Cinzel',serif;font-size:0.5rem;letter-spacing:0.3em;text-transform:uppercase;
+      color:var(--dim);opacity:0.6;margin:12px 0 6px;
+      display:flex;align-items:center;gap:8px;
+    }
+    .shop-section-label::after { content:'';flex:1;height:1px;background:rgba(196,162,100,0.1); }
+    .shop-item {
+      display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
+      background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);
+      border-radius:3px;padding:10px 12px;margin-bottom:6px;
+      transition:border-color 0.2s;
+    }
+    .shop-item:hover { border-color:rgba(196,162,100,0.15); }
+    .shop-item-info { flex:1;min-width:0; }
+    .shop-item-name { font-family:'Cinzel',serif;font-size:0.65rem;letter-spacing:0.1em;color:var(--text);margin-bottom:2px; }
+    .shop-item-desc { font-size:0.78rem;color:var(--dim);line-height:1.5; }
+    .shop-item-effect { font-family:'Cinzel',serif;font-size:0.48rem;letter-spacing:0.1em;text-transform:uppercase;color:rgba(196,162,100,0.5);margin-top:2px; }
+    .shop-buy-btn {
+      flex-shrink:0;font-family:'Cinzel',serif;font-size:0.55rem;letter-spacing:0.12em;
+      white-space:nowrap;padding:5px 10px;border-radius:2px;cursor:pointer;
+      background:rgba(139,0,0,0.3);border:1px solid rgba(139,0,0,0.4);
+      color:rgba(232,213,183,0.7);
+      transition:background 0.15s,border-color 0.15s,opacity 0.15s;
+    }
+    .shop-buy-btn:hover { background:rgba(139,0,0,0.55);border-color:rgba(196,100,100,0.4);color:var(--text); }
+    .shop-buy-btn:disabled { opacity:0.35;cursor:not-allowed; }
+    .shop-inventory-list { padding:4px 0; }
+    .shop-inv-item {
+      display:flex;align-items:center;justify-content:space-between;
+      font-size:0.8rem;color:var(--dim);padding:4px 0;
+      border-bottom:1px solid rgba(255,255,255,0.03);
+    }
+    .shop-inv-item-name { flex:1; }
+    .shop-use-btn {
+      font-family:'Cinzel',serif;font-size:0.5rem;letter-spacing:0.1em;
+      padding:3px 8px;border-radius:2px;cursor:pointer;
+      background:rgba(40,100,40,0.2);border:1px solid rgba(60,140,60,0.3);
+      color:rgba(100,200,100,0.7);
+      transition:background 0.15s;
+    }
+    .shop-use-btn:hover { background:rgba(40,100,40,0.4); }
+    .shop-gold-bar {
+      padding:10px 16px;border-top:1px solid rgba(196,162,100,0.08);
+      font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.15em;
+      color:rgba(196,162,100,0.6);text-align:center;flex-shrink:0;
+    }
+    /* Shop button in header */
+    .shop-btn {
+      display:flex;align-items:center;gap:5px;
+      padding:4px 10px;border:1px solid rgba(196,162,100,0.18);border-radius:2px;
+      font-family:'Cinzel',serif;font-size:0.52rem;letter-spacing:0.15em;text-transform:uppercase;
+      color:rgba(196,162,100,0.55);background:none;cursor:pointer;
+      transition:color 0.15s,border-color 0.15s;
+    }
+    .shop-btn:hover{color:var(--accent);border-color:rgba(196,162,100,0.35);}
+
+    /* ── CREDIT MODAL ── */
+    .credit-modal-wrap {
+      position:fixed;inset:0;z-index:600;
+      display:flex;align-items:center;justify-content:center;
+      background:rgba(4,2,2,0.85);
+      opacity:0;pointer-events:none;
+      transition:opacity 0.3s ease;
+    }
+    .credit-modal-wrap.visible { opacity:1;pointer-events:auto; }
+    .credit-modal {
+      width:100%;max-width:400px;margin:20px;
+      background:rgba(16,6,6,0.97);
+      border:1px solid rgba(196,162,100,0.18);
+      border-radius:4px;padding:36px 32px 28px;
+      box-shadow:0 0 0 1px rgba(0,0,0,0.6),0 24px 60px rgba(0,0,0,0.75);
+      text-align:center;
+    }
+    .credit-modal-sigil { font-size:2rem;margin-bottom:14px;opacity:0.7; }
+    .credit-modal-title {
+      font-family:'Playfair Display',serif;font-style:italic;
+      font-size:1.3rem;color:var(--accent);letter-spacing:-0.02em;margin-bottom:10px;
+    }
+    .credit-modal-body {
+      font-size:0.95rem;line-height:1.7;color:var(--dim);margin-bottom:26px;
+    }
+    .credit-modal-btns { display:flex;gap:10px;justify-content:center; }
+    .credit-modal-btn {
+      font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;
+      padding:10px 20px;border-radius:2px;cursor:pointer;
+      transition:background 0.2s,border-color 0.2s,transform 0.1s;
+    }
+    .credit-modal-btn:active { transform:translateY(1px); }
+    .credit-modal-btn.primary {
+      background:rgba(139,0,0,0.75);border:1px solid rgba(139,0,0,0.5);
+      color:rgba(232,213,183,0.9);
+    }
+    .credit-modal-btn.primary:hover { background:rgba(139,0,0,0.95); }
+    .credit-modal-btn.secondary {
+      background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);
+      color:var(--dim);
+    }
+    .credit-modal-btn.secondary:hover { border-color:rgba(196,162,100,0.25);color:var(--accent); }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="game-header">
+  <div class="brand-mark">
+    <div class="brand-dot"></div>
+    <div class="brand-name">The Unwritten Table</div>
+  </div>
+  <div class="header-sep"></div>
+  <button onclick="endSession()" style="font-family:'Cinzel',serif;font-size:0.52rem;letter-spacing:0.2em;text-transform:uppercase;color:rgba(232,213,183,0.35);background:none;text-decoration:none;padding:4px 10px;border:1px solid rgba(255,255,255,0.06);border-radius:2px;white-space:nowrap;cursor:pointer;transition:color 0.15s,border-color 0.15s;" onmouseover="this.style.color='var(--accent)';this.style.borderColor='rgba(196,162,100,0.3)'" onmouseout="this.style.color='rgba(232,213,183,0.35)';this.style.borderColor='rgba(255,255,255,0.06)'">← Exit</button>
+  <div class="header-sep"></div>
+  <div class="campaign-name" id="campaignTitle">The Sunless Citadel</div>
+  <div id="sessionCodeDisplay" style="display:none;align-items:center;gap:6px;padding:3px 10px;border:1px solid rgba(196,162,100,0.15);border-radius:2px;">
+    <span style="font-family:'Cinzel',serif;font-size:0.46rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--dim)">Code</span>
+    <span id="sessionCodeVal" style="font-family:'Cinzel',serif;font-size:0.65rem;letter-spacing:0.35em;color:var(--accent)">——</span>
+    <button onclick="copySessionCode()" id="copyCodeBtn" title="Copy code for friends" style="background:none;border:1px solid rgba(196,162,100,0.18);border-radius:2px;color:var(--dim);cursor:pointer;padding:2px 8px;font-family:'Cinzel',serif;font-size:0.46rem;letter-spacing:0.15em;text-transform:uppercase;transition:color 0.15s,border-color 0.15s;" onmouseover="this.style.color='var(--accent)';this.style.borderColor='rgba(196,162,100,0.4)'" onmouseout="this.style.color='var(--dim)';this.style.borderColor='rgba(196,162,100,0.18)'">Copy</button>
+  </div>
+  <div class="header-spacer"></div>
+  <div class="turn-counter">
+    <span class="turn-label" id="energyLabel">Campaign Energy</span>
+    <div class="turn-track"><div class="turn-fill" id="turnFill" style="width:0%"></div></div>
+    <span class="turn-num" id="turnNum">0 / 60</span>
+  </div>
+  <div class="header-sep"></div>
+  <button class="sheet-btn" onclick="toggleSheet()">📜 Character</button>
+  <button class="map-btn" onclick="toggleMap()">🗺 Map</button>
+  <button class="shop-btn" onclick="toggleShop()">🏪 Shop</button>
+  <div class="header-credit">
+    <div class="credit-dot"></div>
+    1 Credit Active
+  </div>
+</header>
+
+<!-- XP Toast -->
+<div class="xp-toast" id="xpToast"></div>
+
+<!-- Character Sheet Slide-out -->
+<div class="char-sheet-panel" id="charSheetPanel"></div>
+
+<!-- MAIN -->
+<div class="game-layout">
+
+  <!-- ── LEFT: TABLE + PLAYERS ── -->
+  <div class="table-col">
+    <div class="players-wrap">
+
+      <!-- NORTH: Aldric (waiting) -->
+      <div class="p-north" id="seatNorth">
+        <div class="p-avatar waiting" style="color:rgba(196,162,100,0.8)">A
+          <div class="turn-pip waiting"></div>
+        </div>
+        <div class="p-name">Aldric</div>
+        <div class="p-hp-bar"><div class="p-hp-fill hp-high" style="width:87%"></div></div>
+      </div>
+
+      <!-- WEST: Mira (ready) -->
+      <div class="p-west" id="seatWest">
+        <div class="p-avatar ready" style="color:rgba(80,190,80,0.8)">M
+          <div class="turn-pip ready"></div>
+        </div>
+        <div class="p-name">Mira</div>
+        <div class="p-hp-bar"><div class="p-hp-fill hp-high" style="width:90%"></div></div>
+      </div>
+
+      <!-- TABLE -->
+      <div class="table-frame-sm">
+        <div class="stud-sm tl"></div><div class="stud-sm tr"></div>
+        <div class="stud-sm bl"></div><div class="stud-sm br"></div>
+        <div class="table-surface-sm">
+          <!-- DUNGEON MAP SVG -->
+          <svg class="dungeon-map" id="tableMiniMap" viewBox="0 0 198 168" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <pattern id="grid" width="12" height="12" patternUnits="userSpaceOnUse">
+                <path d="M 12 0 L 0 0 0 12" fill="none" stroke="rgba(196,162,100,0.06)" stroke-width="0.5"/>
+              </pattern>
+              <!-- fog gradient -->
+              <radialGradient id="fogGrad" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#0C0A07" stop-opacity="0.5"/>
+                <stop offset="100%" stop-color="#0C0A07" stop-opacity="0.85"/>
+              </radialGradient>
+            </defs>
+
+            <!-- Background -->
+            <rect width="198" height="168" fill="#0C0A07"/>
+            <!-- Grid -->
+            <rect width="198" height="168" fill="url(#grid)"/>
+
+            <!-- ── ROOMS ── -->
+            <!-- Entry Chamber (explored, visited) -->
+            <rect x="8" y="62" width="44" height="36" fill="rgba(196,162,100,0.05)" stroke="rgba(196,162,100,0.2)" stroke-width="1" rx="1"/>
+            <text x="30" y="76" font-family="serif" font-size="4" fill="rgba(196,162,100,0.35)" text-anchor="middle">ENTRY</text>
+            <text x="30" y="82" font-family="serif" font-size="4" fill="rgba(196,162,100,0.35)" text-anchor="middle">CHAMBER</text>
+
+            <!-- Corridor E from entry -->
+            <rect x="52" y="76" width="18" height="8" fill="rgba(196,162,100,0.04)" stroke="rgba(196,162,100,0.12)" stroke-width="0.5"/>
+
+            <!-- Guard Post (CURRENT ROOM — highlighted) -->
+            <rect x="70" y="56" width="58" height="48" fill="rgba(196,162,100,0.09)" stroke="rgba(196,162,100,0.45)" stroke-width="1.5" rx="1"/>
+            <!-- Glow on current room -->
+            <rect x="70" y="56" width="58" height="48" fill="none" stroke="rgba(196,162,100,0.15)" stroke-width="4" rx="1"/>
+            <text x="99" y="70" font-family="serif" font-size="4.5" fill="rgba(196,162,100,0.5)" text-anchor="middle">GUARD POST</text>
+
+            <!-- North alcove off guard post -->
+            <rect x="86" y="46" width="26" height="10" fill="rgba(196,162,100,0.04)" stroke="rgba(196,162,100,0.15)" stroke-width="0.5"/>
+
+            <!-- Corridor S from guard post -->
+            <rect x="90" y="104" width="16" height="18" fill="rgba(30,25,20,0.5)" stroke="rgba(196,162,100,0.08)" stroke-width="0.5"/>
+            <rect x="90" y="104" width="16" height="18" fill="url(#fogGrad)"/>
+
+            <!-- Main Hall (foggy) -->
+            <rect x="66" y="120" width="64" height="40" fill="rgba(20,16,12,0.6)" stroke="rgba(196,162,100,0.1)" stroke-width="1" rx="1"/>
+            <rect x="66" y="120" width="64" height="40" fill="url(#fogGrad)"/>
+            <text x="98" y="142" font-family="serif" font-size="4" fill="rgba(196,162,100,0.2)" text-anchor="middle">???</text>
+
+            <!-- West section (unexplored) -->
+            <rect x="8" y="120" width="50" height="40" fill="rgba(12,10,7,0.85)" stroke="rgba(255,255,255,0.04)" stroke-width="0.5" rx="1"/>
+
+            <!-- East section -->
+            <rect x="138" y="56" width="52" height="48" fill="rgba(12,10,7,0.85)" stroke="rgba(255,255,255,0.04)" stroke-width="0.5" rx="1"/>
+
+            <!-- ── PLAYER TOKENS ── -->
+            <!-- Garen (crimson) -->
+            <circle cx="95" cy="85" r="5" fill="rgba(139,0,0,0.8)" stroke="rgba(200,80,80,0.6)" stroke-width="1.5"/>
+            <text x="95" y="88" font-family="serif" font-size="5" fill="rgba(255,200,200,0.9)" text-anchor="middle">G</text>
+
+            <!-- Mira (green) -->
+            <circle cx="108" cy="80" r="5" fill="rgba(30,100,30,0.8)" stroke="rgba(60,200,60,0.5)" stroke-width="1.5"/>
+            <text x="108" y="83" font-family="serif" font-size="5" fill="rgba(160,255,160,0.9)" text-anchor="middle">M</text>
+
+            <!-- Aldric (amber) -->
+            <circle cx="101" cy="95" r="5" fill="rgba(100,70,10,0.8)" stroke="rgba(196,162,100,0.6)" stroke-width="1.5"/>
+            <text x="101" y="98" font-family="serif" font-size="5" fill="rgba(255,220,140,0.9)" text-anchor="middle">A</text>
+
+            <!-- ── ENEMY TOKENS ── -->
+            <!-- Goblin 1 -->
+            <polygon points="120,68 116,76 124,76" fill="rgba(139,0,0,0.7)" stroke="rgba(200,60,60,0.5)" stroke-width="1"/>
+            <!-- Goblin 2 -->
+            <polygon points="118,85 114,93 122,93" fill="rgba(139,0,0,0.7)" stroke="rgba(200,60,60,0.5)" stroke-width="1"/>
+            <!-- Goblin 3 (wounded — slightly different) -->
+            <polygon points="122,95 118,103 126,103" fill="rgba(100,0,0,0.6)" stroke="rgba(160,40,40,0.4)" stroke-width="1"/>
+
+            <!-- ── LEGEND ── -->
+            <circle cx="12" cy="158" r="3" fill="rgba(139,0,0,0.7)" stroke="rgba(200,80,80,0.5)" stroke-width="0.8"/>
+            <text x="17" y="161" font-family="serif" font-size="3.5" fill="rgba(196,162,100,0.3)">Party</text>
+            <polygon points="34,155 31,161 37,161" fill="rgba(139,0,0,0.7)" stroke="rgba(200,60,60,0.4)" stroke-width="0.8"/>
+            <text x="40" y="161" font-family="serif" font-size="3.5" fill="rgba(196,162,100,0.3)">Enemy</text>
+            <text x="145" y="161" font-family="serif" font-size="3.5" fill="rgba(196,162,100,0.25)">● You are here</text>
+          </svg>
+        </div>
+      </div>
+
+      <!-- EAST: Empty -->
+      <div class="p-east" id="seatEast">
+        <div class="p-avatar empty">+</div>
+        <div class="p-name" style="opacity:0.25">Open</div>
+        <div class="p-hp-bar"><div class="p-hp-fill" style="width:0%"></div></div>
+      </div>
+
+      <!-- SOUTH: Garen (your turn) -->
+      <div class="p-south" id="seatSouth">
+        <div class="p-hp-bar"><div class="p-hp-fill hp-high" style="width:92%"></div></div>
+        <div class="p-name" style="color:rgba(196,100,100,0.7)">Garen (you)</div>
+        <div class="p-avatar your-turn" style="color:rgba(230,160,160,0.9)">G
+          <div class="turn-pip your-turn"></div>
+        </div>
+      </div>
+
+    </div><!-- /players-wrap -->
+
+    <!-- Initiative tracker -->
+    <div class="init-track" id="initTrack"></div>
+
+    <!-- Encounter strip -->
+    <div class="encounter-strip" id="encounterStrip">
+      <div class="encounter-dot" id="encounterDot"></div>
+      <div class="encounter-label" id="encounterLabel">Combat · Round 2</div>
+      <div class="encounter-enemies" id="enemyTracker" style="gap:4px;display:flex;"></div>
+    </div>
+
+  </div><!-- /table-col -->
+
+  <!-- ── RIGHT: NARRATIVE + INPUT ── -->
+  <div class="narrative-col">
+
+    <div class="narrative-feed" id="feed">
+
+      <div class="msg-system">Campaign started · The Sunless Citadel · Session I</div>
+
+      <div class="msg-dm">
+        <div class="msg-label">Dungeon Master</div>
+        <div class="msg-text">You descend a crumbling stone staircase into the earth. The air turns cold immediately — wet stone, rot, and something else. Something old. Your torchlight throws jagged shadows across walls carved with symbols none of you recognise. <strong>The Sunless Citadel swallows you whole.</strong></div>
+      </div>
+
+      <div class="msg-player">
+        <div class="player-av aldric">A</div>
+        <div class="msg-player-body">
+          <div class="msg-label">Aldric · Paladin</div>
+          <div class="msg-text">"I raise my holy symbol and whisper a prayer to Torm. Whatever dwells here will know we do not come unprepared."</div>
+        </div>
+      </div>
+
+      <div class="msg-player">
+        <div class="player-av mira">M</div>
+        <div class="msg-player-body">
+          <div class="msg-label">Mira · Rogue</div>
+          <div class="msg-text">I move ahead of the group, staying low against the left wall. I'm watching for tripwires, pressure plates — the usual welcome party.</div>
+        </div>
+      </div>
+
+      <div class="msg-dice">
+        <span class="dice-icon-lg">⚄</span>
+        <span class="dice-who">Mira</span>
+        <span class="dice-type">Perception Check</span>
+        <div class="dice-spacer"></div>
+        <span class="dice-result-badge">17</span>
+        <span class="dice-dc">DC 12 ✓</span>
+      </div>
+
+      <div class="msg-whisper">
+        <div class="whisper-label"><span>👁</span> Only Mira can see this</div>
+        <div class="msg-text">You spot a thin wire stretched across the doorway at ankle height. The guard post beyond has movement — shadows shifting behind a collapsed pillar.</div>
+      </div>
+
+      <div class="msg-dm">
+        <div class="msg-label">Dungeon Master</div>
+        <div class="msg-text">The corridor opens into a vaulted chamber — the old guard post. Crude torches sputter in iron brackets. Then the shadows move. <strong>Three goblins emerge, blades drawn, teeth bared.</strong> They screech something in their rasping tongue and fan out to flank you.</div>
+      </div>
+
+      <div class="msg-system">Combat begins · Roll for Initiative</div>
+
+      <div class="msg-dice">
+        <span class="dice-icon-lg">🎲</span>
+        <span class="dice-who">Initiative</span>
+        <span class="dice-type">All Players</span>
+        <div class="dice-spacer"></div>
+        <span style="font-family:'Cinzel',serif;font-size:0.65rem;color:var(--dim)">Garen 18 · Mira 15 · Aldric 11</span>
+      </div>
+
+      <div class="msg-dm">
+        <div class="msg-label">Dungeon Master</div>
+        <div class="msg-text"><strong>Garen, you move first.</strong> The nearest goblin is 10 feet ahead, axe raised. Its two companions circle wide — one cutting left toward Mira, the other staying back with what looks like a shortbow. The wounded one from earlier limps near the pillar. What do you do?</div>
+      </div>
+
+      <div class="msg-player">
+        <div class="player-av mira">M</div>
+        <div class="msg-player-body">
+          <div class="msg-label">Mira · Rogue <span style="opacity:0.4;font-size:0.85em">· Submitted</span></div>
+          <div class="msg-text">I'm going to use my bonus action to Hide behind the pillar, then try to Sneak Attack the archer if Garen engages up front.</div>
+        </div>
+      </div>
+
+    </div><!-- /feed -->
+
+    <!-- ACTION AREA -->
+    <div class="action-area">
+      <div class="your-turn-panel" id="yourTurnPanel">
+        <div class="turn-header">
+          <div class="turn-indicator"></div>
+          <span class="turn-title">Your Turn —</span>
+          <span class="turn-char" id="turnChar">Garen Ashveil · Barbarian Lv 4</span>
+        </div>
+        <!-- Ideas panel (hidden by default) -->
+        <div class="ideas-panel" id="ideasPanel"></div>
+
+        <div class="action-input-row">
+          <textarea class="action-textarea" id="actionInput" rows="2" placeholder="What do you do? Be specific — the DM will call for rolls as needed…"></textarea>
+          <div class="action-btns">
+            <button class="submit-btn" id="submitBtn" onclick="submitAction()">Submit →</button>
+            <button class="ideas-btn" onclick="toggleIdeas()">💡 Ideas</button>
+            <button class="dice-btn" onclick="showDiceOverlay()">⚄ Roll</button>
+          </div>
+        </div>
+        <div class="char-quick-ref">
+          <span class="quick-stat" id="qStr">STR <strong>—</strong></span>
+          <span class="quick-stat" id="qDex">DEX <strong>—</strong></span>
+          <span class="quick-stat" id="qCon">CON <strong>—</strong></span>
+          <span class="quick-stat" id="qAc">AC <strong>—</strong></span>
+          <span class="quick-hp" id="qHp">HP — / —</span>
+        </div>
+        <!-- Class resource tracker -->
+        <div class="resource-tracker" id="resourceTracker" style="display:none"></div>
+      </div>
+
+      <!-- Waiting panel (shown after submit) -->
+      <div class="waiting-panel" id="waitingPanel" style="display:none">
+        <div class="waiting-text">Waiting for</div>
+        <div class="waiting-dots"><span></span><span></span><span></span></div>
+        <div class="player-submitted">
+          <div class="submitted-av aldric">A</div>
+          <div class="submitted-check" style="color:rgba(196,162,100,0.5)">…</div>
+        </div>
+        <div class="player-submitted" style="border-color:rgba(60,170,60,0.2);background:rgba(30,80,30,0.1)">
+          <div class="submitted-av mira">M</div>
+          <div class="submitted-check">✓</div>
+        </div>
+        <span style="margin-left:auto;font-family:'Cinzel',serif;font-size:0.52rem;letter-spacing:0.12em;text-transform:uppercase;color:rgba(60,200,60,0.5)">✓ Your action submitted</span>
+      </div>
+    </div>
+
+  </div><!-- /narrative-col -->
+</div><!-- /game-layout -->
+
+<!-- BATTLE MAP OVERLAY -->
+<div class="map-overlay" id="mapOverlay">
+  <div class="map-header">
+    <div class="map-title">🗺 Battle Map</div>
+    <div class="header-sep"></div>
+    <div class="map-scene-name" id="mapSceneName">The Sunless Citadel</div>
+    <div class="map-legend">
+      <div class="legend-item"><span class="legend-sw" style="background:rgba(139,0,0,0.85);border:1px solid rgba(200,80,80,0.5)"></span>Party</div>
+      <div class="legend-item"><span class="legend-sw" style="background:rgba(70,15,15,0.85);border:1px solid rgba(150,35,35,0.5)"></span>Enemies</div>
+      <div class="legend-item"><span class="legend-sw" style="background:#141210;border:0.5px solid rgba(196,162,100,0.08)"></span>Explored</div>
+      <div class="legend-item"><span class="legend-sw" style="background:#0b0907;border:0.5px solid rgba(255,255,255,0.04)"></span>Fog of War</div>
+    </div>
+    <div class="header-sep"></div>
+    <div class="map-hint" id="mapMoveHint">Drag your token to move · Reveals fog</div>
+    <button class="map-close" onclick="toggleMap()">✕ Close</button>
+  </div>
+  <div class="map-body">
+    <div class="map-wrap">
+      <div class="battle-grid" id="mapGrid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- DICE OVERLAY -->
+<div class="dice-overlay" id="diceOverlay">
+  <div class="dice-roll-card">
+    <div class="roll-request">Strength Check</div>
+    <div class="roll-stat-name">Athletics · DC 14</div>
+    <span class="dice-face" id="diceFace">⚄</span>
+    <div class="roll-value" id="rollValue">—</div>
+    <div class="roll-breakdown" id="rollBreakdown">d20 + STR modifier</div>
+    <div class="roll-dc-line pass" id="rollDcLine" style="display:none"></div>
+    <button class="roll-dismiss" id="rollDismiss" onclick="dismissDice()" style="display:none">Continue →</button>
+    <button class="roll-dismiss" id="rollTrigger" onclick="triggerRoll()">Roll the Die</button>
+  </div>
+</div>
+
+<!-- SHOP PANEL -->
+<div class="shop-panel" id="shopPanel">
+  <div class="shop-header">
+    <div class="shop-title">The Wandering Merchant</div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div class="shop-gold-badge">⚜ <span id="shopGoldDisplay">0</span> gp</div>
+      <button class="shop-close" onclick="toggleShop()">✕</button>
+    </div>
+  </div>
+  <div class="shop-body" id="shopBody"></div>
+  <div class="shop-gold-bar" id="shopGoldBar">Purse: <span id="shopGoldBarVal">0</span> gp</div>
+</div>
+
+<!-- CREDIT MODAL -->
+<div class="credit-modal-wrap" id="creditModal">
+  <div class="credit-modal">
+    <div class="credit-modal-sigil">⌛</div>
+    <div class="credit-modal-title" id="creditModalTitle">This Chapter Nears Its End</div>
+    <div class="credit-modal-body" id="creditModalBody">
+      Campaign energy is running low. You may seek a natural ending to this chapter, or extend the adventure with another credit.
+    </div>
+    <div class="credit-modal-btns">
+      <button class="credit-modal-btn primary" onclick="extendCampaign()">Extend Campaign</button>
+      <button class="credit-modal-btn secondary" onclick="closeCreditModal()">Seek an Ending</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const EDGE_URL = 'https://puywhvrgixlhijxzircy.supabase.co/functions/v1/dm-respond';
+  const el = id => document.getElementById(id);
+
+  // ── DATA ──────────────────────────────────────────────────────────
+  const character = (() => { try { return JSON.parse(localStorage.getItem('uwt_selected_character')); } catch(e) { return null; } })();
+  const scenario  = (() => { try { return JSON.parse(sessionStorage.getItem('campaignScenario')); } catch(e) { return null; } })();
+  let sessionId   = sessionStorage.getItem('uwt_session_id');
+  let currentUser = null;
+  let isDMThinking = false;
+  let pendingRoll  = null;
+
+  // Normalize stat from flat number or {base,bonus,total} object
+  function statVal(stats, key) {
+    if (!stats) return 10;
+    const v = stats[key];
+    if (v === undefined || v === null) return 10;
+    return typeof v === 'object' ? (v.total ?? 10) : v;
+  }
+  function statMod(score) { return Math.floor((score - 10) / 2); }
+  function cap(v) { return v ? v.charAt(0).toUpperCase() + v.slice(1) : ''; }
+
+  function calcAC(cls, stats) {
+    const dex = statMod(statVal(stats, 'dex'));
+    const con = statMod(statVal(stats, 'con'));
+    const wis = statMod(statVal(stats, 'wis'));
+    if (cls === 'barbarian') return 10 + dex + con;
+    if (cls === 'monk')      return 10 + dex + wis;
+    if (cls === 'fighter' || cls === 'paladin') return 16;
+    if (cls === 'ranger'  || cls === 'cleric')  return 13 + Math.min(dex, 2);
+    if (cls === 'rogue'   || cls === 'bard' || cls === 'druid') return 11 + dex;
+    return 10 + dex;
+  }
+
+  // ── CLASS RESOURCES ───────────────────────────────────────────────
+  const CLASS_RESOURCES = {
+    barbarian: [{ key:'rage',  label:'Rage',              max: c => c.level < 3 ? 2 : c.level < 6 ? 3 : 4, rest:'long',  emoji:'🔥' }],
+    fighter:   [{ key:'surge', label:'Action Surge',      max: () => 1, rest:'short', emoji:'⚔️' }],
+    paladin:   [{ key:'loh',   label:'Lay on Hands',      max: c => c.level * 5, rest:'long', emoji:'🛡️', isPool:true }],
+    cleric:    [{ key:'cd',    label:'Channel Divinity',   max: () => 1, rest:'short', emoji:'✝' }],
+    druid:     [{ key:'ws',    label:'Wild Shape',         max: () => 2, rest:'short', emoji:'🌙' }],
+    monk:      [{ key:'ki',    label:'Ki Points',          max: c => c.level, rest:'short', emoji:'🥋' }],
+    rogue:     [{ key:'sa',    label:'Sneak Attack',       max: () => 99, rest:'turn', emoji:'🗡️', display: c => `${Math.ceil(c.level/2)}d6` }],
+    bard:      [{ key:'bi',    label:'Bardic Inspiration', max: c => Math.max(1, statMod(statVal(c.stats,'cha'))), rest:'short', emoji:'🎵' }],
+    sorcerer:  [{ key:'sp',    label:'Sorcery Points',     max: c => c.level, rest:'long', emoji:'💫' }],
+    warlock:   [{ key:'pm',    label:'Pact Slots',         max: () => 2, rest:'short', emoji:'🌑' }],
+    wizard:    [{ key:'ar',    label:'Arcane Recovery',    max: () => 1, rest:'long', emoji:'📜' }],
+    ranger:    [{ key:'hm',    label:"Hunter's Mark",      max: () => 1, rest:'long', emoji:'🏹', display: () => 'Conc.' }],
+  };
+  let resources = {};
+
+  function initResources() {
+    if (!character) return;
+    const clsRes = CLASS_RESOURCES[character.cls] || [];
+    const saved  = JSON.parse(localStorage.getItem('uwt_res_' + character.id) || '{}');
+    clsRes.forEach(r => {
+      const max = r.max(character);
+      resources[r.key] = saved[r.key] !== undefined ? Math.min(saved[r.key], max) : max;
+    });
+    renderResources();
+  }
+
+  function useResource(key) {
+    if (resources[key] <= 0) return;
+    resources[key]--;
+    localStorage.setItem('uwt_res_' + (character?.id || 'x'), JSON.stringify(resources));
+    renderResources();
+  }
+
+  function restoreResources(restType) {
+    if (!character) return;
+    (CLASS_RESOURCES[character.cls] || []).forEach(r => {
+      if (restType === 'long' || r.rest === restType || (restType === 'short' && r.rest === 'turn')) {
+        resources[r.key] = r.max(character);
+      }
+    });
+    localStorage.setItem('uwt_res_' + character.id, JSON.stringify(resources));
+    renderResources();
+  }
+
+  function renderResources() {
+    const container = el('resourceTracker');
+    if (!container || !character) return;
+    const clsRes = CLASS_RESOURCES[character.cls] || [];
+    if (!clsRes.length) { container.style.display = 'none'; return; }
+    container.style.display = 'flex';
+    container.innerHTML = clsRes.map(r => {
+      const max = r.max(character);
+      const cur = resources[r.key] ?? max;
+      const disp = r.display ? r.display(character) : null;
+      if (max >= 99) return `<div class="resource-chip">${r.emoji} ${r.label}: <strong>${disp || '∞'}</strong></div>`;
+      const pips = Array.from({length: Math.min(max, 10)}, (_, i) =>
+        `<div class="res-pip ${i < cur ? 'filled' : ''}" onclick="useResource('${r.key}')" title="Click to use"></div>`
+      ).join('');
+      return `<div class="resource-chip">${r.emoji} ${r.label} ${disp ? disp + ' ' : ''}<div class="res-pips">${pips}</div><span class="res-count">${cur}/${max}</span></div>`;
+    }).join('');
+  }
+
+  // ── HP / TURN TRACKING ────────────────────────────────────────────
+  let currentHP = character?.hp || 10;
+  let turnCount = 0;
+
+  const TURNS_PER_CREDIT = 60;
+  let creditWarningShown = false;
+
+  function refreshTurnDisplay() {
+    const pct  = Math.min(100, (turnCount / TURNS_PER_CREDIT) * 100);
+    const fill = el('turnFill');
+    const num  = el('turnNum');
+    if (num) num.textContent = `${turnCount} / ${TURNS_PER_CREDIT}`;
+    if (fill) {
+      fill.style.width = pct + '%';
+      if (pct >= 90) fill.style.background = 'linear-gradient(to right,rgba(180,40,20,0.85),rgba(210,20,20,0.95))';
+      else if (pct >= 70) fill.style.background = 'linear-gradient(to right,rgba(196,100,20,0.75),rgba(180,50,20,0.9))';
+    }
+  }
+
+  function updateTurnCounter() {
+    turnCount++;
+    const pct  = Math.min(100, (turnCount / TURNS_PER_CREDIT) * 100);
+    const fill = el('turnFill');
+    const num  = el('turnNum');
+    if (num) num.textContent = `${turnCount} / ${TURNS_PER_CREDIT}`;
+    if (fill) {
+      fill.style.width = pct + '%';
+      // Shift colour toward red as energy depletes
+      if (pct >= 90) {
+        fill.style.background = 'linear-gradient(to right,rgba(180,40,20,0.85),rgba(210,20,20,0.95))';
+      } else if (pct >= 70) {
+        fill.style.background = 'linear-gradient(to right,rgba(196,100,20,0.75),rgba(180,50,20,0.9))';
+      }
+    }
+    // 10% energy remaining warning (fires once)
+    if (pct >= 90 && !creditWarningShown) {
+      creditWarningShown = true;
+      addToFeed('system', '⌛ The DM senses this chapter nearing its conclusion — campaign energy is low. Seek an ending or extend with another credit.');
+      el('creditModalTitle').textContent = 'This Chapter Nears Its End';
+      el('creditModalBody').textContent  = '10% of campaign energy remains. You can seek a natural ending to this chapter, or extend the adventure with another credit.';
+      el('creditModal').classList.add('visible');
+    }
+    // Energy depleted — block further play until extended
+    if (pct >= 100) {
+      el('creditModalTitle').textContent = 'Campaign Energy Depleted';
+      el('creditModalBody').textContent  = 'This credit has been fully consumed. Extend the campaign to continue the adventure, or end the session here.';
+      el('creditModal').classList.add('visible');
+    }
+  }
+
+  function closeCreditModal() {
+    el('creditModal').classList.remove('visible');
+  }
+
+  function extendCampaign() {
+    // Placeholder — will wire to Stripe / credits flow
+    turnCount = 0;
+    creditWarningShown = false;
+    const fill = el('turnFill');
+    if (fill) {
+      fill.style.width = '0%';
+      fill.style.background = 'linear-gradient(to right,rgba(196,162,100,0.6),rgba(139,0,0,0.8))';
+    }
+    const num = el('turnNum');
+    if (num) num.textContent = `0 / ${TURNS_PER_CREDIT}`;
+    closeCreditModal();
+    addToFeed('system', '✦ Campaign extended — the adventure continues.');
+  }
+
+  function adjustHP(delta) {
+    const maxHP = character?.max_hp || character?.hp || 10;
+    currentHP = Math.min(maxHP, Math.max(0, currentHP + delta));
+    const sheetVal = el('sheetHpVal');
+    if (sheetVal) sheetVal.textContent = currentHP;
+    if (el('qHp')) el('qHp').textContent = `HP ${currentHP} / ${maxHP}`;
+    if (character) {
+      character.hp = currentHP;
+      localStorage.setItem('uwt_selected_character', JSON.stringify(character));
+      if (window.sbClient && character.id)
+        sbClient.from('rpg_characters').update({ hp: currentHP }).eq('id', character.id);
+    }
+    if (currentHP === 0) addToFeed('system', `⚠ ${character?.name || 'You'} has fallen — 0 HP!`);
+  }
+
+  async function endSession() {
+    if (sessionId && window.sbClient) {
+      try { await sbClient.from('rpg_sessions').update({ status: 'ended' }).eq('id', sessionId); } catch(e) {}
+    }
+    sessionStorage.removeItem('uwt_session_id');
+    sessionStorage.removeItem('uwt_session_code');
+    window.location.href = 'characters.html';
+  }
+
+  // ── GOLD & INVENTORY ──────────────────────────────────────────────
+  let characterGold      = character?.gold ?? 50;
+  let characterInventory = (character?.inventory) ? (Array.isArray(character.inventory) ? character.inventory : []) : [];
+
+  function saveGold() {
+    if (character) {
+      character.gold      = characterGold;
+      character.inventory = characterInventory;
+      localStorage.setItem('uwt_selected_character', JSON.stringify(character));
+      if (window.sbClient && character.id)
+        sbClient.from('rpg_characters').update({ gold: characterGold, inventory: characterInventory }).eq('id', character.id);
+    }
+  }
+
+  function adjustGold(delta, silent) {
+    characterGold = Math.max(0, characterGold + delta);
+    saveGold();
+    refreshGoldUI();
+    if (!silent) {
+      const sign = delta >= 0 ? '+' : '';
+      addToFeed('system', `⚜ ${sign}${delta} gp — Purse: ${characterGold} gp`);
+    }
+  }
+
+  function refreshGoldUI() {
+    const els = ['shopGoldDisplay','shopGoldBarVal'];
+    els.forEach(id => { const e = el(id); if (e) e.textContent = characterGold; });
+  }
+
+  // ── SHOP ──────────────────────────────────────────────────────────
+  const SHOP_ITEMS = [
+    // Potions
+    { id:'heal_sm',   cat:'Potions',   name:'Healing Potion',        cost:50,  desc:'Restores 2d4+2 HP when consumed.',              effect:'Restore HP',   use: () => { const roll=Math.floor(Math.random()*4)+1+Math.floor(Math.random()*4)+1+2; adjustHP(roll); addToFeed('system',`🧪 Healing Potion consumed — +${roll} HP`); } },
+    { id:'heal_lg',   cat:'Potions',   name:'Greater Healing Potion',cost:150, desc:'Restores 4d4+4 HP when consumed.',              effect:'Restore HP',   use: () => { const r=()=>Math.floor(Math.random()*4)+1; const roll=r()+r()+r()+r()+4; adjustHP(roll); addToFeed('system',`🧪 Greater Healing Potion consumed — +${roll} HP`); } },
+    { id:'antitox',   cat:'Potions',   name:'Antitoxin',             cost:50,  desc:'Advantage on saves vs poison for 1 hour.',      effect:'1hr Utility' },
+    { id:'inv_elixir',cat:'Potions',   name:'Elixir of Health',      cost:120, desc:'Cures any disease, poison, or condition.',       effect:'Utility' },
+    // Gear
+    { id:'torch',     cat:'Gear',      name:'Torch ×5',              cost:1,   desc:'Burns 1 hr. 20ft bright light, 20ft dim.',      effect:'Light' },
+    { id:'rope',      cat:'Gear',      name:'Hempen Rope (50ft)',     cost:1,   desc:'Useful for climbing, binding, or rigging.',      effect:'Utility' },
+    { id:'rations',   cat:'Gear',      name:'Trail Rations ×5',      cost:3,   desc:'Five days of food. Prevents exhaustion.',        effect:'Sustenance' },
+    { id:'climb_kit', cat:'Gear',      name:"Climber's Kit",         cost:25,  desc:'Advantage on Athletics checks to climb.',        effect:'Climbing' },
+    { id:'thieves',   cat:'Gear',      name:"Thieves' Tools",        cost:25,  desc:'Required to pick locks and disarm traps.',       effect:'Utility' },
+    { id:'lantern',   cat:'Gear',      name:'Hooded Lantern',        cost:5,   desc:'Burns 6 hrs/flask. 30ft bright, 30ft dim light.',effect:'Light' },
+    // Weapons
+    { id:'dagger',    cat:'Weapons',   name:'Dagger',                cost:2,   desc:'Simple finesse weapon. 1d4 piercing. Thrown.',   effect:'1d4 pierce' },
+    { id:'shortsw',   cat:'Weapons',   name:'Shortsword',            cost:10,  desc:'Martial finesse weapon. 1d6 piercing.',          effect:'1d6 pierce' },
+    { id:'handaxe',   cat:'Weapons',   name:'Handaxe ×2',            cost:10,  desc:'Simple weapon. 1d6 slashing. Thrown.',           effect:'1d6 slash' },
+    { id:'arrows',    cat:'Weapons',   name:'Arrows ×20',            cost:1,   desc:'Standard ammunition for bows.',                  effect:'Ammo' },
+    // Armor
+    { id:'leather',   cat:'Armor',     name:'Leather Armor',         cost:10,  desc:'Light armor. AC 11 + DEX modifier.',             effect:'AC 11+DEX' },
+    { id:'shield',    cat:'Armor',     name:'Shield',                cost:10,  desc:'Adds +2 to Armor Class while wielded.',          effect:'+2 AC' },
+    { id:'chain',     cat:'Armor',     name:'Chain Shirt',           cost:50,  desc:'Medium armor. AC 13 + DEX (max 2).',             effect:'AC 13+DEX' },
+  ];
+
+  function renderShop() {
+    const body = el('shopBody');
+    if (!body) return;
+    refreshGoldUI();
+
+    // Group by category
+    const cats = {};
+    SHOP_ITEMS.forEach(item => { (cats[item.cat] = cats[item.cat] || []).push(item); });
+
+    let html = '';
+
+    // Inventory section
+    html += `<div class="shop-section-label">Your Inventory</div>`;
+    if (characterInventory.length === 0) {
+      html += `<div style="font-size:0.8rem;color:rgba(232,213,183,0.25);font-style:italic;padding:6px 0">Your pack is empty.</div>`;
+    } else {
+      html += `<div class="shop-inventory-list">`;
+      characterInventory.forEach((item, idx) => {
+        const shopItem = SHOP_ITEMS.find(s => s.id === item.id);
+        const canUse = shopItem?.use ? '' : 'style="display:none"';
+        html += `<div class="shop-inv-item">
+          <span class="shop-inv-item-name">${item.name} ×${item.qty||1}</span>
+          <button class="shop-use-btn" onclick="useInventoryItem(${idx})" ${canUse}>Use</button>
+        </div>`;
+      });
+      html += `</div>`;
+    }
+
+    // Shop sections
+    Object.entries(cats).forEach(([cat, items]) => {
+      html += `<div class="shop-section-label">${cat}</div>`;
+      items.forEach(item => {
+        const canAfford = characterGold >= item.cost;
+        html += `<div class="shop-item">
+          <div class="shop-item-info">
+            <div class="shop-item-name">${item.name}</div>
+            <div class="shop-item-desc">${item.desc}</div>
+            <div class="shop-item-effect">${item.effect}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
+            <div style="font-family:'Cinzel',serif;font-size:0.58rem;color:rgba(196,162,100,0.7)">${item.cost} gp</div>
+            <button class="shop-buy-btn" onclick="buyItem('${item.id}')" ${canAfford?'':'disabled'}>Buy</button>
+          </div>
+        </div>`;
+      });
+    });
+
+    body.innerHTML = html;
+  }
+
+  function buyItem(itemId) {
+    const item = SHOP_ITEMS.find(i => i.id === itemId);
+    if (!item || characterGold < item.cost) return;
+    adjustGold(-item.cost, true);
+    // Add to inventory
+    const existing = characterInventory.find(i => i.id === itemId);
+    if (existing) existing.qty = (existing.qty || 1) + 1;
+    else characterInventory.push({ id: itemId, name: item.name, qty: 1 });
+    saveGold();
+    addToFeed('system', `🏪 Purchased: ${item.name} — ${item.cost} gp · Purse: ${characterGold} gp`);
+    renderShop();
+  }
+
+  function useInventoryItem(idx) {
+    const invItem = characterInventory[idx];
+    if (!invItem) return;
+    const shopItem = SHOP_ITEMS.find(s => s.id === invItem.id);
+    if (!shopItem?.use) return;
+    shopItem.use();
+    invItem.qty = (invItem.qty || 1) - 1;
+    if (invItem.qty <= 0) characterInventory.splice(idx, 1);
+    saveGold();
+    renderShop();
+  }
+
+  function toggleShop() {
+    const panel = el('shopPanel');
+    if (!panel) return;
+    if (panel.classList.contains('open')) { panel.classList.remove('open'); return; }
+    renderShop();
+    panel.classList.add('open');
+  }
+
+  window.openShopFromDM = function() {
+    const panel = el('shopPanel');
+    if (!panel) return;
+    if (!panel.classList.contains('open')) {
+      addToFeed('system', '🏪 A merchant appears — the shop is open.');
+      renderShop();
+      panel.classList.add('open');
+    }
+  };
+
+  // ── XP TRACKING ───────────────────────────────────────────────────
+  const XP_LEVELS = [0,300,900,2700,6500,14000,23000,34000,48000,64000,85000,100000,120000,140000,165000,195000,225000,265000,305000,355000];
+  let characterXP    = character?.xp    || 0;
+  let characterLevel = character?.level || 1;
+
+  function awardXP(amount) {
+    if (!amount || !character) return;
+    characterXP += amount;
+    character.xp = characterXP;
+    localStorage.setItem('uwt_selected_character', JSON.stringify(character));
+    const toast = el('xpToast');
+    if (toast) { toast.textContent = `+${amount} XP`; toast.style.opacity='1'; toast.style.transform='translateY(-20px)'; setTimeout(() => { toast.style.opacity='0'; toast.style.transform='translateY(-40px)'; }, 2500); }
+    const newLevel = XP_LEVELS.findIndex((t, i) => characterXP < (XP_LEVELS[i+1] || Infinity)) + 1;
+    if (newLevel > characterLevel) {
+      characterLevel = newLevel;
+      character.level = characterLevel;
+      addToFeed('system', `⭐ ${character.name} reached Level ${characterLevel}!`);
+      if (window.sbClient && character.id) sbClient.from('rpg_characters').update({ xp: characterXP, level: characterLevel }).eq('id', character.id);
+    }
+  }
+
+  // ── ENEMIES ───────────────────────────────────────────────────────
+  let ENEMIES = [];
+  let INIT_ORDER = [];
+  window.getEnemies = () => ENEMIES;
+  let currentInitIdx = 0;
+
+  function buildInitOrder() {
+    const myFirst = character ? character.name.split(' ')[0] : 'You';
+    const myGlyph = character ? character.name[0].toUpperCase() : 'Y';
+    const dexMod  = character ? statMod(statVal(character.stats,'dex')) : 0;
+    const order   = [{ name:myFirst, icon:myGlyph, init:Math.floor(Math.random()*20)+1+dexMod, bg:'rgba(139,0,0,0.22)', border:'rgba(139,0,0,0.6)', player:true }];
+    ENEMIES.forEach(e => order.push({ name:e.name, icon:e.emoji||'👾', init:Math.floor(Math.random()*15)+3, bg:'rgba(100,0,0,0.15)', border:'rgba(150,40,40,0.35)', player:false }));
+    return order.sort((a,b) => b.init - a.init);
+  }
+
+  function renderInitTracker() {
+    const track = el('initTrack');
+    if (!track) return;
+    track.innerHTML = '';
+    INIT_ORDER.forEach((e, i) => {
+      if (i > 0) { const sep = document.createElement('span'); sep.className='init-sep'; sep.textContent='›'; track.appendChild(sep); }
+      const entry = document.createElement('div');
+      entry.className = 'init-entry' + (i === currentInitIdx ? ' active' : '');
+      entry.title = `${e.name} — Initiative ${e.init}`;
+      entry.innerHTML = `<div class="init-av" style="background:${e.bg};border:1.5px solid ${e.border}">${e.icon}</div><div class="init-name">${e.name}</div><div class="init-num">${e.init}</div>`;
+      track.appendChild(entry);
+    });
+  }
+
+  function renderEnemies() {
+    const wrap = el('enemyTracker');
+    if (!wrap) return;
+    wrap.innerHTML = '';
+    const strip = el('encounterStrip');
+    if (!ENEMIES.length) { if (strip) strip.style.display='none'; return; }
+    if (strip) strip.style.display='flex';
+    ENEMIES.forEach((e, i) => {
+      const pct  = Math.max(0, (e.hp / e.maxHp) * 100);
+      const dead = e.hp <= 0;
+      const card = document.createElement('div');
+      card.className = 'enemy-card' + (dead ? ' dead' : '');
+      card.innerHTML = `<div class="enemy-icon-sm">${e.emoji||'👾'}</div><div class="enemy-name-sm">${e.name}</div><div class="enemy-hp-mini"><div class="enemy-hp-track"><div class="enemy-hp-fill-mini" style="width:${pct}%"></div></div><span class="enemy-hp-num">${e.hp}/${e.maxHp}</span></div><div class="enemy-dmg-row"><button class="enemy-btn" onclick="changeEnemyHp(${i},-1)" ${dead?'disabled':''}>−</button><button class="enemy-btn" onclick="changeEnemyHp(${i},1)" ${dead?'disabled':''}>+</button></div>`;
+      wrap.appendChild(card);
+    });
+    if (ENEMIES.length && ENEMIES.every(e => e.hp <= 0)) {
+      const dot = el('encounterDot'); const lbl = el('encounterLabel');
+      if (dot) { dot.style.background='rgba(60,200,60,0.7)'; dot.style.boxShadow='0 0 6px rgba(60,200,60,0.5)'; dot.style.animation='none'; }
+      if (lbl) lbl.textContent = 'Combat · Victory!';
+      const xp = ENEMIES.reduce((s,e) => s+(e.xp||50), 0);
+      awardXP(xp);
+    }
+    if (window.updateMapEnemies) window.updateMapEnemies();
+  }
+
+  function changeEnemyHp(idx, delta) {
+    ENEMIES[idx].hp = Math.min(ENEMIES[idx].maxHp, Math.max(0, ENEMIES[idx].hp + delta));
+    renderEnemies();
+  }
+
+  // ── FEED HELPERS ──────────────────────────────────────────────────
+  function addToFeed(type, content, opts = {}) {
+    const feed = el('feed');
+    if (!feed) return null;
+    const div = document.createElement('div');
+    if (type === 'system') {
+      div.className = 'msg-system';
+      div.textContent = content;
+    } else if (type === 'dm') {
+      div.className = 'msg-dm';
+      div.innerHTML = `<div class="msg-label">Dungeon Master</div><div class="msg-text">${content}</div>`;
+    } else if (type === 'action') {
+      const name = opts.name || 'You';
+      const cls  = opts.cls  || 'Adventurer';
+      div.className = 'msg-player';
+      div.innerHTML = `<div class="player-av garen">${name[0]}</div><div class="msg-player-body"><div class="msg-label">${name} · ${cls} <span style="opacity:0.4;font-size:0.85em">· Submitted</span></div><div class="msg-text">${content.replace(/</g,'&lt;')}</div></div>`;
+    } else if (type === 'dice') {
+      div.className = 'msg-dice';
+      div.innerHTML = `<span class="dice-icon-lg">⚄</span><span class="dice-who">${opts.who||'Player'}</span><span class="dice-type">${opts.stat||'Check'} · DC ${opts.dc||'?'}</span><div class="dice-spacer"></div><span class="dice-result-badge">${opts.result||'?'}</span><span class="dice-dc ${opts.pass?'':'fail'}">${opts.pass?'✓ Pass':'✗ Fail'} DC ${opts.dc}</span>`;
+    }
+    feed.appendChild(div);
+    feed.scrollTop = feed.scrollHeight;
+    return div;
+  }
+
+  // ── STREAMING AI DM ───────────────────────────────────────────────
+  async function callDM(action) {
+    if (isDMThinking) return;
+    isDMThinking = true;
+    el('submitBtn').disabled = true;
+
+    const feed = el('feed');
+    const thinkDiv = document.createElement('div');
+    thinkDiv.className = 'msg-dm msg-dm-thinking';
+    thinkDiv.innerHTML = '<div class="msg-label">Dungeon Master</div><div class="dm-thinking"><span></span><span></span><span></span></div>';
+    feed.appendChild(thinkDiv);
+    feed.scrollTop = feed.scrollHeight;
+
+    try {
+      const { data: { session } } = await sbClient.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('No auth token');
+
+      const resp = await fetch(EDGE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({
+          session_id: sessionId,
+          action,
+          character: character ? {
+            id: character.id, name: character.name, race: character.race, cls: character.cls,
+            level: character.level||1, hp: currentHP, max_hp: character.max_hp||character.hp||10,
+            gold: characterGold,
+            stats: { str: statVal(character.stats,'str'), dex: statVal(character.stats,'dex'), con: statVal(character.stats,'con'), int: statVal(character.stats,'int'), wis: statVal(character.stats,'wis'), cha: statVal(character.stats,'cha') },
+          } : null,
+        }),
+      });
+
+      thinkDiv.remove();
+
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        if ((err.error||'').includes('ANTHROPIC_API_KEY')) {
+          addToFeed('system', '⚠ Set ANTHROPIC_API_KEY in Supabase Edge Function secrets to enable the AI DM');
+          addMockDMResponse(action);
+        } else {
+          addToFeed('system', `DM error: ${err.error || 'Could not reach AI DM'}`);
+        }
+        return;
+      }
+
+      const dmDiv = document.createElement('div');
+      dmDiv.className = 'msg-dm';
+      const textEl = document.createElement('div');
+      textEl.className = 'msg-text';
+      dmDiv.innerHTML = '<div class="msg-label">Dungeon Master</div>';
+      dmDiv.appendChild(textEl);
+      feed.appendChild(dmDiv);
+
+      let fullText = '';
+      const reader  = resp.body.getReader();
+      const decoder = new TextDecoder();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        for (const line of decoder.decode(value, {stream:true}).split('\n')) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const data = JSON.parse(line.slice(6));
+            if (data.text) { fullText += data.text; textEl.innerHTML = formatDMText(fullText); feed.scrollTop = feed.scrollHeight; }
+            if (data.done) processDirectives(fullText);
+          } catch {}
+        }
+      }
+    } catch (e) {
+      console.error('DM call failed:', e);
+      thinkDiv.remove();
+      addMockDMResponse(action);
+    } finally {
+      isDMThinking = false;
+      el('submitBtn').disabled = false;
+      el('yourTurnPanel').style.display = '';
+      el('waitingPanel').style.display  = 'none';
+    }
+  }
+
+  function formatDMText(text) {
+    return text
+      .replace(/\[ROLL:[^\]]*\]/g,'').replace(/\[COMBAT_START\]/g,'').replace(/\[COMBAT_END\]/g,'')
+      .replace(/\[ENEMY:[^\]]*\]/g,'').replace(/\[XP:[^\]]*\]/g,'').replace(/\[SCENE:[^\]]*\]/g,'')
+      .replace(/\[GOLD:[^\]]*\]/g,'').replace(/\[SHOP_OPEN\]/g,'')
+      .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/\n\n/g,'<br><br>').trim();
+  }
+
+  function processDirectives(text) {
+    if (text.includes('[COMBAT_START]')) {
+      addToFeed('system', 'Combat begins — Roll for Initiative');
+      INIT_ORDER = buildInitOrder(); currentInitIdx = 0;
+      renderInitTracker();
+    }
+    if (text.includes('[COMBAT_END]')) {
+      addToFeed('system', 'Combat ends'); ENEMIES = []; INIT_ORDER = [];
+      renderEnemies(); renderInitTracker();
+    }
+    let anyEnemy = false;
+    for (const m of text.matchAll(/\[ENEMY:\s*([^,\]]+),\s*(\d+),\s*(\d+),\s*([^\]]+)\]/g)) {
+      ENEMIES.push({ name:m[1].trim(), hp:parseInt(m[2]), maxHp:parseInt(m[2]), ac:parseInt(m[3]), emoji:m[4].trim() });
+      anyEnemy = true;
+    }
+    if (anyEnemy) { INIT_ORDER = buildInitOrder(); currentInitIdx = 0; renderInitTracker(); renderEnemies(); }
+    const rollM = text.match(/\[ROLL:\s*([^,\]]+),\s*(\d+),\s*([^\]]+)\]/);
+    if (rollM) showDiceOverlay(rollM[1].trim(), parseInt(rollM[2]), rollM[3].trim());
+    const xpM = text.match(/\[XP:\s*(\d+)\]/);
+    if (xpM) awardXP(parseInt(xpM[1]));
+    // Gold award/deduct: [GOLD:+50] or [GOLD:-10]
+    for (const m of text.matchAll(/\[GOLD:\s*([+-]?\d+)\]/g)) {
+      adjustGold(parseInt(m[1]));
+    }
+    // Open merchant shop: [SHOP_OPEN]
+    if (text.includes('[SHOP_OPEN]')) window.openShopFromDM();
+  }
+
+  function addMockDMResponse(action) {
+    const picks = [
+      'The torchlight flickers as you act. Dust cascades from the vaulted ceiling. Something stirs in the shadows ahead — you sense this place is watching you. A faint sound: metal on stone, getting closer. What do you do?',
+      'The dungeon responds to your presence. The corridor ahead narrows, the walls pressing close. Your torch catches something: a symbol scratched into the stone — a warning, or a promise. You hear breathing that is not your own.',
+      'Your action echoes through the chamber. From somewhere below, a groan — or is it the settling of ancient stone? A door ahead stands ajar, pale light bleeding through the gap. The smell of old blood lingers.',
+    ];
+    const note = document.createElement('div');
+    note.className = 'msg-system';
+    note.style.fontSize = '0.5rem';
+    note.textContent = '[mock DM — set ANTHROPIC_API_KEY to enable real AI]';
+    el('feed').appendChild(note);
+    setTimeout(() => { addToFeed('dm', picks[Math.floor(Math.random()*picks.length)]); el('feed').scrollTop = el('feed').scrollHeight; }, 1000);
+  }
+
+  // ── SUBMIT ACTION ─────────────────────────────────────────────────
+  async function submitAction() {
+    const val = el('actionInput').value.trim();
+    if (!val || isDMThinking) return;
+    if (turnCount >= TURNS_PER_CREDIT) {
+      el('creditModal').classList.add('visible');
+      return;
+    }
+    const name = character ? character.name.split(' ')[0] : 'You';
+    const cls  = character ? cap(character.cls) : 'Adventurer';
+    addToFeed('action', val, { name, cls });
+    el('actionInput').value = '';
+    el('yourTurnPanel').style.display = 'none';
+    el('waitingPanel').style.display  = 'flex';
+    el('ideasPanel').style.display    = 'none';
+    updateTurnCounter();
+    if (INIT_ORDER.length) { currentInitIdx = (currentInitIdx + 1) % INIT_ORDER.length; renderInitTracker(); }
+    await callDM(val);
+  }
+
+  // ── IDEAS ─────────────────────────────────────────────────────────
+  const IDEAS = {
+    explore: ['Search carefully for hidden doors or traps','Listen at the door before entering','Examine the symbols on the wall','Look for footprints or signs of passage','Attempt to pick the lock','Barricade the door behind us','Call out to see if anyone answers','Check the ceiling for dangers'],
+    combat:  ['Attack the nearest enemy with my weapon','Cast a spell (describe which one)','Move to a better position, then attack','Shove the enemy to knock them prone','Help an ally — give advantage on their next attack','Dodge — focus on defense this round','Grapple the enemy to restrain them','Retreat to a safer position','Use my class ability (describe it)','Intimidate them into surrendering'],
+    social:  ['Persuade them of our good intentions','Try to deceive them with a convincing lie','Intimidate them into cooperating','Offer something of value in exchange','Ask them what they actually want','Appeal to their self-interest','Try to read their body language','Propose a truce or alliance'],
+  };
+
+  function toggleIdeas() {
+    const panel = el('ideasPanel');
+    if (!panel) return;
+    if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
+    const ctx  = ENEMIES.some(e => e.hp > 0) ? 'combat' : (scenario?.id === 'court' ? 'social' : 'explore');
+    const list = IDEAS[ctx];
+    panel.innerHTML = `<div class="ideas-header"><span>💡 Ideas — ${ctx}</span><button onclick="el('ideasPanel').style.display='none'" style="background:none;border:none;color:var(--dim);cursor:pointer">✕</button></div><div class="ideas-list">${list.map(t=>`<button class="idea-chip" onclick="useIdea(this.textContent.trim())">${t}</button>`).join('')}</div>`;
+    panel.style.display = 'block';
+  }
+
+  function useIdea(text) {
+    const ta = el('actionInput');
+    if (ta) { ta.value = text; ta.focus(); }
+    el('ideasPanel').style.display = 'none';
+  }
+
+  // ── CHARACTER SHEET ───────────────────────────────────────────────
+  const SAVING_THROWS = { barbarian:['str','con'], fighter:['str','con'], paladin:['wis','cha'], ranger:['str','dex'], rogue:['dex','int'], wizard:['int','wis'], cleric:['wis','cha'], druid:['int','wis'], monk:['str','dex'], bard:['dex','cha'], sorcerer:['con','cha'], warlock:['wis','cha'] };
+  const SKILLS = [{n:'Acrobatics',s:'dex'},{n:'Animal Handling',s:'wis'},{n:'Arcana',s:'int'},{n:'Athletics',s:'str'},{n:'Deception',s:'cha'},{n:'History',s:'int'},{n:'Insight',s:'wis'},{n:'Intimidation',s:'cha'},{n:'Investigation',s:'int'},{n:'Medicine',s:'wis'},{n:'Nature',s:'int'},{n:'Perception',s:'wis'},{n:'Performance',s:'cha'},{n:'Persuasion',s:'cha'},{n:'Religion',s:'int'},{n:'Sleight of Hand',s:'dex'},{n:'Stealth',s:'dex'},{n:'Survival',s:'wis'}];
+
+  function profBonus(lvl) { return Math.ceil(lvl/4)+1; }
+
+  function toggleSheet() {
+    const panel = el('charSheetPanel');
+    if (!panel) return;
+    if (panel.classList.contains('open')) { panel.classList.remove('open'); return; }
+    if (!character) { panel.innerHTML = '<div style="padding:20px;font-family:Cinzel,serif;font-size:0.7rem;color:rgba(232,213,183,0.4)">No character selected.</div>'; panel.classList.add('open'); return; }
+    const s = character.stats;
+    const keys = ['str','dex','con','int','wis','cha'];
+    const names = {str:'Strength',dex:'Dexterity',con:'Constitution',int:'Intelligence',wis:'Wisdom',cha:'Charisma'};
+    const lvl = character.level||1;
+    const pb  = profBonus(lvl);
+    const saves = SAVING_THROWS[character.cls]||[];
+    const xpNext = XP_LEVELS[lvl]||XP_LEVELS[XP_LEVELS.length-1];
+    const xpPct  = xpNext ? Math.min(100,(characterXP/xpNext)*100) : 100;
+    panel.innerHTML = `
+      <div class="sheet-header">
+        <div><div class="sheet-char-name">${character.name}</div><div class="sheet-char-sub">${cap(character.race)} ${cap(character.cls)} · Level ${lvl}</div></div>
+        <button onclick="el('charSheetPanel').classList.remove('open')" class="sheet-close">✕</button>
+      </div>
+      <div class="sheet-body">
+        <div class="sheet-stats-row">${keys.map(k=>{const v=statVal(s,k);const m=statMod(v);return`<div class="sheet-stat"><div class="sheet-stat-name">${k.toUpperCase()}</div><div class="sheet-stat-val">${v}</div><div class="sheet-stat-mod">${m>=0?'+':''}${m}</div></div>`;}).join('')}</div>
+        <div class="sheet-combat-row">
+          <div class="sheet-combat-chip"><div class="sheet-combat-val">${calcAC(character.cls,s)}</div><div class="sheet-combat-lbl">AC</div></div>
+          <div class="sheet-combat-chip" style="min-width:80px">
+            <div style="display:flex;align-items:center;gap:6px;justify-content:center">
+              <button onclick="adjustHP(-1)" style="width:20px;height:20px;border-radius:2px;border:1px solid rgba(139,0,0,0.4);background:rgba(139,0,0,0.15);color:rgba(200,100,100,0.8);cursor:pointer;font-size:0.8rem;line-height:1;padding:0">−</button>
+              <div class="sheet-combat-val" id="sheetHpVal">${currentHP}</div>
+              <button onclick="adjustHP(1)" style="width:20px;height:20px;border-radius:2px;border:1px solid rgba(60,120,60,0.4);background:rgba(40,100,40,0.15);color:rgba(100,200,100,0.8);cursor:pointer;font-size:0.8rem;line-height:1;padding:0">+</button>
+            </div>
+            <div class="sheet-combat-lbl">HP / ${character.max_hp||character.hp||10}</div>
+          </div>
+          <div class="sheet-combat-chip"><div class="sheet-combat-val">+${pb}</div><div class="sheet-combat-lbl">Prof</div></div>
+          <div class="sheet-combat-chip"><div class="sheet-combat-val">${lvl}</div><div class="sheet-combat-lbl">Level</div></div>
+          <div class="sheet-combat-chip"><div class="sheet-combat-val" style="color:rgba(196,162,100,0.85)">${characterGold}</div><div class="sheet-combat-lbl">Gold (gp)</div></div>
+        </div>
+        <div class="sheet-xp">
+          <div class="sheet-xp-row"><span style="font-family:Cinzel,serif;font-size:0.55rem;letter-spacing:0.15em;color:var(--dim)">XP</span><span style="font-family:Cinzel,serif;font-size:0.55rem;color:var(--accent)">${characterXP} / ${xpNext}</span></div>
+          <div class="sheet-xp-bar"><div class="sheet-xp-fill" style="width:${xpPct}%"></div></div>
+        </div>
+        <div class="sheet-cols">
+          <div class="sheet-col">
+            <div class="sheet-section-label">Saving Throws</div>
+            ${keys.map(k=>{const v=statVal(s,k);const m=statMod(v)+(saves.includes(k)?pb:0);return`<div class="sheet-save ${saves.includes(k)?'proficient':''}"><span class="sheet-save-bullet">${saves.includes(k)?'●':'○'}</span><span>${m>=0?'+':''}${m} ${names[k].slice(0,3)}</span></div>`;}).join('')}
+            <div class="sheet-section-label" style="margin-top:10px">Background</div>
+            <div style="font-size:0.75rem;color:var(--dim);font-style:italic;line-height:1.5">${cap(character.background||'Folk Hero')}</div>
+            <div style="font-size:0.7rem;color:rgba(196,162,100,0.5);margin-top:2px">${cap(character.alignment||'Neutral Good')}</div>
+          </div>
+          <div class="sheet-col">
+            <div class="sheet-section-label">Skills</div>
+            <div class="sheet-skills-grid">${SKILLS.map(sk=>{const v=statVal(s,sk.s);const m=statMod(v);return`<div class="sheet-skill"><span class="sheet-save-bullet">○</span><span>${m>=0?'+':''}${m}</span><span class="sheet-skill-name">${sk.n}</span></div>`;}).join('')}</div>
+          </div>
+        </div>
+        <div class="sheet-rest-row">
+          <button class="rest-btn" onclick="restoreResources('short');el('charSheetPanel').classList.remove('open')">Short Rest</button>
+          <button class="rest-btn long" onclick="restoreResources('long');el('charSheetPanel').classList.remove('open')">Long Rest</button>
+        </div>
+        <div style="padding-top:10px;border-top:1px solid rgba(255,255,255,0.04);margin-top:2px">
+          <button onclick="endSession()" style="width:100%;padding:8px;background:transparent;border:1px solid rgba(255,255,255,0.08);border-radius:2px;font-family:'Cinzel',serif;font-size:0.52rem;letter-spacing:0.2em;text-transform:uppercase;color:rgba(232,213,183,0.3);cursor:pointer;transition:color 0.15s,border-color 0.15s;" onmouseover="this.style.color='rgba(200,80,80,0.7)';this.style.borderColor='rgba(139,0,0,0.3)'" onmouseout="this.style.color='rgba(232,213,183,0.3)';this.style.borderColor='rgba(255,255,255,0.08)'">End Session &amp; Exit</button>
+        </div>
+      </div>`;
+    panel.classList.add('open');
+  }
+
+  // ── DICE OVERLAY ──────────────────────────────────────────────────
+  function showDiceOverlay(ability, dc, reason) {
+    ability = ability || 'STR';
+    dc      = dc      || 15;
+    reason  = reason  || 'Ability Check';
+    const overlay = el('diceOverlay');
+    overlay.classList.add('visible');
+    el('rollValue').textContent = '—';
+    const key     = ability.toLowerCase().slice(0,3);
+    const score   = statVal(character?.stats, key) || 10;
+    const mod     = statMod(score);
+    overlay.querySelector('.roll-request').textContent   = reason;
+    overlay.querySelector('.roll-stat-name').textContent = `${ability} · DC ${dc}`;
+    el('rollBreakdown').textContent = `d20 + ${ability} modifier (${mod>=0?'+':''}${mod})`;
+    el('rollDcLine').style.display  = 'none';
+    el('rollDismiss').style.display = 'none';
+    el('rollTrigger').style.display = '';
+    el('diceFace').textContent      = '⚄';
+    overlay.dataset.dc  = dc;
+    overlay.dataset.mod = mod;
+    overlay.dataset.ability = ability;
+  }
+
+  function triggerRoll() {
+    const faces  = ['⚀','⚁','⚂','⚃','⚄','⚅'];
+    el('rollTrigger').style.display = 'none';
+    const mod  = parseInt(el('diceOverlay').dataset.mod)  || 0;
+    const dc   = parseInt(el('diceOverlay').dataset.dc)   || 15;
+    const abi  = el('diceOverlay').dataset.ability || 'STR';
+    let ticks  = 0;
+    const iv   = setInterval(() => {
+      el('diceFace').textContent  = faces[Math.floor(Math.random()*6)];
+      el('rollValue').textContent = Math.floor(Math.random()*18)+2;
+      ticks++;
+      if (ticks > 10) {
+        clearInterval(iv);
+        const d20   = Math.floor(Math.random()*20)+1;
+        const total = d20 + mod;
+        const pass  = total >= dc;
+        el('diceFace').textContent      = faces[Math.min(d20-1,5)];
+        el('rollValue').textContent     = total;
+        el('rollBreakdown').textContent = `d20 (${d20}) + mod (${mod>=0?'+':''}${mod}) = ${total}`;
+        const dcLine = el('rollDcLine');
+        dcLine.style.display = 'inline-block';
+        if (pass) { dcLine.textContent=`${total} ≥ DC ${dc} — Success!`; dcLine.className='roll-dc-line pass'; dcLine.style.cssText=''; }
+        else { dcLine.textContent=`${total} < DC ${dc} — Failed`; dcLine.className='roll-dc-line'; dcLine.style.background='rgba(100,20,20,0.2)'; dcLine.style.borderColor='rgba(200,60,60,0.3)'; dcLine.style.color='rgba(220,80,80,0.8)'; }
+        el('rollDismiss').style.display = '';
+        addToFeed('dice','',{who:character?character.name.split(' ')[0]:'Player',stat:abi,dc,result:total,pass});
+      }
+    }, 70);
+  }
+
+  function dismissDice() {
+    el('diceOverlay').classList.remove('visible');
+    pendingRoll = null;
+  }
+
+  // ── SESSION CODE ─────────────────────────────────────────────────
+  function copySessionCode() {
+    const code = sessionStorage.getItem('uwt_session_code');
+    if (!code) return;
+    navigator.clipboard.writeText(code).then(() => {
+      const btn = el('copyCodeBtn');
+      if (btn) { btn.textContent = 'Copied!'; setTimeout(() => { btn.textContent = 'Copy'; }, 2000); }
+    });
+  }
+
+  // ── PLAYER SEATS ─────────────────────────────────────────────────
+  function renderPlayerSeat(seatId, chr, opts = {}) {
+    const seat = el(seatId);
+    if (!seat) return;
+    const { isYou = false, isEmpty = false } = opts;
+
+    if (isEmpty) {
+      const inner = `<div class="p-avatar empty">+</div><div class="p-name" style="opacity:0.25">Open</div><div class="p-hp-bar"><div class="p-hp-fill" style="width:0%"></div></div>`;
+      seat.innerHTML = isYou
+        ? `<div class="p-hp-bar"><div class="p-hp-fill" style="width:0%"></div></div><div class="p-name" style="opacity:0.25">Empty</div><div class="p-avatar empty">?</div>`
+        : inner;
+      return;
+    }
+
+    const name    = chr?.name?.split(' ')[0] || 'Player';
+    const initial = name[0].toUpperCase();
+    const maxHP   = chr?.max_hp || chr?.hp || 1;
+    const hpVal   = chr?.hp || maxHP;
+    const hpPct   = Math.max(0, Math.min(100, (hpVal / maxHP) * 100));
+    const hpClass = hpPct > 60 ? 'hp-high' : hpPct > 30 ? 'hp-med' : 'hp-low';
+
+    if (isYou) {
+      seat.innerHTML = `
+        <div class="p-hp-bar"><div class="p-hp-fill ${hpClass}" style="width:${hpPct}%"></div></div>
+        <div class="p-name" style="color:rgba(196,100,100,0.7)">${name} (you)</div>
+        <div class="p-avatar your-turn" style="color:rgba(230,160,160,0.9)">${initial}<div class="turn-pip your-turn"></div></div>`;
+    } else {
+      seat.innerHTML = `
+        <div class="p-avatar ready" style="color:rgba(196,162,100,0.8)">${initial}<div class="turn-pip ready"></div></div>
+        <div class="p-name">${name}</div>
+        <div class="p-hp-bar"><div class="p-hp-fill ${hpClass}" style="width:${hpPct}%"></div></div>`;
+    }
+  }
+
+  async function loadSessionPlayers() {
+    if (!sessionId || !window.sbClient) return;
+
+    const { data: players } = await sbClient
+      .from('rpg_session_players')
+      .select('*, rpg_characters(*)')
+      .eq('session_id', sessionId)
+      .eq('status', 'joined');
+
+    if (!players) return;
+
+    // Separate current user from others
+    const me     = players.find(p => p.user_id === currentUser?.id);
+    const others = players.filter(p => p.user_id !== currentUser?.id);
+    const seats  = ['seatNorth', 'seatWest', 'seatEast'];
+
+    // Fill south with current user's character
+    renderPlayerSeat('seatSouth', me?.rpg_characters || character, { isYou: true });
+
+    // Fill other seats in join order
+    seats.forEach((seatId, i) => {
+      const p = others[i];
+      if (p) renderPlayerSeat(seatId, p.rpg_characters, {});
+      else   renderPlayerSeat(seatId, null, { isEmpty: true });
+    });
+  }
+
+  // ── INIT ──────────────────────────────────────────────────────────
+  // Populate quick ref bar
+  if (character) {
+    const s = character.stats;
+    if (el('turnChar')) el('turnChar').textContent = `${character.name} · ${cap(character.cls)} Lv ${character.level||1}`;
+    if (el('qStr'))     el('qStr').innerHTML = `STR <strong>${statVal(s,'str')}</strong>`;
+    if (el('qDex'))     el('qDex').innerHTML = `DEX <strong>${statVal(s,'dex')}</strong>`;
+    if (el('qCon'))     el('qCon').innerHTML = `CON <strong>${statVal(s,'con')}</strong>`;
+    if (el('qAc'))      el('qAc').innerHTML  = `AC <strong>${calcAC(character.cls,s)}</strong>`;
+    if (el('qHp'))      el('qHp').textContent = `HP ${currentHP} / ${character.max_hp||character.hp||10}`;
+    if (el('actionInput')) el('actionInput').placeholder = `What does ${character.name} do? Be specific — the DM will call for rolls as needed…`;
+  }
+  if (scenario && el('campaignTitle')) el('campaignTitle').textContent = scenario.name;
+
+  el('actionInput')?.addEventListener('keydown', e => { if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); submitAction(); } });
+
+  const feed = el('feed');
+  if (feed) feed.scrollTop = feed.scrollHeight;
+
+  if (el('encounterStrip')) el('encounterStrip').style.display = 'none';
+  initResources();
+
+  // Auth guard, session wiring, message restore, and Realtime
+  function waitForSb(cb) { if (window.sbClient) { cb(); return; } setTimeout(()=>waitForSb(cb), 50); }
+  waitForSb(async () => {
+    currentUser = await requireAuth();
+
+    // Create solo session if entering game.html directly (not from lobby)
+    if (!sessionId && character) {
+      const sc   = scenario || {};
+      const code = generateSessionCode();
+      const { data: ns } = await sbClient.from('rpg_sessions').insert({ host_id:currentUser.id, code, scenario:sc, status:'active' }).select().single();
+      if (ns) {
+        sessionId = ns.id;
+        sessionStorage.setItem('uwt_session_id', sessionId);
+        sessionStorage.setItem('uwt_session_code', code);
+        await sbClient.from('rpg_session_players').insert({ session_id:sessionId, user_id:currentUser.id, character_id:character?.id||null, status:'joined' });
+        await sbClient.from('rpg_game_state').insert({ session_id:sessionId, current_room:'entrance', initiative_order:[], current_initiative_idx:0, enemies:[], round_number:0, combat_active:false, resources:{} });
+      }
+    }
+
+    // Restore game state (enemies, combat)
+    if (sessionId) {
+      const { data: gs } = await sbClient.from('rpg_game_state').select('*').eq('session_id', sessionId).single();
+      if (gs?.enemies?.length) { ENEMIES = gs.enemies; renderEnemies(); }
+    }
+
+    // Restore or start message feed
+    if (sessionId && character) {
+      const { count } = await sbClient.from('rpg_messages').select('id',{count:'exact',head:true}).eq('session_id', sessionId);
+
+      if (count === 0) {
+        // Fresh session — fire opening DM narration
+        setTimeout(() => callDM('Begin the adventure. Set the opening scene with vivid atmosphere and give me a clear first situation to react to.'), 1000);
+      } else {
+        // Reconnecting — reload last 50 messages into the feed
+        const { data: msgs } = await sbClient.from('rpg_messages')
+          .select('*').eq('session_id', sessionId)
+          .order('created_at', { ascending: true }).limit(50);
+        if (msgs && msgs.length) {
+          el('feed').innerHTML = '';
+          addToFeed('system', `Session resumed · ${scenario?.name || 'Campaign'}`);
+          msgs.forEach(msg => {
+            const meta = msg.metadata || {};
+            if      (msg.type === 'dm')     addToFeed('dm', formatDMText(msg.content));
+            else if (msg.type === 'action') addToFeed('action', msg.content, { name: meta.character_name || 'Player', cls: meta.character_cls || 'Adventurer' });
+            else if (msg.type === 'system') addToFeed('system', msg.content);
+          });
+          // Restore turn count from message history (display only — do not increment)
+          turnCount = msgs.filter(m => m.type === 'action').length;
+          refreshTurnDisplay();
+          el('feed').scrollTop = el('feed').scrollHeight;
+        }
+      }
+    }
+
+    // Show session code in header
+    const code = sessionStorage.getItem('uwt_session_code');
+    if (code) {
+      const display = el('sessionCodeDisplay');
+      const codeVal = el('sessionCodeVal');
+      if (display) display.style.display = 'flex';
+      if (codeVal) codeVal.textContent = code;
+    }
+
+    // Load real player seats
+    await loadSessionPlayers();
+
+    // Build scenario mini-map
+    buildMiniMap(scenario?.id || 'vault');
+
+    // Realtime: messages from other players + DM responses
+    if (sessionId) {
+      sbClient.channel('session:' + sessionId)
+        .on('postgres_changes', {
+          event:  'INSERT',
+          schema: 'public',
+          table:  'rpg_messages',
+          filter: `session_id=eq.${sessionId}`,
+        }, payload => {
+          const msg = payload.new;
+          if (msg.type === 'action' && msg.author_id === currentUser?.id) return;
+          if (msg.type === 'dm' && isDMThinking) return;
+          const meta = msg.metadata || {};
+          if      (msg.type === 'action') addToFeed('action', msg.content, { name: meta.character_name || 'Player', cls: meta.character_cls || 'Adventurer' });
+          else if (msg.type === 'dm')     { addToFeed('dm', formatDMText(msg.content)); processDirectives(msg.content); }
+          else if (msg.type === 'system') addToFeed('system', msg.content);
+        })
+        .on('postgres_changes', {
+          event:  'INSERT',
+          schema: 'public',
+          table:  'rpg_session_players',
+          filter: `session_id=eq.${sessionId}`,
+        }, () => {
+          // A new player joined — refresh seats
+          loadSessionPlayers();
+        })
+        .subscribe();
+    }
+  });
+</script>
+
+<script>
+// ── MINI-MAP (table SVG) ──────────────────────────────────────────
+function buildMiniMap(sceneId) {
+  const svg = document.getElementById('tableMiniMap');
+  if (!svg) return;
+
+  const SHARED_DEFS = `
+    <defs>
+      <pattern id="grid" width="12" height="12" patternUnits="userSpaceOnUse">
+        <path d="M 12 0 L 0 0 0 12" fill="none" stroke="GRID_COLOR" stroke-width="0.5"/>
+      </pattern>
+      <radialGradient id="fogGrad" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="FOG_MID" stop-opacity="0.55"/>
+        <stop offset="100%" stop-color="FOG_MID" stop-opacity="0.88"/>
+      </radialGradient>
+    </defs>`;
+
+  if (sceneId === 'court') {
+    svg.innerHTML = SHARED_DEFS
+      .replace(/GRID_COLOR/g, 'rgba(100,140,200,0.05)')
+      .replace(/FOG_MID/g, '#080C14') + `
+      <rect width="198" height="168" fill="#090C16"/>
+      <rect width="198" height="168" fill="url(#grid)"/>
+      <!-- Entrance Hall (explored) -->
+      <rect x="8" y="100" width="40" height="40" fill="rgba(100,140,200,0.07)" stroke="rgba(100,140,200,0.22)" stroke-width="1" rx="1"/>
+      <text x="28" y="120" font-family="serif" font-size="3.5" fill="rgba(120,160,220,0.35)" text-anchor="middle">ENTRANCE</text>
+      <!-- Corridor (explored) -->
+      <rect x="48" y="110" width="24" height="14" fill="rgba(100,140,200,0.05)" stroke="rgba(100,140,200,0.1)" stroke-width="0.5"/>
+      <!-- Grand Ballroom (CURRENT) -->
+      <rect x="72" y="44" width="90" height="84" fill="rgba(80,120,200,0.09)" stroke="rgba(120,160,220,0.5)" stroke-width="1.5" rx="1"/>
+      <rect x="72" y="44" width="90" height="84" fill="none" stroke="rgba(100,150,220,0.14)" stroke-width="4" rx="1"/>
+      <text x="117" y="60" font-family="serif" font-size="4.5" fill="rgba(140,180,240,0.5)" text-anchor="middle">GRAND BALLROOM</text>
+      <!-- West Gallery (explored) -->
+      <rect x="14" y="44" width="56" height="52" fill="rgba(100,140,200,0.06)" stroke="rgba(100,140,200,0.18)" stroke-width="1" rx="1"/>
+      <text x="42" y="72" font-family="serif" font-size="3.5" fill="rgba(120,160,220,0.3)" text-anchor="middle">W. GALLERY</text>
+      <!-- East Alcove (fogged) -->
+      <rect x="164" y="44" width="26" height="36" fill="rgba(8,10,18,0.75)" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>
+      <rect x="164" y="44" width="26" height="36" fill="url(#fogGrad)"/>
+      <!-- Service Corridor (fogged) -->
+      <rect x="164" y="82" width="26" height="50" fill="rgba(8,10,18,0.75)" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>
+      <rect x="164" y="82" width="26" height="50" fill="url(#fogGrad)"/>
+      <!-- Stage (fogged) -->
+      <rect x="86" y="132" width="62" height="26" fill="rgba(8,10,18,0.75)" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>
+      <rect x="86" y="132" width="62" height="26" fill="url(#fogGrad)"/>
+      <text x="117" y="147" font-family="serif" font-size="4" fill="rgba(120,160,220,0.18)" text-anchor="middle">???</text>
+      <!-- Player tokens -->
+      <circle cx="110" cy="90" r="5" fill="rgba(139,0,0,0.8)" stroke="rgba(200,80,80,0.6)" stroke-width="1.5"/>
+      <text x="110" y="93" font-family="serif" font-size="5" fill="rgba(255,200,200,0.9)" text-anchor="middle">G</text>
+      <circle cx="125" cy="80" r="5" fill="rgba(30,100,30,0.8)" stroke="rgba(60,200,60,0.5)" stroke-width="1.5"/>
+      <text x="125" y="83" font-family="serif" font-size="5" fill="rgba(160,255,160,0.9)" text-anchor="middle">M</text>
+      <!-- Legend -->
+      <circle cx="12" cy="158" r="3" fill="rgba(139,0,0,0.7)" stroke="rgba(200,80,80,0.5)" stroke-width="0.8"/>
+      <text x="17" y="161" font-family="serif" font-size="3.5" fill="rgba(120,160,220,0.3)">Party</text>
+      <text x="145" y="161" font-family="serif" font-size="3.5" fill="rgba(120,160,220,0.22)">● You are here</text>`;
+
+  } else if (sceneId === 'dark') {
+    svg.innerHTML = SHARED_DEFS
+      .replace(/GRID_COLOR/g, 'rgba(70,100,50,0.05)')
+      .replace(/FOG_MID/g, '#060704') + `
+      <rect width="198" height="168" fill="#080704"/>
+      <rect width="198" height="168" fill="url(#grid)"/>
+      <!-- North Road (explored) -->
+      <rect x="88" y="8" width="18" height="44" fill="rgba(70,100,50,0.07)" stroke="rgba(90,130,60,0.2)" stroke-width="0.5"/>
+      <!-- The Inn (explored) -->
+      <rect x="8" y="48" width="44" height="62" fill="rgba(70,100,50,0.07)" stroke="rgba(90,130,60,0.22)" stroke-width="1" rx="1"/>
+      <text x="30" y="70" font-family="serif" font-size="3.5" fill="rgba(100,150,70,0.35)" text-anchor="middle">THE INN</text>
+      <!-- Town Square (CURRENT) -->
+      <rect x="56" y="48" width="92" height="68" fill="rgba(60,90,40,0.09)" stroke="rgba(90,150,60,0.45)" stroke-width="1.5" rx="1"/>
+      <rect x="56" y="48" width="92" height="68" fill="none" stroke="rgba(80,130,50,0.14)" stroke-width="4" rx="1"/>
+      <text x="102" y="64" font-family="serif" font-size="4.5" fill="rgba(100,160,70,0.5)" text-anchor="middle">TOWN SQUARE</text>
+      <!-- Church/Ruins (fogged) -->
+      <rect x="152" y="48" width="38" height="52" fill="rgba(6,7,4,0.8)" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>
+      <rect x="152" y="48" width="38" height="52" fill="url(#fogGrad)"/>
+      <!-- Market Stalls (fogged) -->
+      <rect x="56" y="120" width="72" height="30" fill="rgba(6,7,4,0.8)" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>
+      <rect x="56" y="120" width="72" height="30" fill="url(#fogGrad)"/>
+      <text x="92" y="137" font-family="serif" font-size="4" fill="rgba(90,140,60,0.18)" text-anchor="middle">???</text>
+      <!-- Fields (fogged) -->
+      <rect x="8" y="114" width="44" height="40" fill="rgba(6,7,4,0.8)" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>
+      <rect x="8" y="114" width="44" height="40" fill="url(#fogGrad)"/>
+      <!-- Player tokens -->
+      <circle cx="96" cy="88" r="5" fill="rgba(139,0,0,0.8)" stroke="rgba(200,80,80,0.6)" stroke-width="1.5"/>
+      <text x="96" y="91" font-family="serif" font-size="5" fill="rgba(255,200,200,0.9)" text-anchor="middle">G</text>
+      <circle cx="110" cy="82" r="5" fill="rgba(30,100,30,0.8)" stroke="rgba(60,200,60,0.5)" stroke-width="1.5"/>
+      <text x="110" y="85" font-family="serif" font-size="5" fill="rgba(160,255,160,0.9)" text-anchor="middle">M</text>
+      <!-- Legend -->
+      <circle cx="12" cy="158" r="3" fill="rgba(139,0,0,0.7)" stroke="rgba(200,80,80,0.5)" stroke-width="0.8"/>
+      <text x="17" y="161" font-family="serif" font-size="3.5" fill="rgba(100,150,70,0.3)">Party</text>
+      <text x="145" y="161" font-family="serif" font-size="3.5" fill="rgba(90,130,60,0.22)">● You are here</text>`;
+
+  }
+  // vault: SVG content already in HTML — no change needed
+}
+</script>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+//  BATTLE MAP OVERLAY
+// ═══════════════════════════════════════════════════════════════════
+(function () {
+  'use strict';
+
+  const COLS = 20, ROWS = 16;
+
+  // Each scenario has named rooms defined as [col, row, width, height]
+  // explored[] = room indices lit on open; current = highlighted room index; start = player spawn
+  const MAP_DEFS = {
+    vault: {
+      rooms: [
+        [2,6,4,4],   // 0 Entry Chamber
+        [6,7,3,2],   // 1 Corridor (east)
+        [9,5,6,6],   // 2 Guard Post  ← current
+        [11,3,2,2],  // 3 North Alcove
+        [11,11,2,3], // 4 Corridor (south)
+        [8,14,7,2],  // 5 Main Hall
+        [15,5,4,6],  // 6 East Section
+      ],
+      explored: [0,1,2], current: 2, start: [13,8],
+    },
+    court: {
+      rooms: [
+        [2,7,3,4],   // 0 Entrance Hall
+        [5,4,10,9],  // 1 Grand Ballroom ← current
+        [2,4,3,3],   // 2 West Gallery
+        [15,4,3,3],  // 3 East Gallery
+        [15,7,3,4],  // 4 Service Corridor
+        [7,13,6,2],  // 5 Stage
+      ],
+      explored: [0,1,2], current: 1, start: [10,8],
+    },
+    dark: {
+      rooms: [
+        [5,5,10,6],  // 0 Town Square ← current
+        [2,4,3,5],   // 1 The Inn
+        [15,4,3,5],  // 2 Old Church
+        [5,11,6,3],  // 3 Market Stalls
+        [8,2,4,3],   // 4 North Road
+        [5,14,10,2], // 5 Fields
+      ],
+      explored: [0,1,4], current: 0, start: [10,8],
+    },
+  };
+
+  // Runtime state
+  let grid = [];               // 0=wall 1=explored 2=fogged 3=current-room
+  let playerPos = {col:10, row:8};
+  let sceneId   = 'vault';
+  let dragGhost = null;
+
+  window.MAP_OPEN = false;
+
+  // ── MOVEMENT RANGE ───────────────────────────────────────────────
+
+  function getSpeedSquares() {
+    let chr = null;
+    try { chr = JSON.parse(localStorage.getItem('uwt_selected_character')); } catch(e) {}
+    if (!chr) return 6;
+    const lvl = chr.level || 1;
+    if (chr.cls === 'barbarian') return 7;           // 35ft
+    if (chr.cls === 'monk') {
+      if (lvl >= 18) return 12;                      // 60ft
+      if (lvl >= 14) return 11;                      // 55ft
+      if (lvl >= 10) return 10;                      // 50ft
+      if (lvl >= 6)  return 9;                       // 45ft
+      if (lvl >= 2)  return 8;                       // 40ft
+      return 6;
+    }
+    return 6;                                        // 30ft (everyone else)
+  }
+
+  function showMovementRange() {
+    const speed = getSpeedSquares();
+    const container = document.getElementById('mapGrid');
+    if (!container) return;
+    container.querySelectorAll('.mc').forEach(cell => {
+      const col = parseInt(cell.dataset.col);
+      const row = parseInt(cell.dataset.row);
+      if (grid[row]?.[col] === 0) return;            // walls — skip
+      // Chebyshev distance (diagonals cost 1 square, matches 5e default)
+      const dist = Math.max(Math.abs(col - playerPos.col), Math.abs(row - playerPos.row));
+      if (dist <= speed) {
+        cell.classList.add('mc-in-range');
+      } else {
+        cell.classList.add('mc-out-range');
+      }
+    });
+    const hint = document.getElementById('mapMoveHint');
+    if (hint) hint.textContent = `Move range: ${speed} squares · ${speed * 5}ft · green = reachable`;
+  }
+
+  function clearMovementRange() {
+    document.querySelectorAll('.mc-in-range').forEach(c => c.classList.remove('mc-in-range'));
+    document.querySelectorAll('.mc-out-range').forEach(c => c.classList.remove('mc-out-range'));
+    const hint = document.getElementById('mapMoveHint');
+    if (hint) hint.textContent = 'Drag your token to move · Reveals fog';
+  }
+
+  // ── GRID CONSTRUCTION ────────────────────────────────────────────
+
+  function buildGrid(sid) {
+    sceneId = sid;
+    const def = MAP_DEFS[sid] || MAP_DEFS.vault;
+    grid = Array.from({length:ROWS}, () => new Array(COLS).fill(0));
+    def.rooms.forEach(([c,r,w,h], i) => {
+      const type = i === def.current ? 3 : def.explored.includes(i) ? 1 : 2;
+      for (let row = r; row < r+h && row < ROWS; row++)
+        for (let col = c; col < c+w && col < COLS; col++)
+          grid[row][col] = type;
+    });
+    playerPos = { col: def.start[0], row: def.start[1] };
+    revealFog(playerPos.col, playerPos.row, 3);
+  }
+
+  function revealFog(col, row, radius) {
+    for (let dr = -radius; dr <= radius; dr++)
+      for (let dc = -radius; dc <= radius; dc++) {
+        const nr = row + dr, nc = col + dc;
+        if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && grid[nr][nc] === 2)
+          grid[nr][nc] = 1;
+      }
+  }
+
+  // ── RENDER ───────────────────────────────────────────────────────
+
+  function getCellEl(col, row) {
+    return document.querySelector(`#mapGrid [data-col="${col}"][data-row="${row}"]`);
+  }
+
+  function renderGrid() {
+    const container = document.getElementById('mapGrid');
+    if (!container) return;
+    container.className = 'battle-grid theme-' + sceneId;
+    let html = '';
+    for (let r = 0; r < ROWS; r++)
+      for (let c = 0; c < COLS; c++) {
+        const t = grid[r][c];
+        const cls = t===0?'mc-wall':t===1?'mc-floor':t===2?'mc-fog':'mc-current';
+        html += `<div class="mc ${cls}" data-col="${c}" data-row="${r}"></div>`;
+      }
+    container.innerHTML = html;
+    placePlayer();
+    placeEnemies();
+  }
+
+  function placePlayer() {
+    document.querySelectorAll('.map-token-player').forEach(t => t.remove());
+    const c = getCellEl(playerPos.col, playerPos.row);
+    if (!c) return;
+    let chr = null;
+    try { chr = JSON.parse(localStorage.getItem('uwt_selected_character')); } catch(e) {}
+    const tok = document.createElement('div');
+    tok.className = 'map-token map-token-player';
+    tok.textContent = (chr?.name?.[0] || 'P').toUpperCase();
+    tok.title = (chr?.name || 'Player') + ' · Drag to move';
+    c.appendChild(tok);
+  }
+
+  function placeEnemies() {
+    document.querySelectorAll('.map-token-enemy').forEach(t => t.remove());
+    const enemies = window.getEnemies ? window.getEnemies() : [];
+    if (!enemies.length) return;
+    const def = MAP_DEFS[sceneId] || MAP_DEFS.vault;
+    enemies.forEach((e, i) => {
+      // Spread enemies from player position + 2 right, staggered
+      const col = Math.min(COLS-1, Math.max(0, def.start[0] + 2 + (i % 3)));
+      const row = Math.min(ROWS-1, Math.max(0, def.start[1] - 1 + Math.floor(i / 3)));
+      const c = getCellEl(col, row);
+      if (!c) return;
+      const tok = document.createElement('div');
+      tok.className = 'map-token map-token-enemy' + (e.hp <= 0 ? ' dead' : '');
+      tok.textContent = e.emoji || '👾';
+      tok.title = `${e.name} · HP ${e.hp}/${e.maxHp} · AC ${e.ac || '?'}`;
+      c.appendChild(tok);
+    });
+  }
+
+  // Called by renderEnemies() in the main script whenever enemy state changes
+  window.updateMapEnemies = function () {
+    if (!window.MAP_OPEN) return;
+    placeEnemies();
+  };
+
+  // ── DRAG ─────────────────────────────────────────────────────────
+
+  // Find the grid cell under pointer, temporarily hiding the drag ghost
+  function getTargetCell(x, y) {
+    if (dragGhost) dragGhost.style.visibility = 'hidden';
+    const el = document.elementFromPoint(x, y);
+    if (dragGhost) dragGhost.style.visibility = '';
+    if (!el) return null;
+    const c = el.closest ? el.closest('[data-col]') : null;
+    if (!c) return null;
+    const col = parseInt(c.dataset.col);
+    const row = parseInt(c.dataset.row);
+    if (!grid[row] || grid[row][col] === 0) return null; // wall → reject
+    return { col, row, el: c };
+  }
+
+  function setupDrag() {
+    const container = document.getElementById('mapGrid');
+    if (!container || container._mapDragReady) return;
+    container._mapDragReady = true;
+
+    container.addEventListener('mousedown', function (e) {
+      const tok = e.target.closest('.map-token-player');
+      if (!tok) return;
+      e.preventDefault();
+      dragGhost = document.createElement('div');
+      dragGhost.className = 'map-drag-ghost';
+      dragGhost.textContent = tok.textContent;
+      document.body.appendChild(dragGhost);
+      dragGhost.style.left = (e.clientX - 13) + 'px';
+      dragGhost.style.top  = (e.clientY - 13) + 'px';
+      showMovementRange();
+    });
+  }
+
+  document.addEventListener('mousemove', function (e) {
+    if (!dragGhost) return;
+    dragGhost.style.left = (e.clientX - 13) + 'px';
+    dragGhost.style.top  = (e.clientY - 13) + 'px';
+    document.querySelectorAll('.mc-hover').forEach(c => c.classList.remove('mc-hover'));
+    const hit = getTargetCell(e.clientX, e.clientY);
+    if (hit) hit.el.classList.add('mc-hover');
+  });
+
+  document.addEventListener('mouseup', function (e) {
+    if (!dragGhost) return;
+    dragGhost.remove();
+    dragGhost = null;
+    document.querySelectorAll('.mc-hover').forEach(c => c.classList.remove('mc-hover'));
+    clearMovementRange();
+    const hit = getTargetCell(e.clientX, e.clientY);
+    if (hit) {
+      playerPos = { col: hit.col, row: hit.row };
+      revealFog(hit.col, hit.row, 3);
+      renderGrid(); // rebuilds innerHTML, range classes are gone
+    }
+  });
+
+  // ── PUBLIC API ────────────────────────────────────────────────────
+
+  window.toggleMap = function () {
+    const overlay = document.getElementById('mapOverlay');
+    if (!overlay) return;
+
+    if (overlay.classList.contains('visible')) {
+      overlay.classList.remove('visible');
+      window.MAP_OPEN = false;
+      return;
+    }
+
+    let sc = null;
+    try { sc = JSON.parse(sessionStorage.getItem('campaignScenario')); } catch(e) {}
+    buildGrid(sc?.id || 'vault');
+
+    const nameEl = document.getElementById('mapSceneName');
+    if (nameEl) nameEl.textContent = sc?.name || 'The Sunless Citadel';
+
+    setupDrag();
+    renderGrid();
+    overlay.classList.add('visible');
+    window.MAP_OPEN = true;
+  };
+
+})();
+</script>
+</body>
+</html>

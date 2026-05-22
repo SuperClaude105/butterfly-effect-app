@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Characters — The Unwritten Table</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Playfair+Display:ital,wght@0,700;0,900;1,400;1,700&family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --primary:#8B0000; --accent:#c4a264;
+      --bg:#080404; --surface:#110707;
+      --border:rgba(255,255,255,0.08); --text:#e8d5b7;
+      --dim:rgba(232,213,183,0.45);
+    }
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'EB Garamond',Georgia,serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+    body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='250' height='250'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");pointer-events:none;z-index:9999;opacity:0.6;}
+    body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 60% 50% at 50% 40%,rgba(139,0,0,0.12) 0%,transparent 70%);pointer-events:none;z-index:0;}
+    .page{position:relative;z-index:10;max-width:960px;margin:0 auto;padding:28px 24px 80px;}
+
+    /* Header */
+    .site-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:36px;padding-bottom:16px;border-bottom:1px solid rgba(196,162,100,0.12);}
+    .brand{display:flex;align-items:center;gap:10px;}
+    .brand-dot{width:6px;height:6px;border-radius:50%;background:var(--primary);box-shadow:0 0 8px var(--primary);}
+    .brand-title{font-family:'Playfair Display',serif;font-style:italic;font-size:1.3rem;color:var(--accent);letter-spacing:-0.02em;}
+    .nav-link{font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.25em;text-transform:uppercase;color:var(--dim);text-decoration:none;padding:6px 12px;border:1px solid rgba(255,255,255,0.07);border-radius:2px;transition:color 0.15s,border-color 0.15s;}
+    .nav-link:hover{color:var(--accent);border-color:rgba(196,162,100,0.3);}
+
+    /* Page title row */
+    .page-title-row{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:28px;}
+    .page-title{font-family:'Playfair Display',serif;font-style:italic;font-size:2rem;color:var(--text);letter-spacing:-0.02em;line-height:1.1;}
+    .page-title span{color:var(--accent);}
+    .slot-info{font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--dim);display:flex;align-items:center;gap:6px;}
+    .slot-pip{width:7px;height:7px;border-radius:50%;}
+    .slot-pip.used{background:var(--accent);}
+    .slot-pip.free{background:rgba(255,255,255,0.12);}
+
+    /* Section label */
+    .section-label{font-family:'Cinzel',serif;font-size:0.58rem;letter-spacing:0.35em;text-transform:uppercase;color:var(--accent);opacity:0.5;display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+    .section-label::after{content:'';flex:1;height:1px;background:linear-gradient(to right,rgba(196,162,100,0.15),transparent);}
+
+    /* Characters grid */
+    .characters-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+
+    /* Character card */
+    .char-card{background:var(--surface);border:1px solid var(--border);border-radius:3px;overflow:hidden;cursor:pointer;position:relative;transition:border-color 0.2s,transform 0.15s,box-shadow 0.2s;}
+    .char-card:hover{border-color:rgba(196,162,100,0.35);transform:translateY(-2px);}
+    .char-card:active{transform:translateY(0);}
+    .char-card.selected{
+      border-color:var(--accent);
+      box-shadow:0 0 0 1px rgba(196,162,100,0.25), 0 6px 28px rgba(196,162,100,0.12);
+      transform:translateY(-2px);
+    }
+    .char-card.selected:hover{border-color:var(--accent);}
+
+    /* Selected checkmark badge */
+    .selected-mark{
+      position:absolute;top:10px;left:10px;z-index:5;
+      width:22px;height:22px;border-radius:50%;
+      background:var(--accent);color:var(--bg);
+      font-size:0.65rem;font-weight:700;font-family:'Cinzel',serif;
+      display:none;align-items:center;justify-content:center;
+      box-shadow:0 2px 8px rgba(0,0,0,0.4);
+    }
+    .char-card.selected .selected-mark{display:flex;}
+
+    /* Portrait */
+    .char-portrait{width:100%;height:160px;position:relative;overflow:hidden;}
+    .char-portrait img{width:100%;height:100%;object-fit:cover;display:block;filter:grayscale(15%) contrast(105%);}
+    .char-portrait::after{content:'';position:absolute;inset:0;background:linear-gradient(to top,rgba(8,4,4,0.95) 0%,rgba(8,4,4,0.3) 50%,transparent 100%);}
+    .char-card.selected .char-portrait::after{background:linear-gradient(to top,rgba(8,4,4,0.9) 0%,rgba(139,0,0,0.15) 60%,transparent 100%);}
+
+    .char-level-badge{position:absolute;top:10px;right:10px;z-index:2;background:rgba(8,4,4,0.7);border:1px solid rgba(196,162,100,0.3);border-radius:2px;padding:3px 8px;font-family:'Cinzel',serif;font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--accent);}
+
+    /* Hover overlay */
+    .char-play-btn{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0;background:rgba(8,4,4,0.55);transition:opacity 0.2s;z-index:3;}
+    .char-card:hover .char-play-btn{opacity:1;}
+    .char-card.selected .char-play-btn{display:none;}
+    .play-inner{font-family:'Cinzel',serif;font-size:0.65rem;letter-spacing:0.3em;text-transform:uppercase;color:var(--accent);padding:10px 20px;border:1px solid rgba(196,162,100,0.4);border-radius:2px;background:rgba(139,0,0,0.4);}
+
+    /* Card info */
+    .char-info{padding:14px 16px 16px;}
+    .char-name{font-family:'Playfair Display',serif;font-style:italic;font-size:1.15rem;color:var(--text);line-height:1.2;margin-bottom:3px;}
+    .char-class{font-family:'Cinzel',serif;font-size:0.58rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--accent);opacity:0.75;margin-bottom:10px;}
+    .char-stats{display:flex;gap:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.05);}
+    .char-stat{text-align:center;}
+    .char-stat-val{display:block;font-family:'Cinzel',serif;font-size:0.85rem;color:var(--text);line-height:1.1;}
+    .char-stat-lbl{display:block;font-size:0.52rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--dim);margin-top:1px;}
+    .char-last{margin-top:10px;font-size:0.68rem;font-style:italic;color:var(--dim);line-height:1.4;}
+    .char-last strong{color:rgba(196,162,100,0.6);font-style:normal;}
+
+    /* New character card */
+    .new-char-card{background:rgba(255,255,255,0.015);border:2px dashed rgba(196,162,100,0.18);border-radius:3px;min-height:280px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;cursor:pointer;text-decoration:none;transition:border-color 0.2s,background 0.2s,transform 0.15s;}
+    .new-char-card:hover{border-color:rgba(196,162,100,0.4);background:rgba(196,162,100,0.03);transform:translateY(-2px);}
+    .new-char-icon{width:52px;height:52px;border-radius:50%;border:2px dashed rgba(196,162,100,0.3);display:flex;align-items:center;justify-content:center;font-size:1.4rem;color:rgba(196,162,100,0.4);}
+    .new-char-label{font-family:'Cinzel',serif;font-size:0.65rem;letter-spacing:0.25em;text-transform:uppercase;color:rgba(196,162,100,0.45);}
+    .new-char-sub{font-size:0.65rem;color:var(--dim);font-style:italic;}
+
+    /* Locked slot */
+    .locked-card{background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.05);border-radius:3px;min-height:280px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;transition:border-color 0.2s,transform 0.15s;}
+    .locked-card:hover{border-color:rgba(196,162,100,0.2);transform:translateY(-2px);cursor:pointer;}
+    .lock-icon{width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:center;font-size:1.1rem;opacity:0.3;}
+    .locked-label{font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;color:rgba(255,255,255,0.2);}
+    .unlock-btn{margin-top:4px;padding:7px 16px;background:rgba(139,0,0,0.2);border:1px solid rgba(139,0,0,0.35);border-radius:2px;font-family:'Cinzel',serif;font-size:0.55rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--accent);opacity:0.7;cursor:pointer;transition:opacity 0.15s,background 0.15s;}
+    .unlock-btn:hover{opacity:1;background:rgba(139,0,0,0.35);}
+    .unlock-price{font-size:0.6rem;color:var(--dim);font-style:italic;}
+
+    /* CTA strip */
+    .campaigns-cta{
+      position:fixed;bottom:0;left:0;right:0;z-index:100;
+      background:rgba(8,4,4,0.96);border-top:1px solid rgba(255,255,255,0.07);
+      backdrop-filter:blur(12px);
+      padding:14px 32px;
+      display:flex;align-items:center;justify-content:space-between;gap:20px;
+    }
+    .cta-text{}
+    .cta-title{font-family:'Playfair Display',serif;font-style:italic;font-size:1rem;color:var(--text);margin-bottom:3px;}
+    .cta-sub{font-size:0.7rem;color:var(--dim);line-height:1.4;}
+    .cta-sub .playing-as{color:var(--accent);font-style:normal;}
+    .cta-btn{
+      flex-shrink:0;padding:11px 28px;
+      border-radius:2px;font-family:'Cinzel',serif;font-size:0.62rem;
+      letter-spacing:0.3em;text-transform:uppercase;
+      cursor:pointer;text-decoration:none;
+      transition:opacity 0.2s,transform 0.1s;
+    }
+    .cta-btn.disabled{
+      background:rgba(255,255,255,0.04);
+      border:1px solid rgba(255,255,255,0.08);
+      color:rgba(232,213,183,0.25);
+      cursor:not-allowed;pointer-events:none;
+    }
+    .cta-btn.enabled{
+      background:linear-gradient(140deg,#7A0000,#5A0000);
+      border:1px solid rgba(139,0,0,0.45);
+      color:var(--accent);
+      box-shadow:0 4px 20px rgba(139,0,0,0.25);
+    }
+    .cta-btn.enabled:hover{opacity:0.87;}
+    .cta-btn.enabled:active{transform:scale(0.98);}
+
+    /* Empty state */
+    .empty-state{text-align:center;padding:60px 20px;color:var(--dim);}
+    .empty-state p{font-style:italic;margin-bottom:16px;}
+
+    /* Delete button on char card */
+    .char-delete{position:absolute;top:10px;right:10px;z-index:6;width:22px;height:22px;border-radius:50%;background:rgba(139,0,0,0.7);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.7);font-size:0.75rem;line-height:1;display:none;align-items:center;justify-content:center;cursor:pointer;transition:background 0.15s;}
+    .char-delete:hover{background:rgba(180,0,0,0.9);}
+    .char-card:hover .char-delete{display:flex;}
+    .char-card.selected .char-delete{display:none;}
+
+    /* Loading state */
+    .loading-state{text-align:center;padding:60px 20px;color:var(--dim);font-style:italic;}
+
+    /* User info in header */
+    .user-info{display:flex;align-items:center;gap:10px;}
+    .user-name{font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.15em;color:var(--dim);}
+    .sign-out-btn{font-family:'Cinzel',serif;font-size:0.55rem;letter-spacing:0.2em;text-transform:uppercase;color:rgba(196,162,100,0.45);background:none;border:1px solid rgba(255,255,255,0.07);border-radius:2px;padding:5px 10px;cursor:pointer;transition:color 0.15s,border-color 0.15s;}
+    .sign-out-btn:hover{color:var(--accent);border-color:rgba(196,162,100,0.3);}
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <header class="site-header">
+    <div class="brand">
+      <div class="brand-dot"></div>
+      <div class="brand-title">The Unwritten Table</div>
+    </div>
+    <div class="user-info">
+      <span class="user-name" id="userNameDisplay"></span>
+      <button class="sign-out-btn" onclick="signOut()">Sign Out</button>
+      <a href="scenario.html" class="nav-link">Browse Campaigns</a>
+    </div>
+  </header>
+
+  <div class="page-title-row">
+    <h1 class="page-title">Your <span>Characters</span></h1>
+    <div class="slot-info" id="slotInfo">
+      <!-- rendered by JS -->
+    </div>
+  </div>
+
+  <div class="section-label">Active Characters</div>
+
+  <div class="characters-grid" id="charactersGrid">
+    <!-- rendered by JS -->
+  </div>
+
+</div>
+
+<!-- Fixed CTA -->
+<div class="campaigns-cta">
+  <div class="cta-text">
+    <div class="cta-title" id="ctaTitle">Ready to adventure?</div>
+    <div class="cta-sub" id="ctaSub">Select a character above to continue.</div>
+  </div>
+  <button class="cta-btn disabled" id="ctaBtn" onclick="goToCampaigns()">Select a Character First</button>
+</div>
+
+<script src="supabase-client.js"></script>
+<script>
+  const FREE_SLOTS  = 2;
+  const TOTAL_SLOTS = 4;
+
+  let characters = [];
+  let selectedId = null;
+  let currentUser = null;
+
+  // ── Helpers ──────────────────────────────────────────────────
+  function capitalise(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; }
+
+  function statVal(stats, key) {
+    if (!stats) return '—';
+    const v = stats[key];
+    if (v === undefined || v === null) return '—';
+    // Normalize: Supabase stores flat numbers; localStorage may store {base,racial,total}
+    return typeof v === 'object' ? (v.total ?? '—') : v;
+  }
+
+  function timeSince(iso) {
+    if (!iso) return null;
+    const diff = Date.now() - new Date(iso).getTime();
+    const mins  = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days  = Math.floor(diff / 86400000);
+    if (mins < 2)   return 'just now';
+    if (hours < 1)  return mins + ' min ago';
+    if (days < 1)   return hours + 'h ago';
+    if (days === 1) return 'yesterday';
+    return days + ' days ago';
+  }
+
+  const primaryStat = {
+    barbarian:'str', fighter:'str', paladin:'str',
+    ranger:'dex', rogue:'dex', monk:'dex',
+    wizard:'int', sorcerer:'cha', warlock:'cha',
+    bard:'cha', cleric:'wis', druid:'wis'
+  };
+
+  // ── Load from Supabase ────────────────────────────────────────
+  async function loadCharacters() {
+    const grid = document.getElementById('charactersGrid');
+    grid.innerHTML = '<div class="loading-state">Loading your characters...</div>';
+
+    const { data, error } = await sbClient
+      .from('rpg_characters')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error loading characters:', error);
+      // Fall back to localStorage if Supabase fails
+      characters = JSON.parse(localStorage.getItem('uwt_characters') || '[]');
+    } else {
+      characters = data || [];
+      // Sync to localStorage for game screens that read from it
+      localStorage.setItem('uwt_characters', JSON.stringify(characters));
+    }
+
+    // Restore selection if it still exists
+    const saved = localStorage.getItem('uwt_selected_character');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (characters.find(c => c.id === parsed.id)) selectedId = parsed.id;
+      } catch(e) {}
+    }
+
+    render();
+  }
+
+  // ── Delete character ──────────────────────────────────────────
+  async function deleteChar(id, event) {
+    event.stopPropagation();
+    if (!confirm('Delete this character? This cannot be undone.')) return;
+
+    const { error } = await sbClient
+      .from('rpg_characters')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', currentUser.id);
+
+    if (error) {
+      alert('Could not delete character. Please try again.');
+      return;
+    }
+
+    // If deleted the selected character, clear selection
+    if (selectedId === id) {
+      selectedId = null;
+      localStorage.removeItem('uwt_selected_character');
+    }
+
+    characters = characters.filter(c => c.id !== id);
+    localStorage.setItem('uwt_characters', JSON.stringify(characters));
+    render();
+  }
+
+  // ── Render ───────────────────────────────────────────────────
+  function render() {
+    renderSlotInfo();
+    renderGrid();
+    updateCTA();
+  }
+
+  function renderSlotInfo() {
+    const used = characters.length;
+    const slotEl = document.getElementById('slotInfo');
+    let html = '';
+    for (let i = 0; i < TOTAL_SLOTS; i++) {
+      html += `<div class="slot-pip ${i < used ? 'used' : 'free'}"></div>`;
+    }
+    html += `&nbsp;${used} of ${FREE_SLOTS} slots used`;
+    slotEl.innerHTML = html;
+  }
+
+  function renderGrid() {
+    const grid = document.getElementById('charactersGrid');
+    const used = characters.length;
+    let html = '';
+
+    characters.forEach(c => {
+      const ps   = primaryStat[c.cls] || 'str';
+      const pVal = statVal(c.stats, ps);
+      const conV = statVal(c.stats, 'con');
+      const hp   = c.hp ?? '—';
+      const xp   = c.xp ?? 0;
+      const portrait = c.portrait || `https://picsum.photos/seed/${encodeURIComponent(c.cls || 'warrior')}/280/220`;
+      const isSelected = c.id === selectedId;
+      const lastLine = c.last_campaign
+        ? `Last seen in <strong>${c.last_campaign}</strong> · ${timeSince(c.created_at)}`
+        : `Created ${timeSince(c.created_at)}`;
+
+      html += `
+        <div class="char-card${isSelected ? ' selected' : ''}" data-id="${c.id}" onclick="selectChar('${c.id}')">
+          <div class="selected-mark">✓</div>
+          <button class="char-delete" onclick="deleteChar('${c.id}', event)" title="Delete character">✕</button>
+          <div class="char-portrait">
+            <img src="${portrait}" alt="${c.name}">
+            <div class="char-level-badge">Level ${c.level || 1}</div>
+          </div>
+          <div class="char-play-btn"><div class="play-inner">Select Character</div></div>
+          <div class="char-info">
+            <div class="char-name">${c.name}</div>
+            <div class="char-class">${capitalise(c.race)} · ${capitalise(c.cls)}</div>
+            <div class="char-stats">
+              <div class="char-stat">
+                <span class="char-stat-val">${pVal}</span>
+                <span class="char-stat-lbl">${ps.toUpperCase()}</span>
+              </div>
+              <div class="char-stat">
+                <span class="char-stat-val">${conV}</span>
+                <span class="char-stat-lbl">CON</span>
+              </div>
+              <div class="char-stat">
+                <span class="char-stat-val">${hp}</span>
+                <span class="char-stat-lbl">HP</span>
+              </div>
+              <div class="char-stat">
+                <span class="char-stat-val">${xp}</span>
+                <span class="char-stat-lbl">XP</span>
+              </div>
+            </div>
+            <div class="char-last">${lastLine}</div>
+          </div>
+        </div>`;
+    });
+
+    if (used < FREE_SLOTS) {
+      const avail = FREE_SLOTS - used;
+      html += `
+        <a href="character-create.html" class="new-char-card">
+          <div class="new-char-icon">+</div>
+          <div class="new-char-label">New Character</div>
+          <div class="new-char-sub">${avail} slot${avail > 1 ? 's' : ''} available</div>
+        </a>`;
+    }
+
+    const lockedCount = Math.max(0, TOTAL_SLOTS - Math.max(used, FREE_SLOTS));
+    for (let i = 0; i < lockedCount; i++) {
+      html += `
+        <div class="locked-card">
+          <div class="lock-icon">🔒</div>
+          <div class="locked-label">Locked Slot</div>
+          <button class="unlock-btn">Unlock Slot</button>
+          <div class="unlock-price">$2.99 · one-time</div>
+        </div>`;
+    }
+
+    if (used === 0) {
+      grid.style.display = 'block';
+      html = `<div class="empty-state"><p>You haven't created any characters yet.</p></div>` + html;
+    } else {
+      grid.style.display = '';
+    }
+
+    grid.innerHTML = html;
+  }
+
+  function updateCTA() {
+    const btn   = document.getElementById('ctaBtn');
+    const title = document.getElementById('ctaTitle');
+    const sub   = document.getElementById('ctaSub');
+    const char  = characters.find(c => c.id === selectedId);
+
+    if (char) {
+      btn.className   = 'cta-btn enabled';
+      btn.textContent = 'Browse Campaigns →';
+      title.textContent = 'Ready to adventure?';
+      sub.innerHTML = `Playing as <span class="playing-as">${char.name} · ${capitalise(char.race)} ${capitalise(char.cls)}</span> — choose a campaign to begin.`;
+    } else {
+      btn.className   = 'cta-btn disabled';
+      btn.textContent = 'Select a Character First';
+      title.textContent = 'Ready to adventure?';
+      sub.textContent = 'Select a character above, then choose your campaign.';
+    }
+  }
+
+  // ── Selection ─────────────────────────────────────────────────
+  function selectChar(id) {
+    selectedId = id;
+    const char = characters.find(c => c.id === id);
+    if (char) localStorage.setItem('uwt_selected_character', JSON.stringify(char));
+
+    document.querySelectorAll('.char-card').forEach(card => {
+      card.classList.toggle('selected', card.dataset.id === id);
+    });
+    updateCTA();
+  }
+
+  function goToCampaigns() {
+    if (!selectedId) return;
+    window.location.href = 'scenario.html';
+  }
+
+  // ── Init ──────────────────────────────────────────────────────
+  function waitForSb(cb) {
+    if (window.sbClient) { cb(); return; }
+    setTimeout(() => waitForSb(cb), 50);
+  }
+
+  waitForSb(async () => {
+    currentUser = await requireAuth();
+
+    // Show user name in header
+    const displayName = currentUser.user_metadata?.display_name || currentUser.email?.split('@')[0] || 'Adventurer';
+    document.getElementById('userNameDisplay').textContent = displayName;
+
+    await loadCharacters();
+  });
+</script>
+</body>
+</html>

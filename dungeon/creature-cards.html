@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Creature Compendium — The Unwritten Table</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --elevated: #1a1a26;
+    --border: rgba(255,255,255,0.07);
+    --text: #e8e0d4;
+    --dim: #8a8070;
+    --gold: #c4a264;
+    --easy: #4ade80;
+    --medium: #fbbf24;
+    --hard: #f97316;
+    --legendary: #c084fc;
+    --easy-bg: rgba(74,222,128,0.08);
+    --medium-bg: rgba(251,191,36,0.08);
+    --hard-bg: rgba(249,115,22,0.08);
+    --legendary-bg: rgba(192,132,252,0.08);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+
+  /* Header */
+  .site-header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .brand { font-family: 'Cinzel', serif; font-size: 1.1rem; color: var(--gold); letter-spacing: 0.04em; }
+  .sep { color: var(--dim); font-size: 0.8rem; }
+  .page-title { font-family: 'Cinzel', serif; font-size: 0.95rem; color: var(--text); opacity: 0.7; }
+  .back-link { margin-left: auto; color: var(--dim); font-size: 0.8rem; text-decoration: none; transition: color 0.2s; }
+  .back-link:hover { color: var(--gold); }
+
+  /* Controls */
+  .controls {
+    padding: 24px 32px 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    background: var(--bg);
+    position: sticky;
+    top: 60px;
+    z-index: 90;
+    border-bottom: 1px solid var(--border);
+  }
+  .search-wrap { position: relative; flex: 1; min-width: 220px; max-width: 340px; }
+  .search-wrap input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 14px 9px 38px;
+    color: var(--text);
+    font-size: 0.875rem;
+    font-family: 'Inter', sans-serif;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .search-wrap input:focus { border-color: rgba(196,162,100,0.35); }
+  .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--dim); font-size: 0.9rem; pointer-events: none; }
+
+  .filter-group { display: flex; gap: 6px; flex-wrap: wrap; }
+  .filter-btn {
+    padding: 7px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--dim);
+    font-size: 0.78rem;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    transition: all 0.18s;
+    white-space: nowrap;
+  }
+  .filter-btn:hover { color: var(--text); border-color: rgba(255,255,255,0.15); }
+  .filter-btn.active { color: var(--bg); font-weight: 600; }
+  .filter-btn[data-tier="all"].active { background: var(--gold); border-color: var(--gold); }
+  .filter-btn[data-tier="easy"].active { background: var(--easy); border-color: var(--easy); }
+  .filter-btn[data-tier="medium"].active { background: var(--medium); border-color: var(--medium); }
+  .filter-btn[data-tier="hard"].active { background: var(--hard); border-color: var(--hard); }
+  .filter-btn[data-tier="legendary"].active { background: var(--legendary); border-color: var(--legendary); }
+
+  .count-badge {
+    margin-left: auto;
+    color: var(--dim);
+    font-size: 0.8rem;
+    white-space: nowrap;
+  }
+
+  /* Type filter pills */
+  .type-filters { padding: 12px 32px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .type-pill {
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--dim);
+    font-size: 0.72rem;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    transition: all 0.18s;
+  }
+  .type-pill:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
+  .type-pill.active { background: rgba(196,162,100,0.12); border-color: rgba(196,162,100,0.35); color: var(--gold); }
+
+  /* Grid */
+  .grid-wrap { padding: 20px 32px 40px; }
+  .creature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+  }
+
+  /* Card */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.18s, border-color 0.18s, box-shadow 0.18s;
+  }
+  .card:hover { transform: translateY(-2px); border-color: rgba(196,162,100,0.2); box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
+  .card.expanded { border-color: rgba(196,162,100,0.3); }
+  .card[data-tier="easy"] { --tier-c: var(--easy); --tier-bg: var(--easy-bg); }
+  .card[data-tier="medium"] { --tier-c: var(--medium); --tier-bg: var(--medium-bg); }
+  .card[data-tier="hard"] { --tier-c: var(--hard); --tier-bg: var(--hard-bg); }
+  .card[data-tier="legendary"] { --tier-c: var(--legendary); --tier-bg: var(--legendary-bg); }
+
+  .card-top { display: flex; align-items: center; gap: 14px; padding: 16px; }
+  .avatar {
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    background: var(--tier-bg);
+    border: 1.5px solid var(--tier-c);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.6rem;
+    flex-shrink: 0;
+    box-shadow: 0 0 16px color-mix(in srgb, var(--tier-c) 25%, transparent);
+  }
+  .card-meta { flex: 1; min-width: 0; }
+  .card-name { font-family: 'Cinzel', serif; font-size: 0.95rem; color: var(--text); line-height: 1.2; }
+  .card-sub { font-size: 0.72rem; color: var(--dim); margin-top: 2px; }
+  .cr-badge {
+    flex-shrink: 0;
+    background: var(--tier-bg);
+    border: 1px solid var(--tier-c);
+    color: var(--tier-c);
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .card-stats {
+    display: flex;
+    gap: 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .stat-chip {
+    flex: 1;
+    text-align: center;
+    padding: 8px 4px;
+    border-right: 1px solid var(--border);
+  }
+  .stat-chip:last-child { border-right: none; }
+  .stat-label { font-size: 0.6rem; color: var(--dim); text-transform: uppercase; letter-spacing: 0.06em; }
+  .stat-val { font-size: 0.88rem; color: var(--text); font-weight: 500; margin-top: 1px; }
+
+  .card-footer { padding: 10px 16px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .tier-tag {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--tier-c);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .env-tag {
+    font-size: 0.65rem;
+    padding: 2px 7px;
+    border-radius: 3px;
+    background: rgba(255,255,255,0.04);
+    color: var(--dim);
+    border: 1px solid var(--border);
+  }
+  .expand-icon { margin-left: auto; color: var(--dim); font-size: 0.75rem; transition: transform 0.2s; }
+  .card.expanded .expand-icon { transform: rotate(180deg); }
+
+  /* Expanded detail */
+  .card-detail {
+    display: none;
+    padding: 0 16px 16px;
+    border-top: 1px solid var(--border);
+  }
+  .card.expanded .card-detail { display: block; }
+  .detail-desc { font-size: 0.8rem; color: var(--dim); line-height: 1.6; padding: 12px 0 10px; }
+
+  .detail-section { margin-top: 10px; }
+  .detail-head { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--gold); margin-bottom: 6px; font-weight: 600; }
+  .detail-row { font-size: 0.78rem; color: var(--text); line-height: 1.6; }
+  .detail-row + .detail-row { margin-top: 4px; }
+  .trait-name { color: var(--gold); font-weight: 500; }
+
+  .stat-block-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 4px;
+    margin-top: 6px;
+  }
+  .sb-cell { background: rgba(255,255,255,0.03); border-radius: 4px; text-align: center; padding: 6px 2px; }
+  .sb-key { font-size: 0.58rem; text-transform: uppercase; color: var(--dim); letter-spacing: 0.08em; }
+  .sb-score { font-size: 0.82rem; color: var(--text); font-weight: 500; }
+  .sb-mod { font-size: 0.6rem; color: var(--dim); }
+
+  .tactics-box {
+    margin-top: 10px;
+    padding: 8px 12px;
+    background: rgba(196,162,100,0.06);
+    border-left: 2px solid var(--gold);
+    border-radius: 0 4px 4px 0;
+    font-size: 0.78rem;
+    color: var(--dim);
+    line-height: 1.6;
+  }
+
+  /* Empty state */
+  .empty { text-align: center; padding: 80px 20px; color: var(--dim); font-size: 0.9rem; }
+
+  @media (max-width: 640px) {
+    .controls { padding: 16px; }
+    .type-filters { padding: 10px 16px; }
+    .grid-wrap { padding: 16px; }
+    .creature-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <span class="brand">The Unwritten Table</span>
+  <span class="sep">›</span>
+  <span class="page-title">Creature Compendium</span>
+  <a href="index.html" class="back-link">← Back to Lobby</a>
+</header>
+
+<div class="controls">
+  <div class="search-wrap">
+    <span class="search-icon">⌕</span>
+    <input type="text" id="searchInput" placeholder="Search creatures…" />
+  </div>
+  <div class="filter-group">
+    <button class="filter-btn active" data-tier="all">All</button>
+    <button class="filter-btn" data-tier="easy">Easy</button>
+    <button class="filter-btn" data-tier="medium">Medium</button>
+    <button class="filter-btn" data-tier="hard">Hard</button>
+    <button class="filter-btn" data-tier="legendary">Legendary</button>
+  </div>
+  <span class="count-badge" id="countBadge">— creatures</span>
+</div>
+
+<div class="type-filters" id="typeFilters"></div>
+
+<div class="grid-wrap">
+  <div class="creature-grid" id="grid"></div>
+  <div class="empty" id="emptyState" style="display:none">No creatures match your search.</div>
+</div>
+
+<script>
+const CREATURES = [
+
+  // ══════════════════════════════════════
+  // EASY  (CR 0 – 2)
+  // ══════════════════════════════════════
+
+  { id:'crawling-claw', name:'Crawling Claw', icon:'🤚', type:'Undead', tier:'easy', cr:'0', xp:10,
+    hp:2, ac:13, speed:'20 ft.', str:13, dex:14, con:11, int:5, wis:10, cha:4,
+    traits:['Undead Servant: Controlled by necromancer; acts on caster\'s initiative'],
+    attacks:['Claw: +3 to hit, 1d4+1 bludgeoning'],
+    environments:['dungeon'],
+    desc:'A disembodied hand animated by dark magic. Mindless, relentless, and deeply unsettling.',
+    tactics:'Crawls toward the nearest living creature. No self-preservation; fights to destruction.' },
+
+  { id:'myconid-sprout', name:'Myconid Sprout', icon:'🍄', type:'Plant', tier:'easy', cr:'0', xp:10,
+    hp:7, ac:10, speed:'10 ft.', str:8, dex:10, con:10, int:8, wis:11, cha:5,
+    traits:['Distress Spores: On taking damage, all myconids within 240 ft. are alerted'],
+    attacks:['Fist: +1 to hit, 1d4–1 bludgeoning'],
+    environments:['dungeon','underdark'],
+    desc:'An infant fungus creature. Pacifist unless cornered; its real danger is calling the colony.',
+    tactics:'Retreats immediately when struck, using Distress Spores to summon allies.' },
+
+  { id:'kobold', name:'Kobold', icon:'🦎', type:'Humanoid', tier:'easy', cr:'1/8', xp:25,
+    hp:5, ac:12, speed:'30 ft.', str:7, dex:15, con:9, int:8, wis:7, cha:8,
+    traits:['Pack Tactics: Advantage on attacks when ally is adjacent to target','Sunlight Sensitivity: Disadvantage on attacks and Perception in sunlight'],
+    attacks:['Dagger: +4 to hit, 1d4+2 piercing','Sling: +4 to hit, 1d4+2 bludgeoning (30/120 ft.)'],
+    environments:['dungeon','mountain','forest'],
+    desc:'Small reptilian scavengers who build devious traps and worship dragons as gods.',
+    tactics:'Always use Pack Tactics. Set ambushes and tripwires. Flee into tunnels when losing.' },
+
+  { id:'bandit', name:'Bandit', icon:'🗡️', type:'Humanoid', tier:'easy', cr:'1/8', xp:25,
+    hp:11, ac:12, speed:'30 ft.', str:11, dex:12, con:12, int:10, wis:10, cha:10,
+    traits:['Pack Fighter: Prefers to outnumber foes'],
+    attacks:['Scimitar: +3 to hit, 1d6+1 slashing','Crossbow: +3 to hit, 1d8+1 piercing (80/320 ft.)'],
+    environments:['urban','forest','coastal','mountain'],
+    desc:'Desperate outlaws operating in gangs. Dangerous in numbers; cowardly alone.',
+    tactics:'Surround and intimidate. Surrender or flee if their captain falls.' },
+
+  { id:'guard', name:'City Guard', icon:'🛡️', type:'Humanoid', tier:'easy', cr:'1/8', xp:25,
+    hp:11, ac:16, speed:'30 ft.', str:13, dex:12, con:12, int:10, wis:11, cha:10,
+    traits:['Shield Wall: +2 AC when adjacent to another Guard (included if applicable)'],
+    attacks:['Spear: +3 to hit, 1d6+1 piercing (thrown 20/60 ft.)'],
+    environments:['urban','dungeon'],
+    desc:'Trained soldiers maintaining order. They call for reinforcements rather than fight to the death.',
+    tactics:'Hold a chokepoint, call for backup, and subdue rather than kill if ordered.' },
+
+  { id:'cultist', name:'Cultist', icon:'🕯️', type:'Humanoid', tier:'easy', cr:'1/8', xp:25,
+    hp:9, ac:12, speed:'30 ft.', str:11, dex:12, con:10, int:10, wis:11, cha:10,
+    traits:['Dark Devotion: Advantage on saves against being charmed or frightened'],
+    attacks:['Scimitar: +3 to hit, 1d6+1 slashing'],
+    environments:['urban','dungeon','planar'],
+    desc:'Fanatical worshippers willing to die for their dark god. Chillingly calm in combat.',
+    tactics:'Fight fearlessly; sacrifice themselves to protect cult leaders or complete a ritual.' },
+
+  { id:'tribal-warrior', name:'Tribal Warrior', icon:'⚔️', type:'Humanoid', tier:'easy', cr:'1/8', xp:25,
+    hp:11, ac:12, speed:'30 ft.', str:13, dex:11, con:12, int:8, wis:11, cha:8,
+    traits:['Pack Tactics: Advantage on attacks when ally is adjacent to target'],
+    attacks:['Spear: +3 to hit, 1d6+1 piercing'],
+    environments:['forest','mountain','swamp','coastal'],
+    desc:'Warriors from isolated communities. Fierce in defense of their territory.',
+    tactics:'Protect the shaman. Use terrain. Retreat to alert the village if overwhelmed.' },
+
+  { id:'giant-rat', name:'Giant Rat', icon:'🐀', type:'Beast', tier:'easy', cr:'1/8', xp:25,
+    hp:7, ac:12, speed:'30 ft., burrow 6 ft.', str:7, dex:15, con:11, int:2, wis:10, cha:4,
+    traits:['Keen Smell: Advantage on Perception checks using smell','Pack Tactics: Advantage on attacks when ally is adjacent to target'],
+    attacks:['Bite: +4 to hit, 1d4+2 piercing'],
+    environments:['dungeon','urban','swamp'],
+    desc:'Rodents the size of a dog. Diseased, fast, and unnerving in swarms.',
+    tactics:'Swarm a single target. Flee if attacked by fire or bright light.' },
+
+  { id:'stirge', name:'Stirge', icon:'🦟', type:'Beast', tier:'easy', cr:'1/8', xp:25,
+    hp:2, ac:14, speed:'10 ft., fly 40 ft.', str:4, dex:16, con:11, int:2, wis:8, cha:6,
+    traits:['Blood Drain: Attached stirge deals 1d4+3 necrotic damage each turn (auto-hit)'],
+    attacks:['Blood Drain: +5 to hit, 1d4+3 piercing (then attached)'],
+    environments:['dungeon','swamp','forest'],
+    desc:'Mosquito-winged horrors that latch onto prey and drain blood until sated or slain.',
+    tactics:'Dive in, attach, drain. Fly off when full. Deadly in swarms against single targets.' },
+
+  { id:'twig-blight', name:'Twig Blight', icon:'🌿', type:'Plant', tier:'easy', cr:'1/8', xp:25,
+    hp:4, ac:13, speed:'20 ft.', str:6, dex:13, con:12, int:4, wis:8, cha:3,
+    traits:['False Appearance: Indistinguishable from a dead shrub while motionless','Vulnerable to Fire'],
+    attacks:['Claws: +3 to hit, 1d4+1 piercing'],
+    environments:['forest','swamp'],
+    desc:'Animated dead plants corrupted by dark forest magic. Excellent ambushers.',
+    tactics:'Blend into undergrowth. Strike when creatures pass within reach.' },
+
+  { id:'goblin', name:'Goblin', icon:'👺', type:'Humanoid', tier:'easy', cr:'1/4', xp:50,
+    hp:7, ac:15, speed:'30 ft.', str:8, dex:14, con:10, int:10, wis:8, cha:8,
+    traits:['Nimble Escape: Disengage or Hide as a bonus action each turn'],
+    attacks:['Scimitar: +4 to hit, 1d6+2 slashing','Shortbow: +4 to hit, 1d6+2 piercing (80/320 ft.)'],
+    environments:['dungeon','forest','mountain','swamp'],
+    desc:'Green-skinned menaces who dwell in dark places. Cowardly alone, chaotic in packs.',
+    tactics:'Hit-and-hide. Constant Disengage. Use numerical advantage and traps.' },
+
+  { id:'skeleton', name:'Skeleton', icon:'💀', type:'Undead', tier:'easy', cr:'1/4', xp:50,
+    hp:13, ac:13, speed:'30 ft.', str:10, dex:14, con:15, int:6, wis:8, cha:5,
+    traits:['Vulnerable to Bludgeoning','Immune to Poison, Exhaustion'],
+    attacks:['Shortsword: +4 to hit, 1d6+2 piercing','Shortbow: +4 to hit, 1d6+2 piercing (80/320 ft.)'],
+    environments:['dungeon'],
+    desc:'Animated bones obedient to the necromancer who raised them. Mindlessly follow orders.',
+    tactics:'Walk in a straight line toward the last command. No tactics, no fear.' },
+
+  { id:'zombie', name:'Zombie', icon:'🧟', type:'Undead', tier:'easy', cr:'1/4', xp:50,
+    hp:22, ac:8, speed:'20 ft.', str:13, dex:6, con:16, int:3, wis:6, cha:5,
+    traits:['Undead Fortitude: On dropping to 0 HP, Constitution save DC 5 + damage dealt — succeed to drop to 1 HP instead (once per round)'],
+    attacks:['Slam: +3 to hit, 1d6+1 bludgeoning'],
+    environments:['dungeon','swamp','urban'],
+    desc:'Rotting corpses driven by an insatiable hunger. Almost impossible to stop without fire or holy power.',
+    tactics:'Shamble forward. Ignore injuries. Focus on the nearest living creature.' },
+
+  { id:'wolf', name:'Wolf', icon:'🐺', type:'Beast', tier:'easy', cr:'1/4', xp:50,
+    hp:11, ac:13, speed:'40 ft.', str:12, dex:15, con:12, int:3, wis:12, cha:6,
+    traits:['Pack Tactics: Advantage on attacks when ally is adjacent to target','Knock Down: Target DC 11 STR save or be knocked prone'],
+    attacks:['Bite: +4 to hit, 2d4+2 piercing'],
+    environments:['forest','mountain','arctic'],
+    desc:'Intelligent pack hunters with excellent senses and coordinated attack patterns.',
+    tactics:'Flank. One wolf knocks prone, the rest pile on with advantage.' },
+
+  { id:'giant-bat', name:'Giant Bat', icon:'🦇', type:'Beast', tier:'easy', cr:'1/4', xp:50,
+    hp:22, ac:13, speed:'10 ft., fly 60 ft.', str:15, dex:16, con:11, int:2, wis:12, cha:6,
+    traits:['Echolocation: Advantage on Perception checks in dim/dark (fails if deafened)','Keen Hearing'],
+    attacks:['Bite: +4 to hit, 1d6+2 piercing'],
+    environments:['dungeon','mountain','forest'],
+    desc:'Enormous cave-dwelling bats. Attack in dives; their squealing disorients prey.',
+    tactics:'Dive-bomb from above. Harass spellcasters to break concentration.' },
+
+  { id:'giant-poisonous-snake', name:'Giant Poisonous Snake', icon:'🐍', type:'Beast', tier:'easy', cr:'1/4', xp:50,
+    hp:11, ac:14, speed:'30 ft., swim 30 ft.', str:10, dex:18, con:13, int:2, wis:10, cha:3,
+    traits:['Poison: On bite, target DC 11 CON save or 3d6 poison damage, half on success'],
+    attacks:['Bite: +6 to hit, 1d4+4 piercing + poison'],
+    environments:['forest','swamp','coastal','desert'],
+    desc:'A constrictor-sized serpent with venomous fangs. Lurks in vegetation or water.',
+    tactics:'Strike quickly, pull back. Let poison do the work. Retreat to water if threatened.' },
+
+  { id:'kenku', name:'Kenku', icon:'🐦‍⬛', type:'Humanoid', tier:'easy', cr:'1/4', xp:50,
+    hp:13, ac:13, speed:'30 ft.', str:10, dex:16, con:10, int:11, wis:10, cha:10,
+    traits:['Mimicry: Can mimic sounds and voices heard in the past month (DC 14 Insight to detect)','Ambusher: Advantage on attacks in the first round of combat if hidden'],
+    attacks:['Shortsword: +5 to hit, 1d6+3 piercing','Shortbow: +5 to hit, 1d6+3 piercing (80/320 ft.)'],
+    environments:['urban','dungeon','forest'],
+    desc:'Crow-headed humanoids cursed to never speak their own words. Masters of mimicry and larceny.',
+    tactics:'Mimic ally voices to split parties. Ambush with advantage. Flee if discovered.' },
+
+  { id:'needle-blight', name:'Needle Blight', icon:'🌵', type:'Plant', tier:'easy', cr:'1/4', xp:50,
+    hp:11, ac:12, speed:'30 ft.', str:12, dex:12, con:13, int:4, wis:8, cha:3,
+    traits:['False Appearance: Looks like a dead conifer while motionless'],
+    attacks:['Claws: +3 to hit, 1d6+1 piercing','Needles: +3 to hit, 2d6+1 piercing (30/60 ft.)'],
+    environments:['forest'],
+    desc:'Thorned plant creatures that serve the will of dark druids. Excellent ranged harassers.',
+    tactics:'Hang back and volley needles. Close only when enemies are weakened.' },
+
+  { id:'swarm-rats', name:'Swarm of Rats', icon:'🐁', type:'Beast', tier:'easy', cr:'1/4', xp:50,
+    hp:24, ac:10, speed:'30 ft.', str:9, dex:11, con:9, int:2, wis:10, cha:3,
+    traits:['Swarm: Can share space with other creatures; immune to prone/grapple','Vulnerable when at half HP'],
+    attacks:['Bite: +2 to hit, 2d6 piercing (1d6 when at half HP)'],
+    environments:['dungeon','urban','swamp'],
+    desc:'A chittering mass of diseased rodents that engulfs its prey.',
+    tactics:'Envelop a single target. Ignore attacks of opportunity. Drown them in bodies.' },
+
+  { id:'shadow', name:'Shadow', icon:'🌑', type:'Undead', tier:'easy', cr:'1/2', xp:100,
+    hp:16, ac:12, speed:'40 ft.', str:6, dex:14, con:13, int:6, wis:10, cha:8,
+    traits:['Strength Drain: Hit reduces target STR by 1d4; if STR hits 0, target dies and rises as Shadow in 1d4 hours','Sunlight Weakness: Disadvantage on all attacks in sunlight'],
+    attacks:['Strength Drain: +4 to hit, 2d6+2 necrotic + STR drain'],
+    environments:['dungeon'],
+    desc:'The shadow of a creature corrupted into undead form. It hungers to consume the life force of the living.',
+    tactics:'Stay in darkness. Focus on the weakest STR target. Retreat to shadow if damaged.' },
+
+  { id:'orc', name:'Orc', icon:'🪓', type:'Humanoid', tier:'easy', cr:'1/2', xp:100,
+    hp:15, ac:13, speed:'30 ft.', str:16, dex:12, con:16, int:7, wis:11, cha:10,
+    traits:['Aggressive: As a bonus action, move up to speed toward a hostile creature'],
+    attacks:['Greataxe: +5 to hit, 1d12+3 slashing','Javelin: +5 to hit, 1d6+3 piercing (30/120 ft.)'],
+    environments:['mountain','forest','dungeon'],
+    desc:'Fierce warmongers who live to battle. Their Aggressive trait makes them terrifying openers.',
+    tactics:'Aggressive bonus move then Greataxe every turn. Charge the biggest threat.' },
+
+  { id:'hobgoblin', name:'Hobgoblin', icon:'⚔️', type:'Humanoid', tier:'easy', cr:'1/2', xp:100,
+    hp:11, ac:18, speed:'30 ft.', str:13, dex:12, con:12, int:10, wis:10, cha:9,
+    traits:['Martial Advantage: Extra 2d6 damage when ally is adjacent to same target (once per turn)'],
+    attacks:['Longsword: +3 to hit, 1d8+1 slashing','Longbow: +3 to hit, 1d8+1 piercing (150/600 ft.)'],
+    environments:['dungeon','mountain','forest'],
+    desc:'Disciplined goblins who run militaristic armies. Unlike their goblin cousins, they do not flee.',
+    tactics:'Form battle lines. Use Martial Advantage in tandem. Hold position and call reinforcements.' },
+
+  { id:'lizardfolk', name:'Lizardfolk', icon:'🦖', type:'Humanoid', tier:'easy', cr:'1/2', xp:100,
+    hp:22, ac:15, speed:'30 ft., swim 30 ft.', str:15, dex:10, con:13, int:7, wis:12, cha:7,
+    traits:['Hold Breath: Can hold breath up to 15 minutes'],
+    attacks:['Multiattack: Bite + Claws','Bite: +4 to hit, 1d6+2 piercing','Claws: +4 to hit, 2d6+2 slashing'],
+    environments:['swamp','coastal'],
+    desc:'Cold-blooded reptilian warriors who see other races as prey. They eat what they kill.',
+    tactics:'Fight in their swamp. Drag foes underwater. Eat the fallen after battle.' },
+
+  { id:'gnoll', name:'Gnoll', icon:'🐗', type:'Humanoid', tier:'easy', cr:'1/2', xp:100,
+    hp:22, ac:15, speed:'30 ft.', str:14, dex:12, con:11, int:6, wis:10, cha:7,
+    traits:['Rampage: After reducing a creature to 0 HP, move up to half speed and bite as a bonus action'],
+    attacks:['Spear: +4 to hit, 1d6+2 piercing (thrown 20/60 ft.)','Longbow: +3 to hit, 1d8+1 piercing (150/600 ft.)'],
+    environments:['grassland','forest','mountain'],
+    desc:'Hyena-headed raiders who massacre their prey and leave no survivors. Always hungry.',
+    tactics:'Charge recklessly. Rampage bonus attack when a kill is made. Never stop.' },
+
+  { id:'gray-ooze', name:'Gray Ooze', icon:'🟢', type:'Ooze', tier:'easy', cr:'1/2', xp:100,
+    hp:22, ac:8, speed:'10 ft., climb 10 ft.', str:12, dex:6, con:16, int:1, wis:6, cha:2,
+    traits:['Corrode Metal: Metal weapons that strike the ooze take –1 penalty; destroyed at –5','Amorphous: Can squeeze through 1-inch gaps','False Appearance: Looks like wet stone'],
+    attacks:['Pseudopod: +3 to hit, 2d6+1 acid'],
+    environments:['dungeon'],
+    desc:'A puddle of acidic slime that dissolves metal on contact. Nearly indistinguishable from wet rock.',
+    tactics:'Stay still. Wait for prey to step on it. Corrode weapons on every hit.' },
+
+  { id:'imp', name:'Imp', icon:'😈', type:'Fiend', tier:'easy', cr:'1', xp:200,
+    hp:10, ac:13, speed:'20 ft., fly 40 ft.', str:6, dex:17, con:13, int:11, wis:12, cha:14,
+    traits:['Shapechanger: Polymorph into rat, raven, or spider as action','Invisibility: Become invisible until attacking or concentration ends','Devil\'s Sight: Darkvision 120 ft., ignores magical darkness','Poison Sting: On hit, DC 11 CON save or 3d6 poison'],
+    attacks:['Sting (Tail): +5 to hit, 1d4+3 piercing + poison'],
+    environments:['planar','urban','dungeon'],
+    desc:'A tiny devil serving as a familiar to warlocks and mages. Cunning, snide, and deliciously malicious.',
+    tactics:'Stay invisible. Spy and report. Sting from stealth. Flee if cornered.' },
+
+  { id:'quasit', name:'Quasit', icon:'👾', type:'Fiend', tier:'easy', cr:'1', xp:200,
+    hp:7, ac:13, speed:'40 ft.', str:5, dex:17, con:10, int:7, wis:10, cha:10,
+    traits:['Shapechanger: Polymorph into bat, centipede, or toad','Invisibility: Same as Imp','Scare: 120 ft. radius, DC 10 WIS save or frightened 1 minute (1/day)'],
+    attacks:['Claws: +4 to hit, 1d4+3 piercing + DC 10 CON save or 2d4 poison'],
+    environments:['planar','dungeon'],
+    desc:'A chaotic demon familiar. It delights in spreading panic and misfortune.',
+    tactics:'Use Scare to disrupt enemy formation. Scratch and hide. Create chaos.' },
+
+  { id:'ghoul', name:'Ghoul', icon:'👻', type:'Undead', tier:'easy', cr:'1', xp:200,
+    hp:22, ac:12, speed:'30 ft.', str:13, dex:15, con:10, int:7, wis:10, cha:6,
+    traits:['Claws Paralyze: DC 10 CON save or paralyzed 1 minute (not Elves or Undead)','Stench of Death'],
+    attacks:['Bite: +2 to hit, 2d6+2 piercing','Claws: +4 to hit, 2d4+2 slashing + paralysis'],
+    environments:['dungeon','swamp','urban'],
+    desc:'A feral undead creature that craves the flesh of the living. Its claws can freeze victims in place.',
+    tactics:'Claw to paralyze, then bite. Focus a paralyzed target until it dies.' },
+
+  { id:'giant-spider', name:'Giant Spider', icon:'🕷️', type:'Beast', tier:'easy', cr:'1', xp:200,
+    hp:26, ac:14, speed:'30 ft., climb 30 ft.', str:14, dex:16, con:12, int:2, wis:11, cha:4,
+    traits:['Spider Climb: Climbs any surface including ceilings','Web Sense: Knows location of anything touching its web','Web Walker: Ignores movement restrictions from webs'],
+    attacks:['Bite: +5 to hit, 1d8+3 piercing + DC 11 CON save or 2d8 poison','Web (Recharge 5-6): DC 12 DEX save or restrained; DC 12 STR check to escape'],
+    environments:['dungeon','forest'],
+    desc:'A spider the size of a horse. Webs entire corridors and lurks on ceilings.',
+    tactics:'Web the entry point. Drop from ceiling onto restrained prey. Bite to poison.' },
+
+  { id:'dryad', name:'Dryad', icon:'🌳', type:'Fey', tier:'easy', cr:'1', xp:200,
+    hp:22, ac:11, speed:'30 ft.', str:10, dex:12, con:11, int:14, wis:15, cha:20,
+    traits:['Innate Spellcasting: Entangle (3/day), Goodberry (3/day), Pass Without Trace (1/day)','Tree Stride: Step into tree, emerge from another within 60 ft. (once per turn)','Speak with Plants'],
+    attacks:['Club: +2 to hit, 1d4 bludgeoning'],
+    environments:['forest'],
+    desc:'A guardian spirit bonded to a single tree. Protects its grove with charm and magic.',
+    tactics:'Charm intruders. Entangle grouped enemies. Retreat via Tree Stride if losing.' },
+
+  { id:'harpy', name:'Harpy', icon:'🦅', type:'Monstrosity', tier:'easy', cr:'1', xp:200,
+    hp:38, ac:11, speed:'20 ft., fly 40 ft.', str:12, dex:13, con:12, int:7, wis:10, cha:13,
+    traits:['Luring Song: All humanoids within 300 ft. must DC 11 WIS save each turn or be charmed and move toward the harpy'],
+    attacks:['Claws: +3 to hit, 2d4+1 slashing (×2, Multiattack)'],
+    environments:['mountain','coastal'],
+    desc:'Part woman, part vulture, all cruelty. Lures sailors and travelers to their doom.',
+    tactics:'Sing to charm, circle overhead. Once charmed victims walk off cliffs, swoop to feed.' },
+
+  { id:'specter', name:'Specter', icon:'💨', type:'Undead', tier:'easy', cr:'1', xp:200,
+    hp:22, ac:12, speed:'fly 50 ft. (hover)', str:1, dex:14, con:11, int:10, wis:10, cha:11,
+    traits:['Incorporeal Movement: Pass through objects (5 ft. extra cost)','Life Drain: On hit, target DC 10 CON save or max HP reduced by damage dealt (restored on long rest)','Sunlight Sensitivity'],
+    attacks:['Life Drain: +4 to hit, 3d6 necrotic + HP reduction'],
+    environments:['dungeon'],
+    desc:'A vengeful ghost stripped of body but not hatred. It drains vitality with a touch.',
+    tactics:'Phase through walls to isolate targets. Focus on one creature to drain max HP to 0.' },
+
+  { id:'bugbear', name:'Bugbear', icon:'🧌', type:'Humanoid', tier:'easy', cr:'1', xp:200,
+    hp:27, ac:16, speed:'30 ft.', str:15, dex:14, con:13, int:8, wis:11, cha:9,
+    traits:['Brute: Melee attacks deal extra 1d6 damage (included)','Surprise Attack: +2d6 damage if target is surprised (first turn)'],
+    attacks:['Morningstar: +4 to hit, 2d8+2 piercing','Javelin: +4 to hit, 1d6+2 piercing (30/120 ft.)'],
+    environments:['dungeon','forest','mountain'],
+    desc:'Large, brutish goblinoids who are expert ambushers. They love the first kill.',
+    tactics:'Ambush for Surprise Attack. Then Morningstar every turn. Act as shock troops for goblin gangs.' },
+
+  { id:'gargoyle', name:'Gargoyle', icon:'🗿', type:'Elemental', tier:'easy', cr:'2', xp:450,
+    hp:52, ac:15, speed:'30 ft., fly 60 ft.', str:15, dex:11, con:16, int:6, wis:11, cha:7,
+    traits:['False Appearance: Indistinguishable from stone statue while motionless','Resistant to Nonmagical Weapons (not adamantine)'],
+    attacks:['Multiattack: Bite + Claws','Bite: +4 to hit, 1d6+2 piercing','Claws: +4 to hit, 1d6+2 slashing'],
+    environments:['dungeon','urban','mountain'],
+    desc:'Animated stone guardians who perch motionlessly for centuries, then erupt into violence.',
+    tactics:'Drop from height. Divide parties. Focus on unarmored targets.' },
+
+  { id:'ogre', name:'Ogre', icon:'👹', type:'Giant', tier:'easy', cr:'2', xp:450,
+    hp:59, ac:11, speed:'40 ft.', str:19, dex:8, con:16, int:5, wis:7, cha:7,
+    traits:['Thick Skull: Resistant to Stunned condition'],
+    attacks:['Greatclub: +6 to hit, 2d8+4 bludgeoning','Javelin: +6 to hit, 2d6+4 piercing (30/120 ft.)'],
+    environments:['mountain','forest','dungeon'],
+    desc:'A massive brute driven by hunger and violence. Not bright enough to flee when losing.',
+    tactics:'Charge the heaviest-armored target. Throw javelins at casters. Smash everything.' },
+
+  { id:'mimic', name:'Mimic', icon:'📦', type:'Monstrosity', tier:'easy', cr:'2', xp:450,
+    hp:58, ac:12, speed:'15 ft.', str:17, dex:12, con:15, int:5, wis:13, cha:8,
+    traits:['Shapeshifter: Appear as any object (chest, door, floor tile)','Adhesive: Creatures hit are grappled (DC 13 STR to escape)','False Appearance: Indistinguishable from chosen object while still'],
+    attacks:['Pseudopod: +5 to hit, 1d8+3 bludgeoning','Bite: +5 to hit, 1d8+3 piercing + Adhesive'],
+    environments:['dungeon'],
+    desc:'A shape-shifting predator that mimics dungeon furniture. The most famous trick is the treasure chest.',
+    tactics:'Wait as a chest. Let a greedy adventurer open it. Grapple and bite repeatedly.' },
+
+  { id:'bandit-captain', name:'Bandit Captain', icon:'☠️', type:'Humanoid', tier:'easy', cr:'2', xp:450,
+    hp:65, ac:15, speed:'30 ft.', str:15, dex:16, con:14, int:14, wis:11, cha:14,
+    traits:['Multiattack: Scimitar (×2) + Dagger','Parry: +2 AC against one melee attack per turn (reaction)'],
+    attacks:['Scimitar: +5 to hit, 1d6+3 slashing','Dagger: +5 to hit, 1d4+3 piercing (20/60 ft.)'],
+    environments:['urban','coastal','forest'],
+    desc:'A seasoned criminal with tactical savvy. Commands loyalty through fear and coin.',
+    tactics:'Target the weakest PC. Use Parry against strongest attacker. Fall back if below half HP.' },
+
+  // ══════════════════════════════════════
+  // MEDIUM  (CR 3 – 7)
+  // ══════════════════════════════════════
+
+  { id:'wight', name:'Wight', icon:'⚰️', type:'Undead', tier:'medium', cr:'3', xp:700,
+    hp:45, ac:14, speed:'30 ft.', str:15, dex:14, con:16, int:10, wis:13, cha:15,
+    traits:['Life Drain: On hit, DC 13 CON save or max HP reduced by damage dealt; a humanoid reduced to 0 max HP rises as a zombie under wight\'s control','Sunlight Sensitivity'],
+    attacks:['Multiattack: Life Drain + Longsword (×2)','Life Drain: +4 to hit, 3d6+2 necrotic','Longsword: +4 to hit, 1d8+2 slashing'],
+    environments:['dungeon'],
+    desc:'A warrior cursed with undeath, driven by malice and the hunger to dominate the living.',
+    tactics:'Life Drain to reduce max HP. Create zombie minions to build an army mid-fight.' },
+
+  { id:'werewolf', name:'Werewolf', icon:'🐺', type:'Humanoid', tier:'medium', cr:'3', xp:700,
+    hp:84, ac:11, speed:'30 ft. (wolf: 40 ft.)', str:15, dex:13, con:14, int:10, wis:11, cha:10,
+    traits:['Shapechanger: Humanoid, hybrid, or wolf form','Lycanthropy: Bite transmits lycanthropy (DC 8 CON save)','Keen Hearing/Smell: Advantage on Perception','Immune to Nonmagical Bludgeoning/Piercing/Slashing (not silvered)'],
+    attacks:['Multiattack (hybrid): Bite + Claws','Bite: +4 to hit, 2d8+2 piercing + lycanthropy','Claws: +4 to hit, 2d4+2 slashing'],
+    environments:['forest','urban'],
+    desc:'A cursed shapeshifter who turns into a deadly wolf-hybrid at night or under the moon.',
+    tactics:'Open as human to get close. Transform mid-conversation. Isolate a target and bite.' },
+
+  { id:'owlbear', name:'Owlbear', icon:'🦉', type:'Monstrosity', tier:'medium', cr:'3', xp:700,
+    hp:59, ac:13, speed:'40 ft.', str:20, dex:12, con:17, int:3, wis:12, cha:7,
+    traits:['Keen Sight/Smell','Multiattack: Beak + Claws','Beak Grab: Target is grappled (DC 13 STR); owlbear auto-hits with beak each turn against grappled target'],
+    attacks:['Beak: +7 to hit, 1d10+5 piercing','Claws: +7 to hit, 2d8+5 slashing'],
+    environments:['forest','dungeon','mountain'],
+    desc:'Part owl, part bear, all rage. One of nature\'s most tenacious predators.',
+    tactics:'Grab with beak, auto-bite each round. Claws for anyone who tries to interfere.' },
+
+  { id:'hell-hound', name:'Hell Hound', icon:'🔥', type:'Fiend', tier:'medium', cr:'3', xp:700,
+    hp:45, ac:15, speed:'50 ft.', str:17, dex:12, con:14, int:6, wis:13, cha:6,
+    traits:['Pack Tactics','Fire Breath (Recharge 5-6): DC 12 DEX save, 6d6 fire (half on success)','Immune to Fire','Keen Hearing/Smell'],
+    attacks:['Bite: +5 to hit, 1d8+3 piercing + 2d6 fire'],
+    environments:['planar','dungeon','mountain'],
+    desc:'Infernal hounds that breathe fire and run down fleeing prey without mercy.',
+    tactics:'Use Fire Breath on clustered enemies. Chase anyone who flees. Hunt in pairs.' },
+
+  { id:'manticore', name:'Manticore', icon:'🦁', type:'Monstrosity', tier:'medium', cr:'3', xp:700,
+    hp:68, ac:14, speed:'30 ft., fly 50 ft.', str:17, dex:16, con:17, int:7, wis:12, cha:8,
+    traits:['Tail Spike Volley: Fling up to 6 spikes per action (each +5, 1d8+3 piercing, 100/200 ft.)'],
+    attacks:['Multiattack: Bite + Claws (×2)','Bite: +5 to hit, 1d8+3 piercing','Claw: +5 to hit, 1d6+3 slashing'],
+    environments:['mountain','grassland','desert'],
+    desc:'Lion-bodied, human-faced, dragon-winged. Its tail fires bone spikes like crossbow bolts.',
+    tactics:'Spike volley from the air. Land only to finish wounded targets. Never fight outnumbered.' },
+
+  { id:'basilisk', name:'Basilisk', icon:'🐊', type:'Monstrosity', tier:'medium', cr:'3', xp:700,
+    hp:52, ac:15, speed:'20 ft.', str:16, dex:8, con:15, int:2, wis:8, cha:7,
+    traits:['Petrifying Gaze: At start of each turn, creatures within 30 ft. that can see its eyes: DC 12 CON save or restrained (then fully petrified on fail next turn)'],
+    attacks:['Bite: +5 to hit, 2d6+3 piercing'],
+    environments:['dungeon','mountain','forest'],
+    desc:'An eight-legged lizard whose gaze turns flesh to stone. Its lair is ringed with statues.',
+    tactics:'Walk slowly. Gaze petrifies everything nearby. Bite the restrained.' },
+
+  { id:'green-hag', name:'Green Hag', icon:'🧙‍♀️', type:'Fey', tier:'medium', cr:'3', xp:700,
+    hp:82, ac:17, speed:'30 ft.', str:18, dex:12, con:16, int:13, wis:14, cha:14,
+    traits:['Innate Spells: Dancing Lights, Minor Illusion, Vicious Mockery (at will)','Illusory Appearance: Appear as any humanoid at will','Invisible Passage: Turn invisible at will (end after attack)'],
+    attacks:['Claws: +6 to hit, 2d8+4 slashing'],
+    environments:['swamp','forest'],
+    desc:'A wicked fey crone who preys on travelers with illusions and manipulation.',
+    tactics:'Appear as a kindly old woman. Lure party into swamp. Turn invisible, ambush from behind.' },
+
+  { id:'ankheg', name:'Ankheg', icon:'🦗', type:'Monstrosity', tier:'medium', cr:'2', xp:450,
+    hp:39, ac:14, speed:'30 ft., burrow 10 ft.', str:17, dex:11, con:13, int:1, wis:13, cha:6,
+    traits:['Burrow Ambush: Surfaces from underground as part of attack (advantage on first attack)'],
+    attacks:['Bite: +5 to hit, 2d6+3 piercing + 1d6 acid','Acid Spray (Recharge 6): 30 ft. line, DC 13 DEX save, 3d6 acid (half on success)'],
+    environments:['grassland','forest','dungeon'],
+    desc:'A giant burrowing insect that ambushes from below ground and spits acid.',
+    tactics:'Burrow underground. Erupt beneath a target for advantage. Spit acid on groups.' },
+
+  { id:'ettercap', name:'Ettercap', icon:'🕸️', type:'Monstrosity', tier:'medium', cr:'2', xp:450,
+    hp:44, ac:13, speed:'30 ft., climb 30 ft.', str:14, dex:15, con:13, int:7, wis:12, cha:8,
+    traits:['Spider Climb','Web Sense','Poison Web: DC 11 DEX save or restrained; web has AC 10, 5 HP, Vulnerable to Fire'],
+    attacks:['Multiattack: Bite + Claws','Bite: +4 to hit, 1d8+2 piercing + DC 11 CON save or 1d8 poison','Claws: +4 to hit, 2d4+2 slashing'],
+    environments:['forest','dungeon'],
+    desc:'A spider-worshipping humanoid that strings webs across forest paths to catch prey.',
+    tactics:'Web the entrance. Cling to ceiling. Drop on tangled prey and bite repeatedly.' },
+
+  { id:'vine-blight', name:'Vine Blight', icon:'🌿', type:'Plant', tier:'medium', cr:'1/2', xp:100,
+    hp:26, ac:12, speed:'10 ft.', str:15, dex:8, con:14, int:5, wis:10, cha:3,
+    traits:['False Appearance: Looks like a gnarled shrub while motionless','Constrict: Grappled and restrained target (DC 12 STR to escape); Vine Blight auto-hits grappled target'],
+    attacks:['Constrict: +4 to hit, 2d6+2 bludgeoning + grapple/restrain'],
+    environments:['forest','swamp'],
+    desc:'A large, mobile shrub that wraps itself around prey and slowly crushes it.',
+    tactics:'Hold still until a creature enters reach. Constrict and crush. Alert nearby blights with rustling.' },
+
+  { id:'troll', name:'Troll', icon:'🧟‍♂️', type:'Giant', tier:'medium', cr:'5', xp:1800,
+    hp:84, ac:15, speed:'30 ft.', str:18, dex:13, con:20, int:7, wis:9, cha:7,
+    traits:['Regeneration: Regains 10 HP at start of each turn (not if dealt fire or acid damage that round)','Keen Smell'],
+    attacks:['Multiattack: Bite + Claws (×2)','Bite: +7 to hit, 1d6+4 piercing','Claw: +7 to hit, 2d6+4 slashing'],
+    environments:['mountain','forest','swamp','coastal'],
+    desc:'A ravenous giant that literally cannot be killed without fire or acid. Severed limbs reattach.',
+    tactics:'Absorb punishment while regenerating. Only fire/acid permanently stops it. Troll dies to fire.' },
+
+  { id:'night-hag', name:'Night Hag', icon:'🌙', type:'Fiend', tier:'medium', cr:'5', xp:1800,
+    hp:112, ac:17, speed:'30 ft.', str:18, dex:15, con:16, int:16, wis:14, cha:16,
+    traits:['Innate Spells: Detect Magic (at will), Magic Missile (at will), Plane Shift (self only, 1/day), Sleep (2/day)','Nightmare Haunting: Enter Ethereal Plane to visit sleeping creatures and give them exhaustion','Magic Resistance: Advantage on saves against spells'],
+    attacks:['Claws (in night hag form): +7 to hit, 2d8+4 slashing'],
+    environments:['planar','swamp','urban'],
+    desc:'A creature of pure evil who harvests soul larvae by haunting dreamscapes.',
+    tactics:'Weaken targets over multiple nights with Nightmare Haunting. Attack when they\'re exhausted.' },
+
+  { id:'vampire-spawn', name:'Vampire Spawn', icon:'🧛', type:'Undead', tier:'medium', cr:'5', xp:1800,
+    hp:82, ac:15, speed:'30 ft.', str:16, dex:16, con:16, int:11, wis:10, cha:12,
+    traits:['Spider Climb','Misty Escape: When reduced to 0 HP, turn to mist and retreat to coffin (if not in sunlight/running water)','Sunlight Hypersensitivity: 20 radiant damage per turn in sunlight'],
+    attacks:['Multiattack: Claws + Bite','Claws: +6 to hit, 2d4+3 slashing','Bite: +6 to hit, 1d6+3 piercing + 2d6 necrotic (target\'s max HP reduced by necrotic amount)'],
+    environments:['urban','dungeon'],
+    desc:'A vampire thrall — powerful but bound to its master. Craves blood above all else.',
+    tactics:'Grapple then bite to drain max HP. Retreat as mist to coffin if losing.' },
+
+  { id:'medusa', name:'Medusa', icon:'🐍', type:'Monstrosity', tier:'medium', cr:'6', xp:2300,
+    hp:127, ac:15, speed:'30 ft.', str:10, dex:15, con:16, int:12, wis:13, cha:15,
+    traits:['Petrifying Gaze: Same as basilisk but DC 14 CON; creatures who avert eyes get disadvantage on attacks but no risk (Medusa then has disadvantage on attacks against them)'],
+    attacks:['Multiattack: Snakes (×3) or Longbow (×2) + Snakes','Snake Hair: +5 to hit, 1d4+2 piercing + DC 14 CON save or 4d6 poison','Longbow: +5 to hit, 2d6+2 piercing + DC 14 CON save or 2d6 poison'],
+    environments:['dungeon','forest'],
+    desc:'The cursed queen of serpents. Her garden of frozen statues tells her story.',
+    tactics:'Let gaze petrify those who look. Shoot arrows at those who avert eyes. Snake hair kills the petrified.' },
+
+  { id:'mage', name:'Arcane Mage', icon:'🧙', type:'Humanoid', tier:'medium', cr:'6', xp:2300,
+    hp:40, ac:12, speed:'30 ft.', str:9, dex:14, con:11, int:17, wis:12, cha:11,
+    traits:['Spellcasting (INT 17): Fire Bolt (×∞), Mage Armor, Magic Missile (×3), Shield (×3), Misty Step (×2), Counterspell (×2), Fireball (×2), Fly (×1)'],
+    attacks:['Dagger: +5 to hit, 1d4+2 piercing','Fire Bolt: +6 to hit, 4d10 fire (120 ft.)'],
+    environments:['urban','dungeon'],
+    desc:'A learned caster who has devoted decades to mastering the arcane. Devastatingly powerful at range.',
+    tactics:'Open with Fireball. Shield against melee. Counterspell key enemy spells. Fly to escape.' },
+
+  { id:'lamia', name:'Lamia', icon:'🧝‍♀️', type:'Monstrosity', tier:'medium', cr:'4', xp:1100,
+    hp:97, ac:13, speed:'30 ft.', str:16, dex:13, con:15, int:14, wis:15, cha:16,
+    traits:['Innate Spells: Disguise Self (at will), Major Image (3/day), Suggestion (3/day), Geas (1/day)','Intoxicating Touch: Touch causes DC 13 WIS save or creature is under "daze" — disadvantage on WIS saves for 1 hour (max 3 curses)'],
+    attacks:['Multiattack: Intoxicating Touch + Claws','Claws: +5 to hit, 2d10+3 slashing'],
+    environments:['desert','dungeon'],
+    desc:'A lion-bodied enchantress who turns travelers into willing slaves using magical curses.',
+    tactics:'Stack Intoxicating Touch curses. Use Suggestion on the strongest fighter. Geas the party leader.' },
+
+  { id:'banshee', name:'Banshee', icon:'👸', type:'Undead', tier:'medium', cr:'4', xp:1100,
+    hp:58, ac:12, speed:'fly 40 ft. (hover)', str:1, dex:14, con:10, int:12, wis:11, cha:17,
+    traits:['Incorporeal Movement','Life Drain: Touch DC 13 CON save or max HP reduced','Wail (1/day): All non-undead within 30 ft. DC 13 CON save or drop to 0 HP'],
+    attacks:['Corrupting Touch: +4 to hit, 3d6 necrotic'],
+    environments:['dungeon','forest','urban'],
+    desc:'The spirit of a vain elf who refused to share her beauty. Her wail can kill instantly.',
+    tactics:'Open with Wail (save or die). Follow with Corrupting Touch on survivors. Phase through walls to escape.' },
+
+  { id:'will-o-wisp', name:'Will-o\'-Wisp', icon:'✨', type:'Undead', tier:'medium', cr:'2', xp:450,
+    hp:22, ac:19, speed:'fly 50 ft. (hover)', str:1, dex:28, con:10, int:13, wis:14, cha:11,
+    traits:['Consume Life: When creature within 5 ft. drops to 0 HP, wisp regains 10d6 HP','Ephemeral: Can\'t equip/carry anything','Incorporeal Movement','Variable Illumination: Bright light 5-20 ft. radius (control as bonus action)','Invisible: Turn invisible (end on attack or variable illumination change)'],
+    attacks:['Shock: +4 to hit, 2d8 lightning'],
+    environments:['swamp','dungeon'],
+    desc:'A malevolent ball of light that lures travelers into bogs, then feeds on their dying life-force.',
+    tactics:'Appear as a lantern. Lead victims into quicksand. Turn invisible. Shock when cornered.' },
+
+  { id:'gladiator', name:'Gladiator', icon:'🏛️', type:'Humanoid', tier:'medium', cr:'5', xp:1800,
+    hp:112, ac:16, speed:'30 ft.', str:20, dex:15, con:20, int:10, wis:12, cha:15,
+    traits:['Multiattack: Spear (×3) or Javelin (×2)','Brave: Advantage on saves against being frightened','Shield Bash: As bonus action, DC 15 STR save or target is knocked prone'],
+    attacks:['Spear: +9 to hit, 2d6+5 piercing','Javelin: +9 to hit, 2d6+5 piercing (30/120 ft.)'],
+    environments:['urban'],
+    desc:'A veteran arena fighter. Built for crowds, brutal, and completely fearless.',
+    tactics:'Bash prone, then drive the spear home. Shout war cries to intimidate. Never retreats.' },
+
+  { id:'flesh-golem', name:'Flesh Golem', icon:'🧩', type:'Construct', tier:'medium', cr:'5', xp:1800,
+    hp:93, ac:9, speed:'30 ft.', str:19, dex:9, con:18, int:6, wis:10, cha:5,
+    traits:['Berserk: When at or below 40 HP at start of turn, 1-in-6 chance to go berserk attacking nearest creature','Lightning Absorption: Lightning damage heals golem instead','Immune to Charm/Exhaustion/Fear/Poison','Resistant to Nonmagical Weapons'],
+    attacks:['Multiattack: Slam (×2)','Slam: +7 to hit, 2d8+4 bludgeoning'],
+    environments:['dungeon','urban'],
+    desc:'Stitched together from corpses and animated by lightning. A clumsy but near-unstoppable monster.',
+    tactics:'Walk forward and smash. Lightning heals it. Berserk state makes it dangerous to allies too.' },
+
+  { id:'oni', name:'Oni', icon:'👺', type:'Giant', tier:'medium', cr:'7', xp:2900,
+    hp:110, ac:16, speed:'30 ft., fly 30 ft.', str:19, dex:11, con:16, int:14, wis:12, cha:15,
+    traits:['Innate Spells: Darkness (2/day), Invisibility (2/day), Charm Person (2/day), Cone of Cold (1/day)','Shapeshifter: Appear as any Small or Medium humanoid','Regeneration: +10 HP/turn (not if takes cold or necrotic)','Magic Weapons'],
+    attacks:['Multiattack: Claws/Glaive (×2)','Glaive: +7 to hit, 2d10+4 slashing + 2d10 necrotic','Claws (beast form): +7 to hit, 2d8+4 slashing'],
+    environments:['mountain','urban','forest'],
+    desc:'A shape-shifting giant that infiltrates civilizations, eating children and sowing terror.',
+    tactics:'Infiltrate as a humanoid. Poison a feast. Drop disguise and use Cone of Cold. Vanish in Darkness.' },
+
+  { id:'phase-spider', name:'Phase Spider', icon:'🕸️', type:'Monstrosity', tier:'medium', cr:'3', xp:700,
+    hp:32, ac:13, speed:'30 ft., climb 30 ft.', str:15, dex:15, con:10, int:6, wis:10, cha:6,
+    traits:['Ethereal Jaunt: As bonus action, shift between Material and Ethereal Plane','Ethereal Ambush: Advantage on attacks against creatures surprised by shift from Ethereal'],
+    attacks:['Bite: +4 to hit, 1d10+2 piercing + DC 11 CON save or 4d8 poison (half on success)'],
+    environments:['dungeon','mountain'],
+    desc:'A giant spider that phases in and out of reality. Attacks from the Ethereal Plane.',
+    tactics:'Appear from Ethereal for advantage. Bite. Shift back when threatened. Pick off stragglers.' },
+
+  { id:'yuan-ti-pureblood', name:'Yuan-ti Pureblood', icon:'🐍', type:'Monstrosity', tier:'medium', cr:'1', xp:200,
+    hp:40, ac:11, speed:'30 ft.', str:11, dex:12, con:11, int:13, wis:12, cha:14,
+    traits:['Innate Spells: Animal Friendship (snakes, at will), Suggestion (3/day)','Magic Resistance: Advantage on magic saves','Poison Immunity'],
+    attacks:['Multiattack: Scimitar (×2) or Shortbow (×2)','Scimitar: +3 to hit, 1d6+1 slashing','Shortbow: +3 to hit, 1d6+1 piercing + DC 10 CON save or 2d6 poison'],
+    environments:['dungeon','desert','swamp'],
+    desc:'The most human-looking of the serpentine yuan-ti. Infiltrators and assassins.',
+    tactics:'Use Suggestion to redirect a party member. Command snakes. Use as scouts and scouts.' },
+
+  { id:'nothic', name:'Nothic', icon:'👁️', type:'Aberration', tier:'medium', cr:'2', xp:450,
+    hp:45, ac:15, speed:'30 ft.', str:14, dex:16, con:16, int:13, wis:10, cha:8,
+    traits:['Keen Sight: Advantage on Perception (sight)','Weird Insight: Contest Insight vs target\'s Deception — learn one secret if Nothic wins','Rotting Gaze: 30 ft., DC 12 CON save or 3d6 necrotic (no attack roll)'],
+    attacks:['Multiattack: Claws (×2)','Claw: +4 to hit, 1d6+2 slashing'],
+    environments:['dungeon'],
+    desc:'A former wizard transformed into a hunched, one-eyed aberration. It sees too much.',
+    tactics:'Rotting Gaze from cover. Weird Insight to learn secrets and taunt. Claws if cornered.' },
+
+  { id:'peryton', name:'Peryton', icon:'🦌', type:'Monstrosity', tier:'medium', cr:'2', xp:450,
+    hp:33, ac:13, speed:'20 ft., fly 60 ft.', str:16, dex:12, con:13, int:9, wis:12, cha:10,
+    traits:['Dive Attack: Fly 30 ft. in a straight line toward target before Slam — deal extra 2d8 damage','Magic Weapons'],
+    attacks:['Dive Slam: +5 to hit, 2d8+3 piercing','Talons: +5 to hit, 2d4+3 piercing'],
+    environments:['mountain','forest','coastal'],
+    desc:'A winged stag whose shadow is cast as a human silhouette. Hunts hearts to offer to its flock.',
+    tactics:'Dive from height for bonus damage. Tear out heart of first kill. Mate pair tactics.' },
+
+  { id:'wereboar', name:'Wereboar', icon:'🐗', type:'Humanoid', tier:'medium', cr:'4', xp:1100,
+    hp:78, ac:10, speed:'30 ft. (boar: 40 ft.)', str:17, dex:10, con:15, int:10, wis:11, cha:8,
+    traits:['Shapechanger: Human, hybrid, or boar','Charge: Move 20 ft. toward target then Tusk — extra 2d6 and DC 13 STR save or knocked prone','Relentless: Once per rest — if brought to 0 HP by ≤14 damage, drop to 1 HP instead','Immune to Nonmagical Weapons (not silvered)'],
+    attacks:['Multiattack (hybrid): Tusk + Maul','Tusk: +5 to hit, 2d6+3 slashing','Maul: +5 to hit, 2d6+3 bludgeoning'],
+    environments:['forest','mountain'],
+    desc:'A cursed lycanthrope in the form of a raging man-boar. Relentless and nearly impossible to put down.',
+    tactics:'Charge to knock prone. Maul the prone. Relentless makes it seem unkillable.' },
+
+  // ══════════════════════════════════════
+  // HARD  (CR 8 – 15)
+  // ══════════════════════════════════════
+
+  { id:'mind-flayer', name:'Mind Flayer', icon:'🧠', type:'Aberration', tier:'hard', cr:'7', xp:2900,
+    hp:71, ac:15, speed:'30 ft.', str:11, dex:12, con:12, int:19, wis:17, cha:17,
+    traits:['Mind Blast (Recharge 5-6): 60 ft. cone, DC 15 INT save or stunned 1 minute','Innate Spells: Detect Thoughts, Levitate, Dominate Monster (1/day), Plane Shift (1/day)','Tentacles: Grappled and restrained; Brain Extraction kills incapacitated creatures instantly','Magic Resistance'],
+    attacks:['Tentacles: +7 to hit, 2d10+4 psychic (grapple/restrain)','Mind Blast (area)'],
+    environments:['underdark'],
+    desc:'An elder brain\'s servant. It consumes intelligence literally — it eats brains.',
+    tactics:'Mind Blast to stun the group. Grab a stunned target with tentacles. Extract brain. Dominate survivors.' },
+
+  { id:'stone-giant', name:'Stone Giant', icon:'⛰️', type:'Giant', tier:'hard', cr:'7', xp:2900,
+    hp:126, ac:17, speed:'40 ft.', str:23, dex:15, con:20, int:10, wis:12, cha:9,
+    traits:['Stone Camouflage: Advantage on Stealth in rocky terrain','Multiattack: Greatclub (×2)'],
+    attacks:['Greatclub: +9 to hit, 3d8+6 bludgeoning','Rock: +9 to hit, 4d10+6 bludgeoning (60/240 ft.) + DC 17 STR save or knocked prone'],
+    environments:['mountain','dungeon','underdark'],
+    desc:'Contemplative giants who carve their histories in stone. Treat surface dwellers as dream-creatures.',
+    tactics:'Hurl rocks from distance. Move only when forced to melee. Knock prone then smash.' },
+
+  { id:'frost-giant', name:'Frost Giant', icon:'❄️', type:'Giant', tier:'hard', cr:'8', xp:3900,
+    hp:138, ac:15, speed:'40 ft.', str:23, dex:9, con:21, int:9, wis:10, cha:12,
+    traits:['Immune to Cold'],
+    attacks:['Multiattack: Greataxe (×2)','Greataxe: +9 to hit, 3d12+6 slashing','Rock: +9 to hit, 4d10+6 bludgeoning (60/240 ft.)'],
+    environments:['arctic','mountain'],
+    desc:'Brutal raiders who value strength above all. They raid settlements for food, slaves, and glory.',
+    tactics:'Throw rocks to chunk health. Close and axe repeatedly. Ignore the weak; target the strong.' },
+
+  { id:'fire-giant', name:'Fire Giant', icon:'🔥', type:'Giant', tier:'hard', cr:'9', xp:5000,
+    hp:162, ac:18, speed:'30 ft.', str:25, dex:9, con:23, int:10, wis:14, cha:13,
+    traits:['Immune to Fire','Multiattack: Greatsword (×2)'],
+    attacks:['Greatsword: +11 to hit, 6d6+7 slashing','Rock: +11 to hit, 4d10+7 bludgeoning + 2d6 fire (60/240 ft.)'],
+    environments:['mountain','planar'],
+    desc:'Military geniuses of giantkind. They build fortresses of fire-hewn iron and rule through conquest.',
+    tactics:'Throw burning rocks. Form battle lines with other giants. Target spellcasters first.' },
+
+  { id:'cloud-giant', name:'Cloud Giant', icon:'☁️', type:'Giant', tier:'hard', cr:'9', xp:5000,
+    hp:200, ac:14, speed:'40 ft., fly 0 ft. (cloud walk)', str:27, dex:10, con:22, int:12, wis:16, cha:16,
+    traits:['Keen Smell','Innate Spells: Detect Magic (at will), Fog Cloud (at will), Feather Fall (at will), Fly (3/day), Telekinesis (3/day), Control Weather (1/day)'],
+    attacks:['Multiattack: Morningstar (×2)','Morningstar: +12 to hit, 3d8+8 piercing','Rock: +12 to hit, 4d10+8 bludgeoning (60/240 ft.)'],
+    environments:['mountain','planar'],
+    desc:'Haughty, graceful giants who dwell in cloud-fortresses and value wealth and artistry.',
+    tactics:'Use Telekinesis to hurl party members off heights. Fog Cloud to disorient. Smash the rest.' },
+
+  { id:'aboleth', name:'Aboleth', icon:'🐙', type:'Aberration', tier:'hard', cr:'10', xp:5900,
+    hp:135, ac:17, speed:'10 ft., swim 40 ft.', str:21, dex:9, con:15, int:18, wis:15, cha:18,
+    traits:['Amphibious: Breathe air and water','Mucous Cloud: Creatures that touch it must DC 14 CON save or need water to breathe for 3 hours','Legendary Resistance (3/day)','Probing Telepathy: Reading a creature\'s thought reveals its deepest desire','Innate Spells: Detect Thoughts (at will), Project Image (1/day), Dominate Monster (1/day)'],
+    attacks:['Multiattack: Tentacle (×3)','Tentacle: +9 to hit, 2d6+5 bludgeoning + DC 14 CON save or diseased (skin becomes translucent, need water)','Tail: +9 to hit, 3d6+5 bludgeoning'],
+    environments:['coastal','underdark'],
+    desc:'An ancient aquatic horror with perfect memory of all it has ever known. It sees your deepest self.',
+    tactics:'Enslave with Dominate Monster. Diseased tentacles cause drowning risk. Read desires, offer them.' },
+
+  { id:'iron-golem', name:'Iron Golem', icon:'🤖', type:'Construct', tier:'hard', cr:'16', xp:15000,
+    hp:210, ac:20, speed:'30 ft.', str:24, dex:9, con:20, int:3, wis:11, cha:1,
+    traits:['Fire Absorption: Fire damage heals Iron Golem','Poison Breath (Recharge 6): DC 19 CON save, 10d8 poison (half on success)','Magic Resistance','Immune to Poison/Psychic/Nonmagical Weapons not adamantine'],
+    attacks:['Multiattack: Slam (×2)','Slam: +13 to hit, 3d8+7 bludgeoning','Sword: +13 to hit, 3d10+7 slashing'],
+    environments:['dungeon','urban'],
+    desc:'The apex construct — virtually indestructible. Created by archmages to guard their most prized secrets.',
+    tactics:'Walk forward. Use Poison Breath on groups. Fire heals it. Only adamantine weapons work.' },
+
+  { id:'rakshasa', name:'Rakshasa', icon:'🐯', type:'Fiend', tier:'hard', cr:'13', xp:10000,
+    hp:110, ac:16, speed:'40 ft.', str:14, dex:17, con:18, int:13, wis:16, cha:20,
+    traits:['Limited Magic Immunity: Immune to spells of level 6 and lower; advantage on saves against higher','Innate Spells: Detect Thoughts (at will), Disguise Self (at will), Mage Hand (at will), Major Image (3/day), Dominate Person (3/day), Fly (3/day), Plane Shift (1/day), True Seeing (1/day)'],
+    attacks:['Multiattack: Claw (×2)','Claw: +7 to hit, 2d6+2 slashing + DC 15 WIS save or cursed (spells have no effect until Remove Curse)'],
+    environments:['urban','planar'],
+    desc:'A tiger-headed fiend who wears mortal flesh. Its hands are backwards. It infiltrates nobility.',
+    tactics:'Assume noble identity for months. Turn party members against each other. Curse the cleric.' },
+
+  { id:'death-knight', name:'Death Knight', icon:'💀', type:'Undead', tier:'hard', cr:'17', xp:18000,
+    hp:180, ac:20, speed:'30 ft.', str:20, dex:11, con:20, int:12, wis:16, cha:18,
+    traits:['Magic Resistance','Spellcasting (Paladin 19): Hellfire Orb (1/day; 10d6 fire + 10d6 necrotic in 20 ft. sphere DC 24 DEX), Command, Compelled Duel','Legendary Resistance (3/day)','Marshal Undead: Undead within 60 ft. have advantage on saves'],
+    attacks:['Multiattack: Longsword (×3)','Longsword: +11 to hit, 1d8+5 slashing + 9d8 necrotic','Hellfire Orb (1/day): DC 24 DEX, 10d6 fire + 10d6 necrotic'],
+    environments:['dungeon','planar'],
+    desc:'A fallen paladin bound to serve an evil god for eternity. Commands armies of undead with cold authority.',
+    tactics:'Open with Hellfire Orb. Compelled Duel the warrior. Marshal Undead boosts all nearby undead.' },
+
+  { id:'beholder', name:'Beholder', icon:'👁️', type:'Aberration', tier:'hard', cr:'13', xp:10000,
+    hp:180, ac:18, speed:'fly 20 ft. (hover)', str:10, dex:14, con:18, int:17, wis:15, cha:17,
+    traits:['Legendary Resistance (3/day)','Antimagic Cone: Central eye creates a 150-ft cone of antimagic where spells fail','Eye Rays (3/turn in lair): Choose 3 from 10 rays (Charm, Paralyze, Fear, Slow, Enervation, Telekinesis, Sleep, Petrify, Disintegrate, Death)','Lair Actions (in lair)'],
+    attacks:['Bite: +5 to hit, 4d6 piercing','Eye Ray: varies by ray type'],
+    environments:['dungeon','underdark'],
+    desc:'A floating sphere of paranoia with a central antimagic eye and 10 magical eye-stalks.',
+    tactics:'Central eye disables spellcasters. Rotate eye rays to status-lock all PCs simultaneously.' },
+
+  { id:'vampire', name:'Vampire', icon:'🧛', type:'Undead', tier:'hard', cr:'13', xp:10000,
+    hp:144, ac:16, speed:'30 ft.', str:18, dex:18, con:18, int:17, wis:15, cha:18,
+    traits:['Legendary Resistance (3/day)','Shapechanger: Bat swarm or mist form','Regeneration: +20 HP/turn (not radiant or running water)','Spider Climb','Children of the Night: Summon 2d4 bats/wolves/swarm of rats (1/day)','Vampire Weaknesses: Sunlight, running water, stake through heart'],
+    attacks:['Multiattack: Bite + Claws','Unarmed Strike: +9 to hit, 1d8+4 bludgeoning (grapple)','Bite: +9 to hit, 1d6+4 piercing + 3d6 necrotic (target max HP reduced; vampire regains same)'],
+    environments:['urban','dungeon'],
+    desc:'The apex predator of the night. Ancient, cunning, and surrounded by thralls and minions.',
+    tactics:'Bite to heal self and drain max HP. Transform to escape. Summon animals to distract.' },
+
+  { id:'lich', name:'Lich', icon:'💀', type:'Undead', tier:'hard', cr:'21', xp:33000,
+    hp:135, ac:17, speed:'30 ft.', str:11, dex:16, con:16, int:20, wis:14, xp:33000, cha:16,
+    traits:['Legendary Resistance (3/day)','Magic Resistance','Rejuvenation: If destroyed and phylactery intact, regains body in 1d10 days','Spellcasting (INT 20): Wish, Power Word Kill, Finger of Death, Chain Lightning, Cone of Cold, and many more','Paralyzing Touch: DC 18 CON save or paralyzed for 1 minute'],
+    attacks:['Paralyzing Touch: +12 to hit, 3d6 cold + paralysis'],
+    environments:['dungeon','planar','underdark'],
+    desc:'An archmage who achieved immortality through dark ritual, binding their soul to a phylactery. Nearly impossible to permanently destroy.',
+    tactics:'Open with Power Word Kill on the weakest PC. Chain Lightning clusters. Finger of Death key threats. If losing, retreat knowing it will return.' },
+
+  { id:'drow-mage', name:'Drow Mage', icon:'🌑', type:'Humanoid', tier:'hard', cr:'7', xp:2900,
+    hp:45, ac:13, speed:'30 ft.', str:9, dex:16, con:12, int:18, wis:14, cha:16,
+    traits:['Innate Spells (CHA): Dancing Lights (at will), Darkness (2/day), Faerie Fire (2/day), Levitate (1/day)','Spellcasting (INT 18): Fireball, Lightning Bolt, Hold Monster, Fly, Invisibility, Web, Magic Missile, Shield','Fey Ancestry: Advantage on saves against charm; immune to magic sleep','Sunlight Sensitivity'],
+    attacks:['Quarterstaff: +2 to hit, 1d6–1 bludgeoning','Fireball: DC 14 DEX, 8d6 fire (30-ft sphere)'],
+    environments:['underdark','dungeon'],
+    desc:'A spider-cult caster from the depths. Cunning, ruthless, and well prepared.',
+    tactics:'Faerie Fire to remove invisibility. Darkness to confuse. Fireball from distance. Invisibility to escape.' },
+
+  { id:'storm-giant', name:'Storm Giant', icon:'⛈️', type:'Giant', tier:'hard', cr:'13', xp:10000,
+    hp:230, ac:16, speed:'50 ft., swim 50 ft., fly 0 ft.', str:29, dex:14, con:20, int:16, wis:18, cha:18,
+    traits:['Amphibious','Legendary Resistance (3/day)','Innate Spells: Detect Magic (at will), Control Weather (1/day), Earthquake (1/day)','Lightning Strike (Recharge 5-6): 500 ft. range, DC 17 DEX or 6d10 lightning'],
+    attacks:['Multiattack: Greatsword (×2)','Greatsword: +14 to hit, 6d6+9 slashing','Rock: +14 to hit, 4d12+9 bludgeoning (60/240 ft.)'],
+    environments:['coastal','mountain','planar'],
+    desc:'The wisest and most powerful of giantkind. They rarely enter the affairs of small folk — when they do, it changes history.',
+    tactics:'Call down Earthquake to destroy environment. Lightning Strike clusters. Greatsword for those who close.' },
+
+  // ══════════════════════════════════════
+  // LEGENDARY  (CR 16+)
+  // ══════════════════════════════════════
+
+  { id:'adult-red-dragon', name:'Adult Red Dragon', icon:'🐉', type:'Dragon', tier:'legendary', cr:'17', xp:18000,
+    hp:256, ac:19, speed:'40 ft., climb 40 ft., fly 80 ft.', str:27, dex:10, con:25, int:16, wis:13, cha:21,
+    traits:['Legendary Resistance (3/day)','Immune to Fire','Fire Breath (Recharge 5-6): 60 ft. cone, DC 21 DEX, 18d6 fire','Frightful Presence: DC 19 WIS save or frightened 1 minute (120 ft.)','Legendary Actions (3/turn): Detect, Tail Attack, Wing Attack'],
+    attacks:['Multiattack: Bite + Claws (×2)','Bite: +14 to hit, 2d10+8 piercing + 4d6 fire','Claw: +14 to hit, 2d6+8 slashing','Tail: +14 to hit, 2d8+8 bludgeoning'],
+    environments:['mountain','dungeon','planar'],
+    desc:'A mountain-sized arrogance wrapped in fire-proof scales. Red dragons are the most feared and most vain of all dragonkind.',
+    tactics:'Frighten all. Breathe fire on clusters. Fly to avoid melee. Claw and bite the brave.' },
+
+  { id:'ancient-red-dragon', name:'Ancient Red Dragon', icon:'🐉', type:'Dragon', tier:'legendary', cr:'24', xp:62000,
+    hp:546, ac:22, speed:'40 ft., climb 40 ft., fly 80 ft.', str:30, dex:10, con:29, int:18, wis:15, cha:23,
+    traits:['Legendary Resistance (3/day)','Immune to Fire','Fire Breath (Recharge 5-6): 90 ft. cone, DC 24 DEX, 26d6 fire','Frightful Presence: DC 21 WIS, 120 ft.','Lair Actions: Volcanic tremor, lava plume, volcanic gas','Legendary Actions (3/turn)'],
+    attacks:['Multiattack: Bite + Claws (×2) + Tail','Bite: +17 to hit, 2d10+10 piercing + 4d6 fire','Claw: +17 to hit, 2d6+10 slashing'],
+    environments:['mountain','planar'],
+    desc:'A living catastrophe. Ancient red dragons reshape geography. Cities burned at their whim are remembered for millennia.',
+    tactics:'Opens with Frightful Presence then Fire Breath. Claw anything still standing. Lair makes the battlefield a volcano.' },
+
+  { id:'ancient-blue-dragon', name:'Ancient Blue Dragon', icon:'🐲', type:'Dragon', tier:'legendary', cr:'23', xp:50000,
+    hp:481, ac:22, speed:'40 ft., burrow 40 ft., fly 80 ft.', str:29, dex:10, con:27, int:18, wis:17, cha:21,
+    traits:['Legendary Resistance (3/day)','Immune to Lightning','Lightning Breath (Recharge 5-6): 120 ft. line, DC 23 DEX, 16d10 lightning','Frightful Presence: DC 20 WIS, 120 ft.','Lair Actions: Dust storm, lightning arc, thunderclap'],
+    attacks:['Multiattack: Bite + Claws (×2)','Bite: +16 to hit, 2d10+9 piercing + 4d10 lightning'],
+    environments:['desert','grassland','coastal'],
+    desc:'Tyrant of open skies. Blue dragons control lightning and rule vast desert territories as near-divine lords.',
+    tactics:'Lightning Breath at maximum range. Burrow to avoid melee. Lair arc lightning between PCs.' },
+
+  { id:'ancient-green-dragon', name:'Ancient Green Dragon', icon:'🐉', type:'Dragon', tier:'legendary', cr:'22', xp:41000,
+    hp:385, ac:21, speed:'40 ft., swim 40 ft., fly 80 ft.', str:27, dex:12, con:25, int:20, wis:17, cha:19,
+    traits:['Legendary Resistance (3/day)','Immune to Poison','Poison Breath (Recharge 5-6): 90 ft. cone, DC 22 CON, 22d6 poison','Amphibious','Lair Actions: Thorns, poison spores, charm beast'],
+    attacks:['Multiattack: Bite + Claws (×2)','Bite: +14 to hit, 2d10+8 piercing + 4d6 poison'],
+    environments:['forest','swamp'],
+    desc:'The most scheming of all dragons. Green dragons manipulate kingdoms for centuries, pulling strings from forest thrones.',
+    tactics:'Poison Breath to weaken. Charm key NPCs. Manipulate, never confront when scheming works better.' },
+
+  { id:'pit-fiend', name:'Pit Fiend', icon:'👿', type:'Fiend', tier:'legendary', cr:'20', xp:25000,
+    hp:300, ac:19, speed:'30 ft., fly 60 ft.', str:26, dex:14, con:24, int:22, wis:18, cha:24,
+    traits:['Legendary Resistance (3/day)','Magic Resistance','Immune to Fire/Poison','Fear Aura: 20 ft., DC 21 WIS save or frightened','Innate Spells: Detect Magic, Hold Monster, Wall of Fire (at will); Fireball (3/day); Meteor Swarm (1/day)'],
+    attacks:['Multiattack: Claw (×2) + Mace + Bite','Bite: +14 to hit, 4d6+8 piercing + 6d6 fire (DC 21 CON or poisoned)','Claw: +14 to hit, 2d10+8 slashing','Mace: +14 to hit, 2d8+8 bludgeoning + 2d8 fire'],
+    environments:['planar'],
+    desc:'The generals of the Nine Hells. A pit fiend commanding on the battlefield means the Blood War is at stake.',
+    tactics:'Fear Aura to immobilize. Wall of Fire on escape routes. Meteor Swarm to open. Bite poison kills quickly.' },
+
+  { id:'balor', name:'Balor', icon:'😈', type:'Fiend', tier:'legendary', cr:'19', xp:22000,
+    hp:262, ac:19, speed:'40 ft., fly 80 ft.', str:26, dex:15, con:22, int:20, wis:16, cha:22,
+    traits:['Legendary Resistance (3/day)','Magic Resistance','Immune to Fire/Lightning','Death Throes: Explodes on death — DC 20 DEX, 20d6 fire+lightning (60 ft.)','Fire Aura: 5 ft., 3d6 fire to adjacent creatures at start of Balor\'s turn; fire damage to melee weapon users','Vorpal Whip: On hit, target DC 20 STR save or disarmed and whip wraps around them'],
+    attacks:['Multiattack: Vorpal Whip + Longsword','Longsword: +14 to hit, 3d8+8 slashing + 3d8 lightning','Vorpal Whip: +14 to hit, 2d6+8 slashing + fire aura, disarm'],
+    environments:['planar'],
+    desc:'A towering demon lord of chaos. Even its death is dangerous — it explodes in a 60-foot fireball.',
+    tactics:'Charge in, fire aura damages any melee response. Disarm the fighter with whip. On death, take everyone with it.' },
+
+  { id:'tarrasque', name:'Tarrasque', icon:'🦕', type:'Monstrosity', tier:'legendary', cr:'30', xp:155000,
+    hp:676, ac:25, speed:'40 ft.', str:30, dex:11, con:30, int:3, wis:11, cha:11,
+    traits:['Legendary Resistance (3/day)','Magic Resistance','Reflective Carapace: Spells with spell attack rolls have a 1-in-6 chance to reflect back','Siege Monster: Double damage to objects/structures','Frightful Presence: DC 17 WIS, 120 ft.','Legendary Actions (3/turn): Attack, Move, Chomp'],
+    attacks:['Multiattack: Bite + Claws (×2) + Horns + Tail','Bite: +19 to hit, 4d12+10 piercing (grappled, restrained)','Claw: +19 to hit, 4d8+10 slashing','Horns: +19 to hit, 4d10+10 piercing','Tail: +19 to hit, 4d6+10 bludgeoning'],
+    environments:['any'],
+    desc:'The end of worlds made flesh. No dungeon holds it, no army stops it. When the Tarrasque wakes, civilizations end.',
+    tactics:'Cannot be reasoned with. Will not stop. Kill or use Wish to make it unconscious. Nothing else works.' },
+
+  { id:'elder-brain', name:'Elder Brain', icon:'🧠', type:'Aberration', tier:'legendary', cr:'14', xp:11500,
+    hp:210, ac:10, speed:'5 ft., swim 10 ft.', str:15, dex:10, con:20, int:21, wis:19, cha:24,
+    traits:['Legendary Resistance (3/day)','Magic Resistance','Creature Sense: Aware of all creatures within 5 miles that have been dominated by it','Innate Spells: Detect Thoughts (at will), Levitate (at will), Dominate Monster (3/day), Plane Shift (1/day)','Psychic Link: Psionic bond with all mind flayers in colony; share senses','Lair Actions: Psychic pulse, tentacle lash, implant psychic beacon'],
+    attacks:['Tentacle: +6 to hit, 2d10+2 bludgeoning + grapple','Mind Blast (Recharge 5-6): 60 ft. cone, DC 18 INT save or stunned 1 minute'],
+    environments:['underdark'],
+    desc:'The pulsating collective intelligence at the heart of a mind flayer colony. Thousands of devoured intellects scream inside its flesh.',
+    tactics:'Never fights directly. Dominates. Uses thralls as shields. Sits in brine pool, protected by the entire colony.' },
+
+  { id:'adult-gold-dragon', name:'Adult Gold Dragon', icon:'✨', type:'Dragon', tier:'legendary', cr:'17', xp:18000,
+    hp:256, ac:19, speed:'40 ft., swim 40 ft., fly 80 ft.', str:27, dex:14, con:25, int:16, wis:13, cha:24,
+    traits:['Legendary Resistance (3/day)','Immune to Fire','Shapechanger: Humanoid or beast','Amphibious','Fire Breath (Recharge 5-6): 60 ft. cone, DC 21 DEX, 13d6 fire','Weakening Breath (Recharge 5-6): 60 ft. cone, DC 21 STR save or disadvantage on attacks and saves for 1 minute','Frightful Presence','Legendary Actions (3/turn)'],
+    attacks:['Multiattack: Bite + Claws (×2)','Bite: +14 to hit, 2d10+8 piercing + 2d6 fire','Claw: +14 to hit, 2d6+8 slashing'],
+    environments:['mountain','forest','coastal'],
+    desc:'The noblest of all dragons. Gold dragons often disguise themselves as humans to walk among mortals and right injustices.',
+    tactics:'May prefer diplomacy. Weakening Breath hampers all fighters. Fire Breath for those who force battle. Treats good PCs as allies.' },
+
+  { id:'ancient-white-dragon', name:'Ancient White Dragon', icon:'🏔️', type:'Dragon', tier:'legendary', cr:'20', xp:25000,
+    hp:333, ac:20, speed:'40 ft., burrow 40 ft., fly 80 ft., swim 40 ft.', str:26, dex:10, con:26, int:10, wis:13, cha:14,
+    traits:['Legendary Resistance (3/day)','Immune to Cold','Ice Walk: Walk on ice or steep slopes without saving','Cold Breath (Recharge 5-6): 90 ft. cone, DC 22 CON, 16d8 cold','Lair Actions: Blinding blizzard, ice shards, freezing fog'],
+    attacks:['Multiattack: Bite + Claws (×2)','Bite: +14 to hit, 2d10+8 piercing + 2d8 cold'],
+    environments:['arctic','mountain'],
+    desc:'The most bestial of all dragons. White dragons collect frozen trophies of every kill. Cold, relentless, and endlessly hungry.',
+    tactics:'Cold Breath then wait for it to recharge. Burrow into snow to hide. Attack from above out of blizzard conditions.' },
+
+  { id:'tiamat', name:'Tiamat', icon:'🐉', type:'Fiend', tier:'legendary', cr:'30', xp:155000,
+    hp:615, ac:25, speed:'60 ft., fly 120 ft.', str:30, dex:10, con:30, int:26, wis:26, cha:28,
+    traits:['Legendary Resistance (5/day)','Magic Resistance','Divine Everlasting: If slain on the Material Plane, reforms in the Nine Hells after 24 hours','Innate Spells: many high-level divine spells','Five Heads: Five breath weapons on rotation; each head has separate recharge'],
+    attacks:['Multiattack: 5 Bites + 2 Claws + 1 Tail + Frightful Presence','Bite (any head): +19 to hit, 4d12+10 piercing + element (fire/cold/lightning/acid/poison)','Breath Weapons: Each head fires 120-ft cone or line of its element, DC 27'],
+    environments:['planar','any'],
+    desc:'The goddess-dragon of evil dragonkind. Five heads, five elements, one purpose: the domination of all things.',
+    tactics:'Five breaths in one round. Each hit by a different head. Legendary Actions every round. This is a divine encounter — preparation required.' },
+
+];
+
+// ─────────────────────────────────────────────
+// UI
+// ─────────────────────────────────────────────
+
+const ALL_TYPES = [...new Set(CREATURES.map(c => c.type))].sort();
+let activeTier = 'all';
+let activeType = 'all';
+let searchTerm = '';
+
+function mod(score) {
+  const m = Math.floor((score - 10) / 2);
+  return (m >= 0 ? '+' : '') + m;
+}
+
+function renderTypeFilters() {
+  const wrap = document.getElementById('typeFilters');
+  wrap.innerHTML = '';
+  const allBtn = document.createElement('button');
+  allBtn.className = 'type-pill active';
+  allBtn.dataset.type = 'all';
+  allBtn.textContent = 'All Types';
+  allBtn.onclick = () => setType('all');
+  wrap.appendChild(allBtn);
+  ALL_TYPES.forEach(t => {
+    const btn = document.createElement('button');
+    btn.className = 'type-pill';
+    btn.dataset.type = t;
+    btn.textContent = t;
+    btn.onclick = () => setType(t);
+    wrap.appendChild(btn);
+  });
+}
+
+function setType(t) {
+  activeType = t;
+  document.querySelectorAll('.type-pill').forEach(b => {
+    b.classList.toggle('active', b.dataset.type === t);
+  });
+  render();
+}
+
+function filtered() {
+  return CREATURES.filter(c => {
+    const tierOk = activeTier === 'all' || c.tier === activeTier;
+    const typeOk = activeType === 'all' || c.type === activeType;
+    const searchOk = !searchTerm || c.name.toLowerCase().includes(searchTerm) ||
+      c.type.toLowerCase().includes(searchTerm) || c.desc.toLowerCase().includes(searchTerm) ||
+      (c.environments||[]).some(e => e.includes(searchTerm));
+    return tierOk && typeOk && searchOk;
+  });
+}
+
+function buildCard(c) {
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.dataset.tier = c.tier;
+  card.dataset.id = c.id;
+
+  const envTags = (c.environments || []).slice(0, 3)
+    .map(e => `<span class="env-tag">${e}</span>`).join('');
+
+  const statBlock = ['str','dex','con','int','wis','cha'].map(k => `
+    <div class="sb-cell">
+      <div class="sb-key">${k.toUpperCase()}</div>
+      <div class="sb-score">${c[k]}</div>
+      <div class="sb-mod">${mod(c[k])}</div>
+    </div>`).join('');
+
+  const traits = (c.traits || []).map(t => {
+    const colon = t.indexOf(':');
+    if (colon > -1) {
+      return `<div class="detail-row"><span class="trait-name">${t.slice(0,colon)}</span>${t.slice(colon)}</div>`;
+    }
+    return `<div class="detail-row">${t}</div>`;
+  }).join('');
+
+  const attacks = (c.attacks || []).map(a => `<div class="detail-row">${a}</div>`).join('');
+
+  card.innerHTML = `
+    <div class="card-top">
+      <div class="avatar">${c.icon}</div>
+      <div class="card-meta">
+        <div class="card-name">${c.name}</div>
+        <div class="card-sub">${c.type}${c.subtype ? ' · ' + c.subtype : ''}</div>
+      </div>
+      <div class="cr-badge">CR ${c.cr}</div>
+    </div>
+    <div class="card-stats">
+      <div class="stat-chip"><div class="stat-label">HP</div><div class="stat-val">${c.hp}</div></div>
+      <div class="stat-chip"><div class="stat-label">AC</div><div class="stat-val">${c.ac}</div></div>
+      <div class="stat-chip"><div class="stat-label">Speed</div><div class="stat-val">${(c.speed||'30 ft.').split(',')[0]}</div></div>
+      <div class="stat-chip"><div class="stat-label">XP</div><div class="stat-val">${(c.xp||0).toLocaleString()}</div></div>
+    </div>
+    <div class="card-footer">
+      <span class="tier-tag">${c.tier}</span>
+      ${envTags}
+      <span class="expand-icon">▼</span>
+    </div>
+    <div class="card-detail">
+      <div class="detail-desc">${c.desc}</div>
+      <div class="stat-block-grid">${statBlock}</div>
+      ${traits ? `<div class="detail-section"><div class="detail-head">Traits & Abilities</div>${traits}</div>` : ''}
+      ${attacks ? `<div class="detail-section"><div class="detail-head">Attacks</div>${attacks}</div>` : ''}
+      <div class="tactics-box"><strong style="color:var(--gold)">Tactics:</strong> ${c.tactics}</div>
+    </div>`;
+
+  card.querySelector('.card-top, .card-footer').addEventListener('click', () => {});
+  card.addEventListener('click', () => {
+    card.classList.toggle('expanded');
+  });
+
+  return card;
+}
+
+function render() {
+  const list = filtered();
+  const grid = document.getElementById('grid');
+  const empty = document.getElementById('emptyState');
+  grid.innerHTML = '';
+  if (list.length === 0) {
+    empty.style.display = 'block';
+  } else {
+    empty.style.display = 'none';
+    list.forEach(c => grid.appendChild(buildCard(c)));
+  }
+  document.getElementById('countBadge').textContent = `${list.length} creature${list.length !== 1 ? 's' : ''}`;
+}
+
+// Tier filter buttons
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    activeTier = btn.dataset.tier;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    render();
+  });
+});
+
+// Search
+document.getElementById('searchInput').addEventListener('input', e => {
+  searchTerm = e.target.value.toLowerCase().trim();
+  render();
+});
+
+renderTypeFilters();
+render();
+</script>
+</body>
+</html>

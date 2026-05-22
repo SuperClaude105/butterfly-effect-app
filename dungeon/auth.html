@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Enter the Unwritten Table — Sign In</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
+
+  :root {
+    --crimson: #8b0000;
+    --gold: #c9a84c;
+    --gold-light: #e8c97a;
+    --parchment: #f5e6c8;
+    --ink: #1a0a00;
+    --shadow: #0d0500;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Crimson Text', serif;
+    background: var(--shadow);
+    color: var(--parchment);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Layered radial gradient background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 40% at 50% 0%, rgba(139,0,0,0.18) 0%, transparent 70%),
+      radial-gradient(ellipse 80% 60% at 50% 100%, rgba(201,168,76,0.06) 0%, transparent 70%),
+      radial-gradient(ellipse 100% 100% at 50% 50%, #1a0a00 0%, #0d0500 100%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* SVG noise grain overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.4;
+  }
+
+  .auth-container {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    max-width: 420px;
+    padding: 1.5rem;
+  }
+
+  /* Crest / header section */
+  .crest {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+
+  .crest-icon {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: 0.5rem;
+    filter: drop-shadow(0 0 16px rgba(201,168,76,0.4));
+  }
+
+  .crest h1 {
+    font-family: 'Cinzel', serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--gold);
+    line-height: 1.2;
+    text-shadow: 0 2px 12px rgba(139,0,0,0.6);
+  }
+
+  .crest p {
+    margin-top: 0.4rem;
+    font-size: 0.95rem;
+    color: rgba(245,230,200,0.55);
+    font-style: italic;
+  }
+
+  /* Card */
+  .auth-card {
+    background: linear-gradient(145deg, rgba(30,12,4,0.96) 0%, rgba(20,8,2,0.98) 100%);
+    border: 1px solid rgba(201,168,76,0.25);
+    border-radius: 8px;
+    padding: 2rem;
+    box-shadow:
+      0 0 0 1px rgba(139,0,0,0.15),
+      0 8px 32px rgba(0,0,0,0.6),
+      0 2px 8px rgba(0,0,0,0.4),
+      inset 0 1px 0 rgba(201,168,76,0.08);
+  }
+
+  /* Tab switcher */
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid rgba(201,168,76,0.2);
+    margin-bottom: 1.75rem;
+    gap: 0;
+  }
+
+  .tab-btn {
+    flex: 1;
+    padding: 0.6rem 1rem;
+    font-family: 'Cinzel', serif;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: rgba(245,230,200,0.4);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: color 0.2s ease, border-color 0.2s ease;
+    margin-bottom: -1px;
+  }
+
+  .tab-btn.active {
+    color: var(--gold);
+    border-bottom-color: var(--gold);
+  }
+
+  .tab-btn:hover:not(.active) {
+    color: rgba(245,230,200,0.7);
+  }
+
+  /* Forms */
+  .form-group {
+    margin-bottom: 1.25rem;
+  }
+
+  label {
+    display: block;
+    font-family: 'Cinzel', serif;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: rgba(201,168,76,0.75);
+    margin-bottom: 0.4rem;
+    text-transform: uppercase;
+  }
+
+  input[type="email"],
+  input[type="password"],
+  input[type="text"] {
+    width: 100%;
+    padding: 0.65rem 0.85rem;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(201,168,76,0.2);
+    border-radius: 4px;
+    color: var(--parchment);
+    font-family: 'Crimson Text', serif;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  input:focus {
+    border-color: rgba(201,168,76,0.55);
+    box-shadow: 0 0 0 2px rgba(201,168,76,0.1), inset 0 1px 3px rgba(0,0,0,0.3);
+  }
+
+  input::placeholder {
+    color: rgba(245,230,200,0.2);
+  }
+
+  /* Submit button */
+  .btn-primary {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: linear-gradient(135deg, rgba(139,0,0,0.9) 0%, rgba(100,0,0,0.95) 100%);
+    border: 1px solid rgba(201,168,76,0.3);
+    border-radius: 4px;
+    color: var(--gold-light);
+    font-family: 'Cinzel', serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    margin-top: 0.5rem;
+    box-shadow:
+      0 4px 16px rgba(139,0,0,0.3),
+      inset 0 1px 0 rgba(255,255,255,0.06);
+    transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-primary::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .btn-primary:hover {
+    background: linear-gradient(135deg, rgba(160,0,0,0.95) 0%, rgba(120,0,0,1) 100%);
+    box-shadow: 0 6px 24px rgba(139,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
+    transform: translateY(-1px);
+  }
+
+  .btn-primary:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(139,0,0,0.3);
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* Error / success messages */
+  .msg {
+    padding: 0.6rem 0.85rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+    display: none;
+  }
+
+  .msg.error {
+    background: rgba(139,0,0,0.2);
+    border: 1px solid rgba(139,0,0,0.5);
+    color: #ff9999;
+    display: block;
+  }
+
+  .msg.success {
+    background: rgba(74,222,128,0.1);
+    border: 1px solid rgba(74,222,128,0.3);
+    color: #86efac;
+    display: block;
+  }
+
+  /* Divider */
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 1.25rem 0;
+    color: rgba(245,230,200,0.25);
+    font-size: 0.8rem;
+    font-style: italic;
+  }
+
+  .divider::before,
+  .divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(201,168,76,0.15);
+  }
+
+  /* Footer note */
+  .auth-footer {
+    text-align: center;
+    margin-top: 1.5rem;
+    font-size: 0.85rem;
+    color: rgba(245,230,200,0.3);
+    font-style: italic;
+  }
+
+  .auth-footer a {
+    color: rgba(201,168,76,0.6);
+    text-decoration: none;
+  }
+
+  .auth-footer a:hover {
+    color: var(--gold);
+  }
+
+  /* Loading spinner on button */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(201,168,76,0.3);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+
+  /* Torch flicker particles */
+  .torch {
+    position: fixed;
+    font-size: 1.5rem;
+    animation: flicker 3s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 2;
+  }
+  .torch-tl { top: 1.5rem; left: 1.5rem; }
+  .torch-tr { top: 1.5rem; right: 1.5rem; }
+
+  @keyframes flicker {
+    0%, 100% { opacity: 0.7; transform: scale(1); }
+    25% { opacity: 0.5; transform: scale(0.95) rotate(-2deg); }
+    50% { opacity: 0.8; transform: scale(1.05); }
+    75% { opacity: 0.6; transform: scale(0.98) rotate(1deg); }
+  }
+</style>
+</head>
+<body>
+
+<!-- Ambient torches -->
+<div class="torch torch-tl">🔥</div>
+<div class="torch torch-tr" style="animation-delay:-1.3s">🔥</div>
+
+<div class="auth-container">
+  <div class="crest">
+    <span class="crest-icon">⚔️</span>
+    <h1>The Unwritten Table</h1>
+    <p>Forge your legend. The dungeon awaits.</p>
+  </div>
+
+  <div class="auth-card">
+    <!-- Tab switcher -->
+    <div class="tabs">
+      <button class="tab-btn active" id="tab-signin" onclick="switchTab('signin')">Sign In</button>
+      <button class="tab-btn" id="tab-signup" onclick="switchTab('signup')">Create Account</button>
+    </div>
+
+    <!-- Message area -->
+    <div class="msg" id="auth-msg"></div>
+
+    <!-- SIGN IN FORM -->
+    <form id="form-signin" onsubmit="handleSignIn(event)">
+      <div class="form-group">
+        <label for="si-email">Email</label>
+        <input type="email" id="si-email" placeholder="your@email.com" required autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label for="si-password">Password</label>
+        <input type="password" id="si-password" placeholder="••••••••" required autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn-primary" id="btn-signin">Enter the Table</button>
+    </form>
+
+    <!-- SIGN UP FORM -->
+    <form id="form-signup" style="display:none" onsubmit="handleSignUp(event)">
+      <div class="form-group">
+        <label for="su-name">Display Name</label>
+        <input type="text" id="su-name" placeholder="Your adventurer name" required maxlength="40">
+      </div>
+      <div class="form-group">
+        <label for="su-email">Email</label>
+        <input type="email" id="su-email" placeholder="your@email.com" required autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label for="su-password">Password</label>
+        <input type="password" id="su-password" placeholder="At least 8 characters" required minlength="8" autocomplete="new-password">
+      </div>
+      <button type="submit" class="btn-primary" id="btn-signup">Begin Your Journey</button>
+    </form>
+
+    <div class="divider">or</div>
+
+    <div class="auth-footer">
+      <a href="../index.html">← Back to Enter the Unwritten</a>
+    </div>
+  </div>
+</div>
+
+<script src="supabase-client.js"></script>
+<script>
+  // Wait for Supabase to be available
+  function waitForSb(cb) {
+    if (window.sbClient) { cb(); return; }
+    setTimeout(() => waitForSb(cb), 50);
+  }
+
+  // If already logged in, redirect to destination
+  waitForSb(async () => {
+    const user = await getUser();
+    if (user) redirectAfterAuth();
+  });
+
+  function redirectAfterAuth() {
+    const params = new URLSearchParams(window.location.search);
+    const next = params.get('next');
+    window.location.href = next || 'characters.html';
+  }
+
+  function switchTab(tab) {
+    const isSignin = tab === 'signin';
+    document.getElementById('tab-signin').classList.toggle('active', isSignin);
+    document.getElementById('tab-signup').classList.toggle('active', !isSignin);
+    document.getElementById('form-signin').style.display = isSignin ? '' : 'none';
+    document.getElementById('form-signup').style.display = isSignin ? 'none' : '';
+    clearMsg();
+  }
+
+  function showMsg(text, type = 'error') {
+    const el = document.getElementById('auth-msg');
+    el.textContent = text;
+    el.className = `msg ${type}`;
+  }
+
+  function clearMsg() {
+    const el = document.getElementById('auth-msg');
+    el.className = 'msg';
+    el.textContent = '';
+  }
+
+  function setLoading(btnId, loading, label) {
+    const btn = document.getElementById(btnId);
+    btn.disabled = loading;
+    btn.innerHTML = loading ? `<span class="spinner"></span> ${label}` : label;
+  }
+
+  async function handleSignIn(e) {
+    e.preventDefault();
+    clearMsg();
+    const email = document.getElementById('si-email').value.trim();
+    const password = document.getElementById('si-password').value;
+    setLoading('btn-signin', true, 'Entering...');
+
+    const { error } = await sbClient.auth.signInWithPassword({ email, password });
+
+    if (error) {
+      showMsg(error.message === 'Invalid login credentials'
+        ? 'Wrong email or password. Check your credentials and try again.'
+        : error.message);
+      setLoading('btn-signin', false, 'Enter the Table');
+      return;
+    }
+
+    setLoading('btn-signin', false, '✓ Welcome back!');
+    setTimeout(redirectAfterAuth, 500);
+  }
+
+  async function handleSignUp(e) {
+    e.preventDefault();
+    clearMsg();
+    const name = document.getElementById('su-name').value.trim();
+    const email = document.getElementById('su-email').value.trim();
+    const password = document.getElementById('su-password').value;
+    setLoading('btn-signup', true, 'Creating account...');
+
+    const { error } = await sbClient.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { display_name: name }
+      }
+    });
+
+    if (error) {
+      showMsg(error.message);
+      setLoading('btn-signup', false, 'Begin Your Journey');
+      return;
+    }
+
+    showMsg('Account created! Check your email to confirm, then sign in.', 'success');
+    setLoading('btn-signup', false, 'Begin Your Journey');
+    setTimeout(() => switchTab('signin'), 2500);
+  }
+</script>
+</body>
+</html>

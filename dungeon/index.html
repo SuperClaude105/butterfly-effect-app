@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Unwritten Table — Campaign Lobby</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Playfair+Display:ital,wght@0,700;0,900;1,400;1,700&family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="supabase-client.js"></script>
+  <style>
+    :root {
+      --primary:   #8B0000;
+      --accent:    #c4a264;
+      --bg:        #080404;
+      --surface:   #110707;
+      --border:    rgba(255,255,255,0.08);
+      --text:      #e8d5b7;
+      --text-dim:  rgba(232,213,183,0.45);
+      --glow:      rgba(139,0,0,0.4);
+
+      --wood-dark:      #221009;
+      --wood-mid:       #3A1F0F;
+      --wood-light:     #5A3218;
+      --wood-highlight: #7A4E2A;
+      --brass:          #B8860B;
+      --brass-light:    #D4A820;
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'EB Garamond', Georgia, serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* grain */
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='250' height='250'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 9999; opacity: 0.6;
+    }
+
+    /* ambient */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background:
+        radial-gradient(ellipse 70% 60% at 40% 50%, rgba(139,0,0,0.14) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 40% at 85% 20%, rgba(196,162,100,0.04) 0%, transparent 60%);
+      pointer-events: none; z-index: 0;
+    }
+
+    .page {
+      position: relative; z-index: 10;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 20px 24px;
+    }
+
+    /* ── HEADER ── */
+    .site-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid rgba(196,162,100,0.12);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--primary);
+      box-shadow: 0 0 8px var(--primary);
+    }
+    .brand-title {
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      font-size: 1.35rem;
+      color: var(--accent);
+      letter-spacing: -0.02em;
+    }
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .campaign-code {
+      font-size: 0.65rem;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+    .campaign-code strong {
+      color: var(--accent);
+      font-weight: 500;
+    }
+    .header-invite {
+      font-size: 0.65rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      padding: 5px 12px;
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 2px;
+      cursor: pointer;
+      transition: border-color 0.15s ease, color 0.15s ease;
+    }
+    .header-invite:hover { border-color: rgba(196,162,100,0.3); color: var(--accent); }
+
+    /* ── MAIN LAYOUT ── */
+    .main-layout {
+      display: flex;
+      gap: 20px;
+      flex: 1;
+      align-items: flex-start;
+      justify-content: center;
+    }
+
+    /* ── TABLE GRID ── */
+    .table-section {
+      display: grid;
+      grid-template-columns: 100px 500px 100px;
+      grid-template-rows: 90px 500px 90px;
+      column-gap: 26px;
+      row-gap: 8px;
+      align-items: center;
+      justify-items: center;
+    }
+
+    /* ── THE TABLE FRAME ── */
+    .table-frame {
+      grid-column: 2; grid-row: 2;
+      width: 500px; height: 500px;
+      border-radius: 18px;
+      position: relative;
+
+      background:
+        repeating-linear-gradient(
+          91deg,
+          transparent 0px, transparent 3px,
+          rgba(0,0,0,0.07) 3px, rgba(0,0,0,0.07) 4px
+        ),
+        repeating-linear-gradient(
+          179deg,
+          transparent 0px, transparent 24px,
+          rgba(255,255,255,0.008) 24px, rgba(255,255,255,0.008) 25px
+        ),
+        linear-gradient(148deg,
+          #6B3E22 0%,
+          #3A1F0F 15%,
+          #4A2A14 30%,
+          #221009 45%,
+          #3A1F0F 58%,
+          #5A3218 72%,
+          #3A1F0F 85%,
+          #6B3E22 100%
+        );
+
+      border: 7px solid #5A3218;
+      box-shadow:
+        0 0 0 1px rgba(184,134,11,0.25),
+        0 0 0 9px #1A0A04,
+        0 0 0 10px rgba(184,134,11,0.12),
+        0 40px 120px rgba(0,0,0,0.95),
+        0 15px 50px rgba(0,0,0,0.7),
+        inset 0 0 100px rgba(0,0,0,0.5),
+        inset 0 2px 0 rgba(255,255,255,0.05);
+
+      padding: 22px;
+    }
+
+    /* Brass corner studs */
+    .stud {
+      position: absolute;
+      width: 13px; height: 13px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #E8B820, #9A6E08);
+      box-shadow: 0 2px 5px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.2);
+    }
+    .stud-tl { top: 14px; left: 14px; }
+    .stud-tr { top: 14px; right: 14px; }
+    .stud-bl { bottom: 14px; left: 14px; }
+    .stud-br { bottom: 14px; right: 14px; }
+
+    /* Table surface (felt-like) */
+    .table-surface {
+      width: 100%; height: 100%;
+      border-radius: 8px;
+      background: radial-gradient(ellipse at 50% 40%, #191510 0%, #0F0C08 100%);
+      box-shadow:
+        inset 0 0 80px rgba(0,0,0,0.9),
+        inset 0 0 3px rgba(0,0,0,1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* surface grain */
+    .table-surface::before {
+      content: '';
+      position: absolute; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+      pointer-events: none;
+    }
+
+    /* Candlelight glow from corners */
+    .table-surface::after {
+      content: '';
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(circle 80px at 8% 8%, rgba(196,162,100,0.06) 0%, transparent 100%),
+        radial-gradient(circle 80px at 92% 8%, rgba(196,162,100,0.06) 0%, transparent 100%),
+        radial-gradient(circle 80px at 8% 92%, rgba(196,162,100,0.06) 0%, transparent 100%),
+        radial-gradient(circle 80px at 92% 92%, rgba(196,162,100,0.06) 0%, transparent 100%);
+      pointer-events: none;
+    }
+
+    /* ── MAP PANEL ── */
+    .map-panel {
+      width: 360px; height: 360px;
+      border-radius: 3px;
+      border: 1px solid rgba(196,162,100,0.18);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 10px;
+
+      background:
+        radial-gradient(ellipse at 25% 30%, rgba(139,0,0,0.07) 0%, transparent 55%),
+        radial-gradient(ellipse at 75% 70%, rgba(196,162,100,0.04) 0%, transparent 50%),
+        #13100C;
+
+      box-shadow:
+        inset 0 0 40px rgba(0,0,0,0.8),
+        inset 0 0 1px rgba(0,0,0,1),
+        0 0 0 1px rgba(0,0,0,0.6),
+        0 6px 30px rgba(0,0,0,0.6);
+    }
+
+    /* parchment grid lines (faint dungeon map feel) */
+    .map-panel::before {
+      content: '';
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(196,162,100,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(196,162,100,0.025) 1px, transparent 1px);
+      background-size: 30px 30px;
+      pointer-events: none;
+    }
+
+    .map-inner {
+      position: relative; z-index: 2;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    .map-compass {
+      font-size: 2.8rem;
+      opacity: 0.18;
+      line-height: 1;
+    }
+    .map-label {
+      font-family: 'Cinzel', serif;
+      font-size: 0.62rem;
+      letter-spacing: 0.4em;
+      text-transform: uppercase;
+      color: var(--accent);
+      opacity: 0.55;
+    }
+    .map-campaign-title {
+      position: absolute;
+      top: 16px; left: 0; right: 0;
+      text-align: center;
+      font-family: 'Cinzel', serif;
+      font-size: 0.72rem;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: var(--accent);
+      opacity: 0.65;
+    }
+
+    /* Dice tray — bottom right of map */
+    .dice-tray {
+      position: absolute;
+      bottom: 14px; right: 14px;
+      width: 56px; height: 56px;
+      border: 1px dashed rgba(196,162,100,0.22);
+      border-radius: 4px;
+      background: rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.55;
+      font-size: 1.5rem;
+      cursor: pointer;
+      transition: opacity 0.2s ease, border-color 0.2s ease;
+    }
+    .dice-tray:hover { opacity: 0.85; border-color: rgba(196,162,100,0.5); }
+    .dice-label {
+      position: absolute;
+      bottom: 6px; left: 0; right: 0;
+      text-align: center;
+      font-family: 'Cinzel', serif;
+      font-size: 0.44rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--accent);
+      opacity: 0.5;
+    }
+
+    /* ── PLAYER SEATS ── */
+    .seat-north { grid-column: 2; grid-row: 1; }
+    .seat-south { grid-column: 2; grid-row: 3; }
+    .seat-west  { grid-column: 1; grid-row: 2; }
+    .seat-east  { grid-column: 3; grid-row: 2; }
+
+    .player-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+    }
+    .seat-west .player-card,
+    .seat-east .player-card {
+      align-items: center;
+    }
+
+    /* Avatar ring */
+    .avatar-ring {
+      width: 54px; height: 54px;
+      border-radius: 50%;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .avatar-ring.empty {
+      background: rgba(196,162,100,0.03);
+      border: 2px dashed rgba(196,162,100,0.3);
+      animation: ring-pulse 3s ease-in-out infinite;
+    }
+    .avatar-ring.empty:hover {
+      border-color: rgba(196,162,100,0.55);
+      background: rgba(196,162,100,0.06);
+    }
+    .avatar-ring.waiting {
+      border: 2px solid rgba(196,162,100,0.35);
+      background: rgba(196,162,100,0.06);
+      animation: ring-pulse 2.4s ease-in-out infinite;
+    }
+    .avatar-ring.ready {
+      border: 2px solid rgba(80,190,80,0.55);
+      background: rgba(40,100,40,0.15);
+      box-shadow: 0 0 14px rgba(80,190,80,0.18);
+    }
+    .avatar-ring.deciding {
+      border: 2px solid var(--accent);
+      background: rgba(196,162,100,0.1);
+      box-shadow: 0 0 20px rgba(196,162,100,0.25);
+      animation: ring-decide 1s ease-in-out infinite;
+    }
+    .avatar-ring.you {
+      border: 2px solid rgba(139,0,0,0.7);
+      background: rgba(139,0,0,0.12);
+      box-shadow: 0 0 14px rgba(139,0,0,0.25);
+    }
+
+    @keyframes ring-pulse {
+      0%, 100% { box-shadow: 0 0 0 rgba(196,162,100,0); }
+      50%       { box-shadow: 0 0 12px rgba(196,162,100,0.22); }
+    }
+    @keyframes ring-decide {
+      0%, 100% { box-shadow: 0 0 12px rgba(196,162,100,0.2); }
+      50%       { box-shadow: 0 0 28px rgba(196,162,100,0.5); }
+    }
+
+    .avatar-img {
+      width: 100%; height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+      display: block;
+    }
+    .avatar-empty-icon {
+      width: 100%; height: 100%;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      color: rgba(196,162,100,0.25);
+      font-weight: 300;
+    }
+
+    /* Status dot */
+    .status-dot {
+      position: absolute;
+      bottom: -1px; right: -1px;
+      width: 17px; height: 17px;
+      border-radius: 50%;
+      border: 2px solid var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.48rem;
+      font-weight: bold;
+      line-height: 1;
+    }
+    .status-dot.empty   { background: #1a1a1a; }
+    .status-dot.waiting { background: rgba(196,162,100,0.5); }
+    .status-dot.ready   { background: #3a8a3a; color: #fff; }
+    .status-dot.deciding{
+      background: var(--primary);
+      animation: dot-blink 0.9s ease-in-out infinite;
+    }
+    .status-dot.you     { background: rgba(139,0,0,0.8); }
+
+    @keyframes dot-blink {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.35; }
+    }
+
+    /* Name plate */
+    .nameplate { text-align: center; }
+    .p-name {
+      display: block;
+      font-family: 'Cinzel', serif;
+      font-size: 0.63rem;
+      letter-spacing: 0.08em;
+      color: var(--text);
+      white-space: nowrap;
+    }
+    .p-class {
+      display: block;
+      font-size: 0.58rem;
+      color: var(--accent);
+      opacity: 0.65;
+      margin-top: 1px;
+      white-space: nowrap;
+    }
+    .p-status {
+      display: block;
+      font-size: 0.52rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      margin-top: 3px;
+    }
+    .p-status.empty   { color: rgba(255,255,255,0.15); }
+    .p-status.waiting { color: rgba(196,162,100,0.45); }
+    .p-status.ready   { color: rgba(80,190,80,0.65); }
+    .p-status.deciding{ color: var(--accent); }
+
+    /* ── LOBBY PANEL ── */
+    .lobby-panel {
+      width: 272px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      /* Align top of panel with top of table (north seat + row-gap) */
+      margin-top: 0;
+      align-self: flex-start;
+      padding-top: 96px; /* offset to align with table frame top */
+    }
+
+    .panel-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .panel-head {
+      padding: 9px 13px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .panel-label {
+      font-family: 'Cinzel', serif;
+      font-size: 0.58rem;
+      letter-spacing: 0.32em;
+      text-transform: uppercase;
+      color: var(--accent);
+      opacity: 0.65;
+    }
+    .panel-meta { font-size: 0.58rem; color: var(--text-dim); }
+
+    /* Campaign card body */
+    .camp-body { padding: 13px; }
+    .camp-name {
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      font-size: 1.05rem;
+      color: var(--text);
+      line-height: 1.3;
+      margin-bottom: 6px;
+    }
+    .camp-desc {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      line-height: 1.65;
+    }
+    .camp-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 11px;
+      padding-top: 11px;
+      border-top: 1px solid rgba(255,255,255,0.05);
+    }
+    .camp-row-label {
+      font-size: 0.58rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      flex-shrink: 0;
+    }
+    .credit-pips {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+    .pip {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+    }
+    .pip.active { background: var(--accent); box-shadow: 0 0 6px rgba(196,162,100,0.4); }
+    .pip.inactive { background: rgba(255,255,255,0.1); }
+    .turns-label {
+      font-size: 0.58rem;
+      color: var(--text-dim);
+      margin-left: 4px;
+    }
+
+    /* Chat */
+    .chat-messages {
+      padding: 10px 13px;
+      min-height: 160px;
+      max-height: 200px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .chat-system {
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      text-align: center;
+      font-style: italic;
+      padding: 2px 0;
+      opacity: 0.7;
+    }
+    .chat-msg {
+      display: flex;
+      gap: 7px;
+      align-items: flex-start;
+    }
+    .chat-av {
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      background: rgba(196,162,100,0.15);
+      border: 1px solid rgba(196,162,100,0.18);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Cinzel', serif;
+      font-size: 0.55rem;
+      color: var(--accent);
+    }
+    .chat-body {}
+    .chat-sender {
+      font-family: 'Cinzel', serif;
+      font-size: 0.58rem;
+      letter-spacing: 0.04em;
+      color: var(--accent);
+      margin-bottom: 1px;
+      opacity: 0.85;
+    }
+    .chat-text {
+      font-size: 0.76rem;
+      color: var(--text);
+      line-height: 1.5;
+      opacity: 0.82;
+    }
+
+    .chat-input-row {
+      padding: 8px 13px;
+      border-top: 1px solid rgba(255,255,255,0.05);
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    .chat-input {
+      flex: 1;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 2px;
+      padding: 5px 9px;
+      font-family: 'EB Garamond', serif;
+      font-size: 0.78rem;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s ease, background 0.15s ease;
+    }
+    .chat-input:focus {
+      border-color: rgba(196,162,100,0.28);
+      background: rgba(255,255,255,0.05);
+    }
+    .chat-input::placeholder { color: var(--text-dim); opacity: 0.5; font-style: italic; }
+    .chat-send {
+      width: 28px; height: 28px;
+      background: rgba(196,162,100,0.08);
+      border: 1px solid rgba(196,162,100,0.2);
+      border-radius: 2px;
+      color: var(--accent);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      transition: background 0.15s ease, transform 0.1s ease;
+    }
+    .chat-send:hover  { background: rgba(196,162,100,0.18); }
+    .chat-send:active { transform: scale(0.92); }
+
+    /* Begin row */
+    .begin-section {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .waiting-note {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 0.62rem;
+      font-style: italic;
+      color: var(--text-dim);
+    }
+    .dots span {
+      display: inline-block;
+      width: 3px; height: 3px;
+      border-radius: 50%;
+      background: var(--accent);
+      opacity: 0.45;
+      animation: dot-up 1.3s ease-in-out infinite;
+    }
+    .dots span:nth-child(2) { animation-delay: 0.18s; }
+    .dots span:nth-child(3) { animation-delay: 0.36s; }
+    @keyframes dot-up {
+      0%, 80%, 100% { transform: translateY(0);    opacity: 0.45; }
+      40%            { transform: translateY(-3px); opacity: 1; }
+    }
+
+    .begin-btn {
+      width: 100%;
+      padding: 11px;
+      background: linear-gradient(140deg, #7A0000 0%, #5A0000 100%);
+      border: 1px solid rgba(139,0,0,0.45);
+      border-radius: 2px;
+      font-family: 'Cinzel', serif;
+      font-size: 0.65rem;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: var(--accent);
+      cursor: pointer;
+      transition: opacity 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+      box-shadow:
+        0 4px 24px rgba(139,0,0,0.28),
+        inset 0 1px 0 rgba(255,255,255,0.05);
+    }
+    .begin-btn:hover {
+      opacity: 0.88;
+      box-shadow: 0 6px 32px rgba(139,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.05);
+    }
+    .begin-btn:active { transform: scale(0.98); }
+    .begin-btn:disabled {
+      opacity: 0.28;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 3px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(196,162,100,0.18); border-radius: 2px; }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <header class="site-header">
+    <div class="brand">
+      <div class="brand-dot"></div>
+      <div class="brand-title">The Unwritten Table</div>
+    </div>
+    <div class="header-right">
+      <a href="scenario.html" style="font-family:'Cinzel',serif;font-size:0.58rem;letter-spacing:0.22em;text-transform:uppercase;color:var(--text-dim);text-decoration:none;padding:5px 12px;border:1px solid rgba(255,255,255,0.07);border-radius:2px;transition:color 0.15s,border-color 0.15s;" onmouseover="this.style.color='var(--accent)';this.style.borderColor='rgba(196,162,100,0.3)'" onmouseout="this.style.color='var(--text-dim)';this.style.borderColor='rgba(255,255,255,0.07)'">← Change Scenario</a>
+      <div class="campaign-code">Code: <strong>RAVEN-7</strong></div>
+      <div class="header-invite">Invite Link</div>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <div class="main-layout">
+
+    <!-- TABLE + SEATS -->
+    <div class="table-section">
+
+      <!-- NORTH — Aldric (waiting) -->
+      <div class="seat-north">
+        <div class="player-card">
+          <div class="avatar-ring waiting" style="position:relative">
+            <img class="avatar-img" src="https://placehold.co/54x54/2a1608/c4a264?text=A" alt="Aldric">
+            <div class="status-dot waiting">·</div>
+          </div>
+          <div class="nameplate">
+            <span class="p-name">Aldric</span>
+            <span class="p-class">Human Paladin · Lv 4</span>
+            <span class="p-status waiting">Waiting</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- WEST — Mira (ready) -->
+      <div class="seat-west">
+        <div class="player-card">
+          <div class="avatar-ring ready" style="position:relative">
+            <img class="avatar-img" src="https://placehold.co/54x54/0f1a0d/c4a264?text=M" alt="Mira">
+            <div class="status-dot ready">✓</div>
+          </div>
+          <div class="nameplate">
+            <span class="p-name">Mira</span>
+            <span class="p-class">Elf Rogue · Lv 4</span>
+            <span class="p-status ready">Ready</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- THE TABLE -->
+      <div class="table-frame">
+        <!-- Brass corner studs -->
+        <div class="stud stud-tl"></div>
+        <div class="stud stud-tr"></div>
+        <div class="stud stud-bl"></div>
+        <div class="stud stud-br"></div>
+
+        <div class="table-surface">
+          <!-- MAP PANEL -->
+          <div class="map-panel">
+            <div class="map-campaign-title">The Sunless Citadel</div>
+
+            <div class="map-inner">
+              <div class="map-compass">✦</div>
+              <div class="map-label">Awaiting Campaign Start</div>
+            </div>
+
+            <div class="dice-tray">⚃</div>
+            <div class="dice-label">Dice Tray</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- EAST — Empty seat -->
+      <div class="seat-east">
+        <div class="player-card">
+          <div class="avatar-ring empty" style="position:relative">
+            <div class="avatar-empty-icon" style="font-size:1.1rem;font-weight:400">+</div>
+            <div class="status-dot empty"></div>
+          </div>
+          <div class="nameplate">
+            <span class="p-name" style="opacity:0.3;font-size:0.58rem">Empty Seat</span>
+            <span class="p-class" style="opacity:0.3">— Open —</span>
+            <span class="p-status empty">Invite</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- SOUTH — You (in lobby) -->
+      <div class="seat-south">
+        <div class="player-card">
+          <div class="avatar-ring you" style="position:relative">
+            <img class="avatar-img" src="https://placehold.co/54x54/3d0000/e8d5b7?text=G" alt="You">
+            <div class="status-dot you" style="color:#e8d5b7;font-size:0.4rem">●</div>
+          </div>
+          <div class="nameplate">
+            <span class="p-name">Garen <span style="font-size:0.48rem;color:var(--accent);opacity:0.55">(you)</span></span>
+            <span class="p-class">Half-Orc Barbarian · Lv 4</span>
+            <span class="p-status deciding">In Lobby</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <!-- / TABLE SECTION -->
+
+    <!-- LOBBY PANEL -->
+    <div class="lobby-panel">
+
+      <!-- Campaign info -->
+      <div class="panel-card">
+        <div class="panel-head">
+          <span class="panel-label">Campaign</span>
+          <span class="panel-meta">Session 1</span>
+        </div>
+        <div class="camp-body">
+          <div class="camp-name">The Sunless Citadel</div>
+          <div class="camp-desc">
+            An ancient fortress swallowed by the earth. Goblins and kobolds war over a mysterious tree said to grant life — and death.
+          </div>
+          <div class="camp-row">
+            <span class="camp-row-label">Credits</span>
+            <div class="credit-pips">
+              <div class="pip active"></div>
+              <div class="pip inactive"></div>
+              <div class="pip inactive"></div>
+              <div class="pip inactive"></div>
+            </div>
+            <span class="turns-label">60 turns · hosted by Garen</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lobby chat -->
+      <div class="panel-card">
+        <div class="panel-head">
+          <span class="panel-label">Lobby</span>
+          <div class="dots"><span></span><span></span><span></span></div>
+        </div>
+        <div class="chat-messages">
+          <div class="chat-system">Campaign room opened · RAVEN-7</div>
+          <div class="chat-msg">
+            <div class="chat-av">M</div>
+            <div class="chat-body">
+              <div class="chat-sender">Mira</div>
+              <div class="chat-text">Already here, ready to go!</div>
+            </div>
+          </div>
+          <div class="chat-msg">
+            <div class="chat-av">G</div>
+            <div class="chat-body">
+              <div class="chat-sender">Garen (you)</div>
+              <div class="chat-text">Waiting on Aldric, as always 😅</div>
+            </div>
+          </div>
+          <div class="chat-system">Aldric joined · RAVEN-7</div>
+          <div class="chat-msg">
+            <div class="chat-av">A</div>
+            <div class="chat-body">
+              <div class="chat-sender">Aldric</div>
+              <div class="chat-text">Sorry! Dog wanted feeding. Give me 2 min</div>
+            </div>
+          </div>
+        </div>
+        <div class="chat-input-row">
+          <input class="chat-input" type="text" placeholder="Say something…" />
+          <button class="chat-send">↑</button>
+        </div>
+      </div>
+
+      <!-- Begin -->
+      <div class="begin-section">
+        <div class="waiting-note">
+          <span id="lobbyNote">Start when ready</span>
+        </div>
+        <button class="begin-btn" id="beginBtn" onclick="beginCampaign()">Begin Campaign</button>
+      </div>
+
+      <!-- Join a session -->
+      <div class="panel-card" id="joinPanel" style="display:none">
+        <div class="panel-head">
+          <span class="panel-label">Join Session</span>
+        </div>
+        <div style="padding:12px 13px;display:flex;flex-direction:column;gap:8px;">
+          <div style="font-size:0.7rem;color:var(--text-dim);line-height:1.55;">Enter the 6-character code from the session host.</div>
+          <input id="joinCodeInput" type="text" maxlength="6"
+            placeholder="ABC123"
+            style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:2px;padding:8px 12px;font-family:'Cinzel',serif;font-size:1rem;letter-spacing:0.35em;text-transform:uppercase;color:var(--accent);outline:none;width:100%;text-align:center;"
+            oninput="this.value=this.value.toUpperCase()"
+          />
+          <button onclick="joinSession()" id="joinBtn"
+            style="width:100%;padding:10px;background:rgba(196,162,100,0.08);border:1px solid rgba(196,162,100,0.25);border-radius:2px;font-family:'Cinzel',serif;font-size:0.62rem;letter-spacing:0.3em;text-transform:uppercase;color:var(--accent);cursor:pointer;transition:background 0.15s,box-shadow 0.15s;"
+            onmouseover="this.style.background='rgba(196,162,100,0.14)'"
+            onmouseout="this.style.background='rgba(196,162,100,0.08)'">
+            Join Campaign →
+          </button>
+          <div id="joinError" style="font-size:0.65rem;color:rgba(200,80,80,0.7);text-align:center;min-height:14px;font-family:'Cinzel',serif;letter-spacing:0.1em;"></div>
+        </div>
+      </div>
+
+      <!-- Toggle join section -->
+      <div style="text-align:center;padding:4px 0;">
+        <button onclick="toggleJoin()" id="joinToggle"
+          style="background:none;border:none;font-family:'Cinzel',serif;font-size:0.52rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--text-dim);cursor:pointer;transition:color 0.15s;"
+          onmouseover="this.style.color='var(--accent)'"
+          onmouseout="this.style.color='var(--text-dim)'">
+          Joining someone's session? →
+        </button>
+      </div>
+
+    </div>
+    <!-- / LOBBY PANEL -->
+
+  </div>
+</div>
+<script>
+(function() {
+  // ── SCENARIO DATA ───────────────────────────────────────────────────
+  const scenario = (() => { try { return JSON.parse(sessionStorage.getItem('campaignScenario')); } catch(e) { return null; } })();
+  const SCENARIO_DESCS = {
+    vault:  'Dungeon crawl beneath a flooded ancient city. Navigate traps, undead guardians, and rival treasure hunters.',
+    court:  'Political murder mystery at a noble feast. Uncover the conspiracy before midnight strikes.',
+    dark:   'Survival horror in a cursed village. Spreading darkness erases memories. Not everyone escapes.',
+    custom: 'A custom adventure shaped by your choices awaits.'
+  };
+  if (scenario) {
+    const qs = s => document.querySelector(s);
+    if (qs('.camp-name'))          qs('.camp-name').textContent          = scenario.name;
+    if (qs('.map-campaign-title')) qs('.map-campaign-title').textContent = scenario.name;
+    if (qs('.camp-desc'))          qs('.camp-desc').textContent          = SCENARIO_DESCS[scenario.id] || SCENARIO_DESCS.custom;
+    const pips = document.querySelectorAll('.pip');
+    if (pips.length) {
+      const count = scenario.creditsRec || 1;
+      pips.forEach((p, i) => { p.className = 'pip ' + (i < count ? 'active' : 'inactive'); });
+    }
+  }
+
+  // ── SELECTED CHARACTER (south seat = you) ───────────────────────────
+  const character = (() => { try { return JSON.parse(localStorage.getItem('uwt_selected_character')); } catch(e) { return null; } })();
+  const cap = v => v ? v.charAt(0).toUpperCase() + v.slice(1) : '';
+  const myName = character ? character.name.split(' ')[0] : 'You';
+  const myInit = character ? character.name[0].toUpperCase() : 'Y';
+
+  if (character) {
+    const south = document.querySelector('.seat-south');
+    if (south) {
+      const img  = south.querySelector('.avatar-img');
+      const name = south.querySelector('.p-name');
+      const cls  = south.querySelector('.p-class');
+      if (img)  img.src = character.portrait || 'https://picsum.photos/seed/warrior-bold/54/54';
+      if (name) name.innerHTML = `${character.name} <span style="font-size:0.48rem;color:var(--accent);opacity:0.55">(you)</span>`;
+      if (cls)  cls.textContent = `${cap(character.race)} ${cap(character.cls)} · Lv ${character.level}`;
+    }
+    const tl = document.querySelector('.turns-label');
+    if (tl) {
+      const diff = scenario ? scenario.difficulty + ' · ' : '';
+      tl.textContent = `${diff}60 turns · hosted by ${myName}`;
+    }
+  }
+
+  // ── CHAT ────────────────────────────────────────────────────────────
+  const input   = document.querySelector('.chat-input');
+  const sendBtn = document.querySelector('.chat-send');
+  const feed    = document.querySelector('.chat-messages');
+
+  function sendMessage() {
+    const text = (input.value || '').trim();
+    if (!text || !feed) return;
+    const msg = document.createElement('div');
+    msg.className = 'chat-msg';
+    msg.innerHTML = `
+      <div class="chat-av">${myInit}</div>
+      <div class="chat-body">
+        <div class="chat-sender">${myName} (you)</div>
+        <div class="chat-text">${text.replace(/</g,'&lt;')}</div>
+      </div>`;
+    feed.appendChild(msg);
+    feed.scrollTop = feed.scrollHeight;
+    input.value = '';
+  }
+
+  if (sendBtn) sendBtn.addEventListener('click', sendMessage);
+  if (input)   input.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+  // Scroll chat to bottom on load
+  if (feed) feed.scrollTop = feed.scrollHeight;
+
+  // ── JOIN PANEL ──────────────────────────────────────────────────────────
+  let _joinOpen = false;
+  window.toggleJoin = function() {
+    _joinOpen = !_joinOpen;
+    const panel  = document.getElementById('joinPanel');
+    const toggle = document.getElementById('joinToggle');
+    if (panel)  panel.style.display  = _joinOpen ? 'block' : 'none';
+    if (toggle) toggle.textContent   = _joinOpen ? '← Back to hosting' : 'Joining someone\'s session? →';
+  };
+
+  window.joinSession = async function() {
+    const code = (document.getElementById('joinCodeInput')?.value || '').trim().toUpperCase();
+    const errEl = document.getElementById('joinError');
+    const btn   = document.getElementById('joinBtn');
+    if (!code || code.length !== 6) {
+      if (errEl) errEl.textContent = 'Enter a 6-character code.';
+      return;
+    }
+    if (!_currentUser) {
+      window.location.href = 'auth.html?next=index.html';
+      return;
+    }
+    btn.textContent = 'Joining…';
+    btn.disabled = true;
+    if (errEl) errEl.textContent = '';
+
+    // Look up session by code
+    const { data: session, error } = await sbClient
+      .from('rpg_sessions')
+      .select('*')
+      .eq('code', code)
+      .eq('status', 'active')
+      .single();
+
+    if (error || !session) {
+      if (errEl) errEl.textContent = 'Code not found or session has ended.';
+      btn.textContent = 'Join Campaign →';
+      btn.disabled = false;
+      return;
+    }
+
+    const characterData = (() => { try { return JSON.parse(localStorage.getItem('uwt_selected_character')); } catch(e) { return null; } })();
+
+    // Add this player to session (ignore conflict if already joined)
+    await sbClient.from('rpg_session_players').upsert({
+      session_id:   session.id,
+      user_id:      _currentUser.id,
+      character_id: characterData?.id || null,
+      status:       'joined',
+    }, { onConflict: 'session_id,user_id' });
+
+    // Store session for game.html
+    sessionStorage.setItem('uwt_session_id', session.id);
+    sessionStorage.setItem('uwt_session_code', code);
+    // Use the host's scenario
+    if (session.scenario) sessionStorage.setItem('campaignScenario', JSON.stringify(session.scenario));
+
+    window.location.href = 'game.html';
+  };
+
+  // Allow pressing Enter in the code input
+  document.getElementById('joinCodeInput')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') joinSession();
+  });
+
+  // ── Auth guard ──────────────────────────────────────────────────────────
+  let _currentUser = null;
+  (function waitForSb(cb) {
+    if (window.sbClient) { cb(); return; }
+    setTimeout(() => waitForSb(cb), 50);
+  })(async () => {
+    _currentUser = await requireAuth();
+    // Show session code in header if available
+    const code = sessionStorage.getItem('uwt_session_code');
+    if (code) {
+      const codeEl = document.querySelector('.campaign-code strong');
+      if (codeEl) codeEl.textContent = code;
+    }
+  });
+
+  // ── Begin Campaign — creates Supabase session then enters game ──────────
+  window.beginCampaign = async function() {
+    const btn = document.getElementById('beginBtn');
+    btn.disabled = true;
+    btn.textContent = 'Starting…';
+
+    // Wait for auth if still loading
+    if (!_currentUser) {
+      let tries = 0;
+      while (!_currentUser && tries < 40) {
+        await new Promise(r => setTimeout(r, 100));
+        tries++;
+      }
+    }
+    if (!_currentUser) {
+      window.location.href = 'auth.html';
+      return;
+    }
+
+    const scenarioData = (() => { try { return JSON.parse(sessionStorage.getItem('campaignScenario')); } catch(e) { return null; } })();
+    const characterData = (() => { try { return JSON.parse(localStorage.getItem('uwt_selected_character')); } catch(e) { return null; } })();
+
+    // Create session record
+    const code = generateSessionCode();
+    const { data: session, error: sessionErr } = await sbClient
+      .from('rpg_sessions')
+      .insert({
+        host_id:  _currentUser.id,
+        code:     code,
+        scenario: scenarioData || {},
+        status:   'active',
+      })
+      .select()
+      .single();
+
+    if (sessionErr) {
+      console.error('Failed to create session:', sessionErr);
+      btn.disabled = false;
+      btn.textContent = 'Begin Campaign';
+      alert('Could not start session. Please try again.');
+      return;
+    }
+
+    // Add host as a player
+    await sbClient.from('rpg_session_players').insert({
+      session_id:   session.id,
+      user_id:      _currentUser.id,
+      character_id: characterData?.id || null,
+      status:       'joined',
+    });
+
+    // Initialise empty game state
+    await sbClient.from('rpg_game_state').insert({
+      session_id:             session.id,
+      current_room:           'entrance',
+      initiative_order:       [],
+      current_initiative_idx: 0,
+      enemies:                [],
+      round_number:           0,
+      combat_active:          false,
+      resources:              {},
+    });
+
+    // Save session info for game.html
+    sessionStorage.setItem('uwt_session_id', session.id);
+    sessionStorage.setItem('uwt_session_code', code);
+
+    window.location.href = 'game.html';
+  };
+
+})();
+</script>
+</body>
+</html>
