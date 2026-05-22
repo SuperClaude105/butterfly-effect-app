@@ -941,7 +941,7 @@
           document.getElementById('statNote').textContent = 'Click to roll your ability scores. You can re-roll as many times as you like.';
         } else {
           rollBtn.innerHTML = '<span class="roll-icon">📋</span> Apply Standard Array';
-          document.getElementById('statNote').textContent = 'Standard Array: 15, 14, 13, 12, 10, 8 — assigned in order: STR, DEX, CON, INT, WIS, CHA.';
+          document.getElementById('statNote').textContent = 'Standard Array: 15, 14, 13, 12, 10, 8 — assigned by class priority (highest to your key stat).';
           applyStandardArray();
         }
       }
@@ -954,9 +954,30 @@
     return rolls.sort((a, b) => b - a).slice(0, 3).reduce((s, v) => s + v, 0);
   }
 
+  const classPriority = {
+    barbarian: ['str','con','dex','wis','cha','int'],
+    bard:      ['cha','dex','con','wis','int','str'],
+    cleric:    ['wis','con','str','cha','dex','int'],
+    druid:     ['wis','con','dex','int','cha','str'],
+    fighter:   ['str','con','dex','wis','cha','int'],
+    monk:      ['dex','wis','con','str','cha','int'],
+    paladin:   ['str','cha','con','dex','wis','int'],
+    ranger:    ['dex','con','wis','str','cha','int'],
+    rogue:     ['dex','con','cha','int','wis','str'],
+    sorcerer:  ['cha','con','dex','wis','int','str'],
+    warlock:   ['cha','con','dex','wis','int','str'],
+    wizard:    ['int','con','dex','wis','cha','str'],
+  };
+
   function applyStandardArray() {
-    statKeys.forEach((k, i) => updateStatDisplay(k, standardArray[i]));
+    const priority = classPriority[selectedClass] || statKeys;
+    priority.forEach((k, i) => updateStatDisplay(k, standardArray[i]));
     hasRolled = true;
+    const note = document.getElementById('statNote');
+    if (note) {
+      const labels = {'str':'STR','dex':'DEX','con':'CON','int':'INT','wis':'WIS','cha':'CHA'};
+      note.textContent = `Standard Array: 15, 14, 13, 12, 10, 8 — assigned by ${selectedClass ? selectedClass.charAt(0).toUpperCase()+selectedClass.slice(1) : 'class'} priority: ${priority.map(k=>labels[k]).join(', ')}.`;
+    }
   }
 
   document.getElementById('rollBtn').addEventListener('click', function() {
