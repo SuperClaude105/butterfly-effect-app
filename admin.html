@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — Enter the Unwritten</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Playfair+Display:ital,wght@0,700;1,400;1,700&family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary:#8B0000; --accent:#c4a264;
+      --bg:#070404; --surface:#100606;
+      --border:rgba(255,255,255,0.07); --text:#e8d5b7; --dim:rgba(232,213,183,0.42);
+    }
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+    html,body{height:100%;background:var(--bg);color:var(--text);font-family:'EB Garamond',Georgia,serif;}
+
+    body::before {
+      content:'';position:fixed;inset:0;
+      background:
+        radial-gradient(ellipse 60% 50% at 20% 80%, rgba(139,0,0,0.07) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 60% at 80% 20%, rgba(196,162,100,0.04) 0%, transparent 70%);
+      pointer-events:none;z-index:0;
+    }
+    body::after {
+      content:'';position:fixed;inset:0;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events:none;z-index:9999;opacity:0.6;
+    }
+
+    .page {
+      min-height:100vh;display:flex;align-items:center;justify-content:center;
+      padding:40px 20px;position:relative;z-index:1;
+    }
+
+    .card {
+      width:100%;max-width:460px;
+      background:rgba(16,6,6,0.92);
+      border:1px solid rgba(196,162,100,0.12);
+      border-radius:4px;
+      padding:52px 44px 44px;
+      box-shadow:
+        0 0 0 1px rgba(0,0,0,0.6),
+        0 24px 64px rgba(0,0,0,0.7),
+        0 2px 16px rgba(139,0,0,0.08);
+    }
+
+    .brand {
+      text-align:center;margin-bottom:40px;
+    }
+    .brand-title {
+      font-family:'Playfair Display',serif;font-style:italic;
+      font-size:1.6rem;color:var(--accent);letter-spacing:-0.02em;
+      line-height:1.2;margin-bottom:6px;
+    }
+    .brand-sub {
+      font-family:'Cinzel',serif;font-size:0.52rem;
+      letter-spacing:0.28em;text-transform:uppercase;color:var(--dim);
+    }
+
+    /* Gate */
+    #gatePanel {}
+    .gate-label {
+      font-family:'Cinzel',serif;font-size:0.55rem;
+      letter-spacing:0.2em;text-transform:uppercase;
+      color:var(--dim);display:block;margin-bottom:10px;
+    }
+    .gate-input {
+      width:100%;background:rgba(255,255,255,0.03);
+      border:1px solid rgba(196,162,100,0.18);
+      border-radius:2px;padding:12px 14px;
+      font-family:'EB Garamond',serif;font-size:1rem;
+      color:var(--text);outline:none;
+      transition:border-color 0.2s;
+    }
+    .gate-input:focus { border-color:rgba(196,162,100,0.4); }
+    .gate-btn {
+      width:100%;margin-top:12px;
+      background:rgba(139,0,0,0.65);
+      border:1px solid rgba(139,0,0,0.45);
+      border-radius:2px;padding:12px;
+      font-family:'Cinzel',serif;font-size:0.65rem;
+      letter-spacing:0.25em;text-transform:uppercase;
+      color:rgba(232,213,183,0.9);cursor:pointer;
+      transition:background 0.2s, border-color 0.2s, transform 0.1s;
+    }
+    .gate-btn:hover { background:rgba(139,0,0,0.9); }
+    .gate-btn:active { transform:translateY(1px); }
+    .gate-error {
+      text-align:center;margin-top:10px;
+      font-family:'Cinzel',serif;font-size:0.55rem;
+      letter-spacing:0.15em;color:rgba(200,60,60,0.8);
+      min-height:18px;
+    }
+
+    /* Unlocked */
+    #adminPanel { display:none; }
+    .admin-heading {
+      font-family:'Cinzel',serif;font-size:0.55rem;
+      letter-spacing:0.25em;text-transform:uppercase;
+      color:var(--dim);margin-bottom:16px;text-align:center;
+    }
+    .divider { width:40px;height:1px;background:rgba(196,162,100,0.2);margin:24px auto; }
+
+    .link-card {
+      display:block;text-decoration:none;
+      background:rgba(255,255,255,0.02);
+      border:1px solid rgba(196,162,100,0.12);
+      border-radius:3px;padding:16px 20px;margin-bottom:10px;
+      transition:background 0.2s, border-color 0.2s, transform 0.15s;
+    }
+    .link-card:hover {
+      background:rgba(196,162,100,0.05);
+      border-color:rgba(196,162,100,0.28);
+      transform:translateX(3px);
+    }
+    .link-card.featured {
+      background:rgba(139,0,0,0.14);
+      border-color:rgba(139,0,0,0.35);
+    }
+    .link-card.featured:hover {
+      background:rgba(139,0,0,0.24);
+      border-color:rgba(196,100,100,0.45);
+    }
+    .link-title {
+      font-family:'Cinzel',serif;font-size:0.7rem;
+      letter-spacing:0.15em;text-transform:uppercase;
+      color:var(--accent);margin-bottom:4px;
+    }
+    .link-card.featured .link-title { color:#e88; }
+    .link-desc { font-size:0.88rem;color:var(--dim);line-height:1.5; }
+
+    .footer-note {
+      text-align:center;margin-top:28px;
+      font-family:'Cinzel',serif;font-size:0.5rem;
+      letter-spacing:0.18em;text-transform:uppercase;
+      color:rgba(232,213,183,0.18);
+    }
+
+    @keyframes shake {
+      0%,100%{transform:translateX(0);}
+      20%,60%{transform:translateX(-8px);}
+      40%,80%{transform:translateX(8px);}
+    }
+    .shake { animation:shake 0.4s ease; }
+  </style>
+</head>
+<body>
+<div class="page">
+  <div class="card" id="card">
+
+    <div class="brand">
+      <div class="brand-title">Enter the Unwritten</div>
+      <div class="brand-sub">Admin Access</div>
+    </div>
+
+    <!-- Gate -->
+    <div id="gatePanel">
+      <label class="gate-label" for="pwInput">Password</label>
+      <input
+        class="gate-input"
+        id="pwInput"
+        type="password"
+        placeholder="Enter admin password"
+        autocomplete="off"
+      />
+      <button class="gate-btn" onclick="checkPassword()">Unlock →</button>
+      <div class="gate-error" id="gateError"></div>
+    </div>
+
+    <!-- Unlocked -->
+    <div id="adminPanel">
+
+      <!-- Direct game entry — no second password needed -->
+      <a href="dungeon/characters.html" onclick="sessionStorage.setItem('uwt_access','1')" style="
+        display:block;text-align:center;text-decoration:none;
+        background:rgba(139,0,0,0.75);
+        border:1px solid rgba(196,100,100,0.45);
+        border-radius:3px;padding:16px 20px;margin-bottom:24px;
+        font-family:'Cinzel',serif;font-size:0.8rem;letter-spacing:0.25em;text-transform:uppercase;
+        color:rgba(232,213,183,0.95);
+        transition:background 0.2s,transform 0.1s;
+      " onmouseover="this.style.background='rgba(160,0,0,0.9)'" onmouseout="this.style.background='rgba(139,0,0,0.75)'" onmousedown="this.style.transform='translateY(1px)'" onmouseup="this.style.transform=''">
+        ⚔ &nbsp;Enter The Unwritten Table
+      </a>
+
+      <div class="admin-heading">Admin Links</div>
+
+      <a class="link-card featured" href="dungeon/launch.html">
+        <div class="link-title">🔗 Player Entry Page</div>
+        <div class="link-desc">Share this URL with your group — they'll need the passphrase "thecitadel" to get in.</div>
+      </a>
+
+      <a class="link-card" href="dungeon/characters.html">
+        <div class="link-title">📜 Characters (Direct)</div>
+        <div class="link-desc">Skip the launch page and go straight to character selection.</div>
+      </a>
+
+      <a class="link-card" href="dungeon/creature-cards.html">
+        <div class="link-title">📖 Creature Compendium</div>
+        <div class="link-desc">Full monster reference — use during DM prep or mid-session.</div>
+      </a>
+
+      <div class="divider"></div>
+
+      <a class="link-card" href="index.html">
+        <div class="link-title">🏠 Main Site</div>
+        <div class="link-desc">entertheunwritten.com homepage.</div>
+      </a>
+
+      <div class="footer-note">entertheunwritten.com · admin</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  const ADMIN_PASSWORD = '105Gerald105!';
+
+  function checkPassword() {
+    const input = document.getElementById('pwInput').value;
+    const err   = document.getElementById('gateError');
+    if (input === ADMIN_PASSWORD) {
+      sessionStorage.setItem('uwt_admin', '1');
+      showAdmin();
+    } else {
+      err.textContent = 'Incorrect password.';
+      const card = document.getElementById('card');
+      card.classList.remove('shake');
+      void card.offsetWidth;
+      card.classList.add('shake');
+      document.getElementById('pwInput').value = '';
+      document.getElementById('pwInput').focus();
+    }
+  }
+
+  function showAdmin() {
+    document.getElementById('gatePanel').style.display  = 'none';
+    document.getElementById('adminPanel').style.display = 'block';
+  }
+
+  if (sessionStorage.getItem('uwt_admin') === '1') showAdmin();
+
+  document.getElementById('pwInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') checkPassword();
+  });
+</script>
+</body>
+</html>
