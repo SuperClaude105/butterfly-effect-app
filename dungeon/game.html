@@ -1617,7 +1617,11 @@
       .replace(/\[ROLL:[^\]]*\]/g,'').replace(/\[COMBAT_START\]/g,'').replace(/\[COMBAT_END\]/g,'')
       .replace(/\[ENEMY:[^\]]*\]/g,'').replace(/\[XP:[^\]]*\]/g,'').replace(/\[SCENE:[^\]]*\]/g,'')
       .replace(/\[GOLD:[^\]]*\]/g,'').replace(/\[SHOP_OPEN\]/g,'')
-      .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/\n\n/g,'<br><br>').trim();
+      .replace(/^#{1,3}\s+/gm,'')
+      .replace(/^---+$/gm,'')
+      .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')
+      .replace(/\*([^*]+)\*/g,'<em>$1</em>')
+      .replace(/\n\n/g,'<br><br>').trim();
   }
 
   function processDirectives(text) {
