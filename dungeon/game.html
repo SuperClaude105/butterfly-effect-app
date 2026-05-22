@@ -91,10 +91,10 @@
     /* Player strips around table */
     .players-wrap{
       display:grid;
-      grid-template-columns:15% 70% 15%;
-      grid-template-rows:15% 70% 15%;
+      grid-template-columns:1fr 5fr 1fr;
+      grid-template-rows:1fr 5fr 1fr;
       gap:0;
-      width:min(90%, 820px);
+      width:min(calc(100% - 40px), calc(100vh - 160px));
       aspect-ratio:1;
     }
 
@@ -166,7 +166,7 @@
 
     /* Encounter strip */
     .encounter-strip{
-      width:min(90%, 820px);margin-top:12px;
+      width:min(calc(100% - 40px), calc(100vh - 160px));margin-top:12px;
       padding:8px 10px;
       background:rgba(139,0,0,0.08);
       border:1px solid rgba(139,0,0,0.2);
@@ -215,7 +215,7 @@
     }
     .msg-label{font-family:'Cinzel',serif;font-size:0.68rem;letter-spacing:0.22em;text-transform:uppercase;margin-bottom:6px;}
     .msg-dm .msg-label{color:rgba(196,100,100,0.7);}
-    .msg-dm .msg-text{font-style:italic;font-size:1.1rem;line-height:1.8;color:var(--text);}
+    .msg-dm .msg-text{font-style:italic;font-size:1.3rem;line-height:1.8;color:var(--text);}
     .msg-dm .msg-text strong{font-style:normal;color:var(--accent);}
 
     .msg-player{
@@ -235,7 +235,7 @@
     .player-av.garen{background:rgba(139,0,0,0.15);border:1px solid rgba(139,0,0,0.35);}
     .msg-player-body{}
     .msg-player .msg-label{color:var(--accent);opacity:0.8;}
-    .msg-player .msg-text{font-size:1.05rem;line-height:1.65;color:var(--text);opacity:0.85;}
+    .msg-player .msg-text{font-size:1.2rem;line-height:1.65;color:var(--text);opacity:0.85;}
 
     .msg-dice{
       display:flex;align-items:center;gap:8px;
@@ -289,7 +289,7 @@
       flex:1;background:rgba(255,255,255,0.03);
       border:1px solid rgba(255,255,255,0.09);border-radius:2px;
       padding:12px 14px;
-      font-family:'EB Garamond',serif;font-size:1.05rem;color:var(--text);
+      font-family:'EB Garamond',serif;font-size:1.2rem;color:var(--text);
       line-height:1.65;resize:none;outline:none;
       transition:border-color 0.15s,background 0.15s;
       min-height:80px;
@@ -375,7 +375,7 @@
 
     /* ── INITIATIVE TRACKER ── */
     .init-track{
-      width:min(90%, 820px);margin-top:8px;
+      width:min(calc(100% - 40px), calc(100vh - 160px));margin-top:8px;
       padding:6px 10px;
       background:rgba(0,0,0,0.35);
       border:1px solid rgba(255,255,255,0.05);
@@ -855,22 +855,18 @@
     <button class="col-expand-btn table-expand-btn" title="Expand table" onclick="togglePane('table')">⤢</button>
     <div class="players-wrap">
 
-      <!-- NORTH: Aldric (waiting) -->
+      <!-- NORTH: empty until populated by JS -->
       <div class="p-north" id="seatNorth">
-        <div class="p-avatar waiting" style="color:rgba(196,162,100,0.8)">A
-          <div class="turn-pip waiting"></div>
-        </div>
-        <div class="p-name">Aldric</div>
-        <div class="p-hp-bar"><div class="p-hp-fill hp-high" style="width:87%"></div></div>
+        <div class="p-avatar empty">+<div class="turn-pip waiting"></div></div>
+        <div class="p-name" style="opacity:0.25">Open</div>
+        <div class="p-hp-bar"><div class="p-hp-fill" style="width:0%"></div></div>
       </div>
 
-      <!-- WEST: Mira (ready) -->
+      <!-- WEST: empty until populated by JS -->
       <div class="p-west" id="seatWest">
-        <div class="p-avatar ready" style="color:rgba(80,190,80,0.8)">M
-          <div class="turn-pip ready"></div>
-        </div>
-        <div class="p-name">Mira</div>
-        <div class="p-hp-bar"><div class="p-hp-fill hp-high" style="width:90%"></div></div>
+        <div class="p-avatar empty">+<div class="turn-pip waiting"></div></div>
+        <div class="p-name" style="opacity:0.25">Open</div>
+        <div class="p-hp-bar"><div class="p-hp-fill" style="width:0%"></div></div>
       </div>
 
       <!-- TABLE -->
@@ -967,13 +963,11 @@
         <div class="p-hp-bar"><div class="p-hp-fill" style="width:0%"></div></div>
       </div>
 
-      <!-- SOUTH: Garen (your turn) -->
+      <!-- SOUTH: populated by JS from character localStorage -->
       <div class="p-south" id="seatSouth">
-        <div class="p-hp-bar"><div class="p-hp-fill hp-high" style="width:92%"></div></div>
-        <div class="p-name" style="color:rgba(196,100,100,0.7)">Garen (you)</div>
-        <div class="p-avatar your-turn" style="color:rgba(230,160,160,0.9)">G
-          <div class="turn-pip your-turn"></div>
-        </div>
+        <div class="p-hp-bar"><div class="p-hp-fill" style="width:0%"></div></div>
+        <div class="p-name" style="opacity:0.25">You</div>
+        <div class="p-avatar empty">?</div>
       </div>
 
     </div><!-- /players-wrap -->
@@ -995,72 +989,6 @@
     <button class="col-expand-btn chat-expand-btn" title="Expand chat" onclick="togglePane('chat')">⤢</button>
 
     <div class="narrative-feed" id="feed">
-
-      <div class="msg-system">Campaign started · The Sunless Citadel · Session I</div>
-
-      <div class="msg-dm">
-        <div class="msg-label">Dungeon Master</div>
-        <div class="msg-text">You descend a crumbling stone staircase into the earth. The air turns cold immediately — wet stone, rot, and something else. Something old. Your torchlight throws jagged shadows across walls carved with symbols none of you recognise. <strong>The Sunless Citadel swallows you whole.</strong></div>
-      </div>
-
-      <div class="msg-player">
-        <div class="player-av aldric">A</div>
-        <div class="msg-player-body">
-          <div class="msg-label">Aldric · Paladin</div>
-          <div class="msg-text">"I raise my holy symbol and whisper a prayer to Torm. Whatever dwells here will know we do not come unprepared."</div>
-        </div>
-      </div>
-
-      <div class="msg-player">
-        <div class="player-av mira">M</div>
-        <div class="msg-player-body">
-          <div class="msg-label">Mira · Rogue</div>
-          <div class="msg-text">I move ahead of the group, staying low against the left wall. I'm watching for tripwires, pressure plates — the usual welcome party.</div>
-        </div>
-      </div>
-
-      <div class="msg-dice">
-        <span class="dice-icon-lg">⚄</span>
-        <span class="dice-who">Mira</span>
-        <span class="dice-type">Perception Check</span>
-        <div class="dice-spacer"></div>
-        <span class="dice-result-badge">17</span>
-        <span class="dice-dc">DC 12 ✓</span>
-      </div>
-
-      <div class="msg-whisper">
-        <div class="whisper-label"><span>👁</span> Only Mira can see this</div>
-        <div class="msg-text">You spot a thin wire stretched across the doorway at ankle height. The guard post beyond has movement — shadows shifting behind a collapsed pillar.</div>
-      </div>
-
-      <div class="msg-dm">
-        <div class="msg-label">Dungeon Master</div>
-        <div class="msg-text">The corridor opens into a vaulted chamber — the old guard post. Crude torches sputter in iron brackets. Then the shadows move. <strong>Three goblins emerge, blades drawn, teeth bared.</strong> They screech something in their rasping tongue and fan out to flank you.</div>
-      </div>
-
-      <div class="msg-system">Combat begins · Roll for Initiative</div>
-
-      <div class="msg-dice">
-        <span class="dice-icon-lg">🎲</span>
-        <span class="dice-who">Initiative</span>
-        <span class="dice-type">All Players</span>
-        <div class="dice-spacer"></div>
-        <span style="font-family:'Cinzel',serif;font-size:0.65rem;color:var(--dim)">Garen 18 · Mira 15 · Aldric 11</span>
-      </div>
-
-      <div class="msg-dm">
-        <div class="msg-label">Dungeon Master</div>
-        <div class="msg-text"><strong>Garen, you move first.</strong> The nearest goblin is 10 feet ahead, axe raised. Its two companions circle wide — one cutting left toward Mira, the other staying back with what looks like a shortbow. The wounded one from earlier limps near the pillar. What do you do?</div>
-      </div>
-
-      <div class="msg-player">
-        <div class="player-av mira">M</div>
-        <div class="msg-player-body">
-          <div class="msg-label">Mira · Rogue <span style="opacity:0.4;font-size:0.85em">· Submitted</span></div>
-          <div class="msg-text">I'm going to use my bonus action to Hide behind the pillar, then try to Sneak Attack the archer if Garen engages up front.</div>
-        </div>
-      </div>
-
     </div><!-- /feed -->
 
     <!-- ACTION AREA -->
