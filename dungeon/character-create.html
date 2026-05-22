@@ -20,7 +20,7 @@
     body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='250' height='250'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");pointer-events:none;z-index:9999;opacity:0.6;}
     body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 60% 50% at 50% 40%,rgba(139,0,0,0.1) 0%,transparent 70%);pointer-events:none;z-index:0;}
 
-    .page{position:relative;z-index:10;max-width:1100px;margin:0 auto;padding:32px 40px 80px;display:flex;flex-direction:column;min-height:100vh;}
+    .page{position:relative;z-index:10;width:100%;max-width:1600px;margin:0 auto;padding:32px 60px 80px;display:flex;flex-direction:column;min-height:100vh;}
 
     /* Header */
     .site-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;padding-bottom:14px;border-bottom:1px solid rgba(196,162,100,0.12);}
@@ -55,8 +55,9 @@
     .step-sub{font-size:1rem;color:var(--dim);margin-top:8px;line-height:1.6;margin-bottom:24px;}
 
     /* RACE / CLASS GRID */
-    .option-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+    .option-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
     .option-grid.cols4{grid-template-columns:repeat(4,1fr);}
+    @media(min-width:1200px){.option-grid{grid-template-columns:repeat(4,1fr);}.option-grid.cols4{grid-template-columns:repeat(6,1fr);}}
 
     .option-card{
       background:var(--surface);border:1px solid var(--border);
@@ -188,7 +189,8 @@
     .stat-block.pb-spending .stat-value{color:var(--accent);}
 
     /* STEP 5 — Portrait */
-    .portrait-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;}
+    .portrait-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px;}
+    @media(min-width:1200px){.portrait-grid{grid-template-columns:repeat(6,1fr);}}
     .portrait-option{
       border-radius:3px;overflow:hidden;cursor:pointer;position:relative;
       border:2px solid transparent;transition:border-color 0.15s,transform 0.12s;
@@ -614,64 +616,64 @@
         <p class="step-sub">Select a portrait for your character card, or upload your own artwork.</p>
       </div>
       <div class="portrait-grid" id="portraitGrid">
-        <!-- 0: Knight/Fighter -->
-        <div class="portrait-option selected" data-value="https://images.unsplash.com/photo-1595433707802-6b2626ef1c91?w=300&h=400&fit=crop&crop=faces&q=80" data-classes="fighter,paladin">
-          <img src="https://images.unsplash.com/photo-1595433707802-6b2626ef1c91?w=300&h=400&fit=crop&crop=faces&q=80" alt="Knight">
+        <!-- Knight -->
+        <div class="portrait-option selected" data-value="https://images.unsplash.com/photo-1529655683826-aba9b3e77383?w=300&h=400&fit=crop&crop=faces,top&q=80" data-classes="fighter,paladin">
+          <img src="https://images.unsplash.com/photo-1529655683826-aba9b3e77383?w=300&h=400&fit=crop&crop=faces,top&q=80" alt="Knight">
           <div class="portrait-check">✓</div>
         </div>
-        <!-- 1: Armoured Warrior -->
-        <div class="portrait-option" data-value="https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=300&h=400&fit=crop&crop=faces&q=80" data-classes="fighter,barbarian">
-          <img src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=300&h=400&fit=crop&crop=faces&q=80" alt="Warrior">
+        <!-- Armoured Fighter -->
+        <div class="portrait-option" data-value="https://images.unsplash.com/photo-1594736797933-d0501ba2fe65?w=300&h=400&fit=crop&crop=faces,top&q=80" data-classes="fighter,barbarian">
+          <img src="https://images.unsplash.com/photo-1594736797933-d0501ba2fe65?w=300&h=400&fit=crop&crop=faces,top&q=80" alt="Fighter">
           <div class="portrait-check">✓</div>
         </div>
-        <!-- 2: Viking Barbarian -->
-        <div class="portrait-option" data-value="https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=300&h=400&fit=crop&crop=faces&q=80" data-classes="barbarian,ranger">
-          <img src="https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=300&h=400&fit=crop&crop=faces&q=80" alt="Barbarian">
+        <!-- Female Warrior -->
+        <div class="portrait-option" data-value="https://images.unsplash.com/photo-1578301978693-85fa9c0320b9?w=300&h=400&fit=crop&crop=faces,top&q=80" data-classes="ranger,paladin,fighter">
+          <img src="https://images.unsplash.com/photo-1578301978693-85fa9c0320b9?w=300&h=400&fit=crop&crop=faces,top&q=80" alt="Warrior">
           <div class="portrait-check">✓</div>
         </div>
-        <!-- 3: Ranger Woman with Sword -->
-        <div class="portrait-option" data-value="https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?w=300&h=400&fit=crop&crop=faces&q=80" data-classes="ranger,rogue">
-          <img src="https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?w=300&h=400&fit=crop&crop=faces&q=80" alt="Ranger">
+        <!-- Barbarian -->
+        <div class="portrait-option" data-value="https://images.unsplash.com/photo-1580261450046-d0a30080dc9b?w=300&h=400&fit=crop&crop=faces,top&q=80" data-classes="barbarian,ranger">
+          <img src="https://images.unsplash.com/photo-1580261450046-d0a30080dc9b?w=300&h=400&fit=crop&crop=faces,top&q=80" alt="Barbarian">
           <div class="portrait-check">✓</div>
         </div>
-        <!-- 4: Rogue / Assassin -->
-        <div class="portrait-option" data-value="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=300&h=400&fit=crop&crop=faces&q=80" data-classes="rogue,monk">
-          <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=300&h=400&fit=crop&crop=faces&q=80" alt="Rogue">
+        <!-- Rogue -->
+        <div class="portrait-option" data-value="https://images.unsplash.com/photo-1542345812-d98b5cd6cf98?w=300&h=400&fit=crop&crop=faces,top&q=80" data-classes="rogue,monk">
+          <img src="https://images.unsplash.com/photo-1542345812-d98b5cd6cf98?w=300&h=400&fit=crop&crop=faces,top&q=80" alt="Rogue">
           <div class="portrait-check">✓</div>
         </div>
-        <!-- 5: Masked Assassin -->
-        <div class="portrait-option" data-value="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&h=400&fit=crop&crop=faces&q=80" data-classes="rogue,monk,bard">
-          <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&h=400&fit=crop&crop=faces&q=80" alt="Assassin">
+        <!-- Assassin -->
+        <div class="portrait-option" data-value="https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=300&h=400&fit=crop&crop=faces,top&q=80" data-classes="rogue,monk,bard">
+          <img src="https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=300&h=400&fit=crop&crop=faces,top&q=80" alt="Assassin">
           <div class="portrait-check">✓</div>
         </div>
-        <!-- 6: Wizard with Glowing Orb -->
-        <div class="portrait-option" data-value="https://images.unsplash.com/photo-1614680376573-df3480f0c6ff?w=300&h=400&fit=crop&crop=faces&q=80" data-classes="wizard,sorcerer">
-          <img src="https://images.unsplash.com/photo-1614680376573-df3480f0c6ff?w=300&h=400&fit=crop&crop=faces&q=80" alt="Wizard">
+        <!-- Wizard -->
+        <div class="portrait-option" data-value="https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=300&h=400&fit=crop&crop=faces,top&q=80" data-classes="wizard,sorcerer">
+          <img src="https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=300&h=400&fit=crop&crop=faces,top&q=80" alt="Wizard">
           <div class="portrait-check">✓</div>
         </div>
-        <!-- 7: Mage in Robes -->
-        <div class="portrait-option" data-value="https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?w=300&h=400&fit=crop&crop=faces&q=80" data-classes="wizard,druid,cleric">
-          <img src="https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?w=300&h=400&fit=crop&crop=faces&q=80" alt="Mage">
+        <!-- Mage/Witch -->
+        <div class="portrait-option" data-value="https://images.unsplash.com/photo-1509248961158-e54f6934749c?w=300&h=400&fit=crop&crop=faces,top&q=80" data-classes="wizard,warlock,druid">
+          <img src="https://images.unsplash.com/photo-1509248961158-e54f6934749c?w=300&h=400&fit=crop&crop=faces,top&q=80" alt="Mage">
           <div class="portrait-check">✓</div>
         </div>
-        <!-- 8: Sorcerer / Fire Magic -->
-        <div class="portrait-option" data-value="https://images.unsplash.com/photo-1627483262268-9c2b5b2834b5?w=300&h=400&fit=crop&crop=faces&q=80" data-classes="sorcerer,warlock,bard">
-          <img src="https://images.unsplash.com/photo-1627483262268-9c2b5b2834b5?w=300&h=400&fit=crop&crop=faces&q=80" alt="Sorcerer">
+        <!-- Sorcerer -->
+        <div class="portrait-option" data-value="https://images.unsplash.com/photo-1504701954957-2010ec3bcec1?w=300&h=400&fit=crop&crop=faces,top&q=80" data-classes="sorcerer,warlock,bard">
+          <img src="https://images.unsplash.com/photo-1504701954957-2010ec3bcec1?w=300&h=400&fit=crop&crop=faces,top&q=80" alt="Sorcerer">
           <div class="portrait-check">✓</div>
         </div>
-        <!-- 9: Warlock with Lantern -->
-        <div class="portrait-option" data-value="https://images.unsplash.com/photo-1509631179647-0177331693ae?w=300&h=400&fit=crop&crop=faces&q=80" data-classes="warlock,cleric,druid">
-          <img src="https://images.unsplash.com/photo-1509631179647-0177331693ae?w=300&h=400&fit=crop&crop=faces&q=80" alt="Warlock">
+        <!-- Cleric -->
+        <div class="portrait-option" data-value="https://images.unsplash.com/photo-1551966775-a4ddc8df052b?w=300&h=400&fit=crop&crop=faces,top&q=80" data-classes="cleric,paladin,druid">
+          <img src="https://images.unsplash.com/photo-1551966775-a4ddc8df052b?w=300&h=400&fit=crop&crop=faces,top&q=80" alt="Cleric">
           <div class="portrait-check">✓</div>
         </div>
-        <!-- 10: Cleric / Holy -->
-        <div class="portrait-option" data-value="https://images.unsplash.com/photo-1601412436009-d964bd02edbc?w=300&h=400&fit=crop&crop=faces&q=80" data-classes="cleric,paladin,druid">
-          <img src="https://images.unsplash.com/photo-1601412436009-d964bd02edbc?w=300&h=400&fit=crop&crop=faces&q=80" alt="Cleric">
+        <!-- Druid -->
+        <div class="portrait-option" data-value="https://images.unsplash.com/photo-1496080174650-637e3f22fa03?w=300&h=400&fit=crop&crop=faces,top&q=80" data-classes="druid,ranger,cleric">
+          <img src="https://images.unsplash.com/photo-1496080174650-637e3f22fa03?w=300&h=400&fit=crop&crop=faces,top&q=80" alt="Druid">
           <div class="portrait-check">✓</div>
         </div>
-        <!-- 11: Bard / Charismatic -->
-        <div class="portrait-option" data-value="https://images.unsplash.com/photo-1548142813-c348350df52b?w=300&h=400&fit=crop&crop=faces&q=80" data-classes="bard,warlock,sorcerer">
-          <img src="https://images.unsplash.com/photo-1548142813-c348350df52b?w=300&h=400&fit=crop&crop=faces&q=80" alt="Bard">
+        <!-- Bard -->
+        <div class="portrait-option" data-value="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=400&fit=crop&crop=faces,top&q=80" data-classes="bard,warlock,sorcerer">
+          <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=400&fit=crop&crop=faces,top&q=80" alt="Bard">
           <div class="portrait-check">✓</div>
         </div>
       </div>
@@ -991,13 +993,13 @@
   };
 
   function applyStandardArray() {
-    const priority = classPriority[selectedClass] || statKeys;
+    const priority = classPriority[state.cls] || statKeys;
     priority.forEach((k, i) => updateStatDisplay(k, standardArray[i]));
     hasRolled = true;
     const note = document.getElementById('statNote');
     if (note) {
       const labels = {'str':'STR','dex':'DEX','con':'CON','int':'INT','wis':'WIS','cha':'CHA'};
-      note.textContent = `Standard Array: 15, 14, 13, 12, 10, 8 — assigned by ${selectedClass ? selectedClass.charAt(0).toUpperCase()+selectedClass.slice(1) : 'class'} priority: ${priority.map(k=>labels[k]).join(', ')}.`;
+      note.textContent = `Standard Array: 15, 14, 13, 12, 10, 8 — assigned by ${state.cls ? state.cls.charAt(0).toUpperCase()+state.cls.slice(1) : 'class'} priority: ${priority.map(k=>labels[k]).join(', ')}.`;
     }
   }
 
