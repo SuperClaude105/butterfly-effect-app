@@ -925,18 +925,9 @@
             <!-- East section -->
             <rect x="138" y="56" width="52" height="48" fill="rgba(12,10,7,0.85)" stroke="rgba(255,255,255,0.04)" stroke-width="0.5" rx="1"/>
 
-            <!-- ── PLAYER TOKENS ── -->
-            <!-- Garen (crimson) -->
-            <circle cx="95" cy="85" r="5" fill="rgba(139,0,0,0.8)" stroke="rgba(200,80,80,0.6)" stroke-width="1.5"/>
-            <text x="95" y="88" font-family="serif" font-size="5" fill="rgba(255,200,200,0.9)" text-anchor="middle">G</text>
-
-            <!-- Mira (green) -->
-            <circle cx="108" cy="80" r="5" fill="rgba(30,100,30,0.8)" stroke="rgba(60,200,60,0.5)" stroke-width="1.5"/>
-            <text x="108" y="83" font-family="serif" font-size="5" fill="rgba(160,255,160,0.9)" text-anchor="middle">M</text>
-
-            <!-- Aldric (amber) -->
-            <circle cx="101" cy="95" r="5" fill="rgba(100,70,10,0.8)" stroke="rgba(196,162,100,0.6)" stroke-width="1.5"/>
-            <text x="101" y="98" font-family="serif" font-size="5" fill="rgba(255,220,140,0.9)" text-anchor="middle">A</text>
+            <!-- ── PLAYER TOKEN (you) ── -->
+            <circle cx="99" cy="85" r="5" fill="rgba(139,0,0,0.8)" stroke="rgba(200,80,80,0.6)" stroke-width="1.5"/>
+            <text id="miniMapPlayerInitial" x="99" y="88" font-family="serif" font-size="5" fill="rgba(255,200,200,0.9)" text-anchor="middle">?</text>
 
             <!-- ── ENEMY TOKENS ── -->
             <!-- Goblin 1 -->
@@ -997,7 +988,7 @@
         <div class="turn-header">
           <div class="turn-indicator"></div>
           <span class="turn-title">Your Turn —</span>
-          <span class="turn-char" id="turnChar">Garen Ashveil · Barbarian Lv 4</span>
+          <span class="turn-char" id="turnChar">—</span>
         </div>
         <!-- Ideas panel (hidden by default) -->
         <div class="ideas-panel" id="ideasPanel"></div>
@@ -1023,17 +1014,9 @@
 
       <!-- Waiting panel (shown after submit) -->
       <div class="waiting-panel" id="waitingPanel" style="display:none">
-        <div class="waiting-text">Waiting for</div>
         <div class="waiting-dots"><span></span><span></span><span></span></div>
-        <div class="player-submitted">
-          <div class="submitted-av aldric">A</div>
-          <div class="submitted-check" style="color:rgba(196,162,100,0.5)">…</div>
-        </div>
-        <div class="player-submitted" style="border-color:rgba(60,170,60,0.2);background:rgba(30,80,30,0.1)">
-          <div class="submitted-av mira">M</div>
-          <div class="submitted-check">✓</div>
-        </div>
-        <span style="margin-left:auto;font-family:'Cinzel',serif;font-size:0.52rem;letter-spacing:0.12em;text-transform:uppercase;color:rgba(60,200,60,0.5)">✓ Your action submitted</span>
+        <div class="waiting-text">The DM is responding</div>
+        <span style="margin-left:auto;font-family:'Cinzel',serif;font-size:0.52rem;letter-spacing:0.12em;text-transform:uppercase;color:rgba(60,200,60,0.5)">✓ Action submitted</span>
       </div>
     </div>
 
@@ -1932,6 +1915,10 @@
   }
   if (scenario && el('campaignTitle')) el('campaignTitle').textContent = scenario.name;
 
+  // Set mini-map player initial from character
+  const miniMapInitEl = document.getElementById('miniMapPlayerInitial');
+  if (miniMapInitEl && character) miniMapInitEl.textContent = character.name[0].toUpperCase();
+
   el('actionInput')?.addEventListener('keydown', e => { if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); submitAction(); } });
 
   const feed = el('feed');
@@ -2102,14 +2089,12 @@ function buildMiniMap(sceneId) {
       <rect x="86" y="132" width="62" height="26" fill="rgba(8,10,18,0.75)" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>
       <rect x="86" y="132" width="62" height="26" fill="url(#fogGrad)"/>
       <text x="117" y="147" font-family="serif" font-size="4" fill="rgba(120,160,220,0.18)" text-anchor="middle">???</text>
-      <!-- Player tokens -->
+      <!-- Player token (you) -->
       <circle cx="110" cy="90" r="5" fill="rgba(139,0,0,0.8)" stroke="rgba(200,80,80,0.6)" stroke-width="1.5"/>
-      <text x="110" y="93" font-family="serif" font-size="5" fill="rgba(255,200,200,0.9)" text-anchor="middle">G</text>
-      <circle cx="125" cy="80" r="5" fill="rgba(30,100,30,0.8)" stroke="rgba(60,200,60,0.5)" stroke-width="1.5"/>
-      <text x="125" y="83" font-family="serif" font-size="5" fill="rgba(160,255,160,0.9)" text-anchor="middle">M</text>
+      <text id="miniMapPlayerInitial" x="110" y="93" font-family="serif" font-size="5" fill="rgba(255,200,200,0.9)" text-anchor="middle">?</text>
       <!-- Legend -->
       <circle cx="12" cy="158" r="3" fill="rgba(139,0,0,0.7)" stroke="rgba(200,80,80,0.5)" stroke-width="0.8"/>
-      <text x="17" y="161" font-family="serif" font-size="3.5" fill="rgba(120,160,220,0.3)">Party</text>
+      <text x="17" y="161" font-family="serif" font-size="3.5" fill="rgba(120,160,220,0.3)">You</text>
       <text x="145" y="161" font-family="serif" font-size="3.5" fill="rgba(120,160,220,0.22)">● You are here</text>`;
 
   } else if (sceneId === 'dark') {
@@ -2137,14 +2122,12 @@ function buildMiniMap(sceneId) {
       <!-- Fields (fogged) -->
       <rect x="8" y="114" width="44" height="40" fill="rgba(6,7,4,0.8)" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>
       <rect x="8" y="114" width="44" height="40" fill="url(#fogGrad)"/>
-      <!-- Player tokens -->
+      <!-- Player token (you) -->
       <circle cx="96" cy="88" r="5" fill="rgba(139,0,0,0.8)" stroke="rgba(200,80,80,0.6)" stroke-width="1.5"/>
-      <text x="96" y="91" font-family="serif" font-size="5" fill="rgba(255,200,200,0.9)" text-anchor="middle">G</text>
-      <circle cx="110" cy="82" r="5" fill="rgba(30,100,30,0.8)" stroke="rgba(60,200,60,0.5)" stroke-width="1.5"/>
-      <text x="110" y="85" font-family="serif" font-size="5" fill="rgba(160,255,160,0.9)" text-anchor="middle">M</text>
+      <text id="miniMapPlayerInitial" x="96" y="91" font-family="serif" font-size="5" fill="rgba(255,200,200,0.9)" text-anchor="middle">?</text>
       <!-- Legend -->
       <circle cx="12" cy="158" r="3" fill="rgba(139,0,0,0.7)" stroke="rgba(200,80,80,0.5)" stroke-width="0.8"/>
-      <text x="17" y="161" font-family="serif" font-size="3.5" fill="rgba(100,150,70,0.3)">Party</text>
+      <text x="17" y="161" font-family="serif" font-size="3.5" fill="rgba(100,150,70,0.3)">You</text>
       <text x="145" y="161" font-family="serif" font-size="3.5" fill="rgba(90,130,60,0.22)">● You are here</text>`;
 
   }
