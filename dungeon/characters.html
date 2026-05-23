@@ -114,9 +114,35 @@
       position:fixed;bottom:0;left:0;right:0;z-index:100;
       background:rgba(8,4,4,0.96);border-top:1px solid rgba(255,255,255,0.07);
       backdrop-filter:blur(12px);
-      padding:20px 32px;
-      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+      padding:16px 32px;
+      display:flex;align-items:center;justify-content:center;gap:32px;
     }
+    .cta-left{display:flex;flex-direction:column;align-items:center;gap:8px;}
+    .cta-divider{width:1px;height:56px;background:rgba(255,255,255,0.07);flex-shrink:0;}
+    .cta-right{display:flex;flex-direction:column;align-items:flex-start;gap:8px;}
+    .cta-right-label{font-family:'Cinzel',serif;font-size:0.58rem;letter-spacing:0.25em;text-transform:uppercase;color:var(--accent);opacity:0.6;}
+    .cta-code-row{display:flex;gap:8px;align-items:center;}
+    .cta-code-input{
+      background:rgba(255,255,255,0.04);
+      border:1px solid rgba(196,162,100,0.25);border-radius:2px;
+      padding:9px 14px;width:160px;
+      font-family:'Cinzel',serif;font-size:0.75rem;letter-spacing:0.35em;text-transform:uppercase;
+      color:var(--accent);outline:none;
+      transition:border-color 0.15s;
+    }
+    .cta-code-input::placeholder{color:rgba(196,162,100,0.25);letter-spacing:0.2em;}
+    .cta-code-input:focus{border-color:rgba(196,162,100,0.5);}
+    .cta-code-btn{
+      padding:9px 18px;border-radius:2px;
+      background:linear-gradient(140deg,rgba(139,0,0,0.6),rgba(80,0,0,0.6));
+      border:1px solid rgba(139,0,0,0.45);
+      font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;
+      color:var(--accent);cursor:pointer;white-space:nowrap;
+      transition:opacity 0.15s;
+    }
+    .cta-code-btn:hover{opacity:0.85;}
+    .cta-code-btn:disabled{opacity:0.35;cursor:not-allowed;}
+    .cta-code-error{font-size:0.68rem;font-style:italic;color:rgba(220,80,80,0.75);display:none;}
     .cta-text{text-align:center;}
     .cta-title{font-family:'Playfair Display',serif;font-style:italic;font-size:1.1rem;color:var(--text);margin-bottom:3px;}
     .cta-sub{font-size:0.78rem;color:var(--dim);line-height:1.4;}
@@ -227,11 +253,24 @@
 
 <!-- Fixed CTA -->
 <div class="campaigns-cta">
-  <div class="cta-text">
-    <div class="cta-title" id="ctaTitle">Ready to adventure?</div>
-    <div class="cta-sub" id="ctaSub">Select a character above to continue.</div>
+  <div class="cta-left">
+    <div class="cta-text">
+      <div class="cta-title" id="ctaTitle">Ready to adventure?</div>
+      <div class="cta-sub" id="ctaSub">Select a character above to continue.</div>
+    </div>
+    <button class="cta-btn disabled" id="ctaBtn" onclick="goToCampaigns()">Select a Character First</button>
   </div>
-  <button class="cta-btn disabled" id="ctaBtn" onclick="goToCampaigns()">Select a Character First</button>
+  <div class="cta-divider"></div>
+  <div class="cta-right">
+    <div class="cta-right-label">Join by Code</div>
+    <div class="cta-code-row">
+      <input class="cta-code-input" id="codeInput" placeholder="ABC123" maxlength="6"
+        oninput="this.value=this.value.toUpperCase()"
+        onkeydown="if(event.key==='Enter') joinByCode()">
+      <button class="cta-code-btn" id="codeBtn" onclick="joinByCode()">Join →</button>
+    </div>
+    <div class="cta-code-error" id="codeError"></div>
+  </div>
 </div>
 
 <script src="supabase-client.js"></script>
@@ -469,6 +508,76 @@
   function goToCampaigns() {
     if (!selectedId) return;
     window.location.href = 'scenario.html';
+  }
+
+  // ── Join by Code ──────────────────────────────────────────────
+  async function joinByCode() {
+    const input = document.getElementById('codeInput');
+    const btn   = document.getElementById('codeBtn');
+    const err   = document.getElementById('codeError');
+    const code  = input.value.trim().toUpperCase();
+
+    err.style.display = 'none';
+
+    if (!selectedId) {
+      err.textContent = 'Select a character first.';
+      err.style.display = 'block';
+      return;
+    }
+    if (code.length < 4) {
+      err.textContent = 'Enter a valid session code.';
+      err.style.display = 'block';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = '…';
+
+    const { data: session, error } = await sbClient
+      .from('rpg_sessions')
+      .select('id, code, scenario, status')
+      .eq('code', code)
+      .single();
+
+    if (error || !session) {
+      err.textContent = 'No campaign found with that code.';
+      err.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Join →';
+      return;
+    }
+    if (session.status === 'ended') {
+      err.textContent = 'That campaign has already ended.';
+      err.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Join →';
+      return;
+    }
+    if (session.status === 'archived') {
+      err.textContent = 'That campaign has been archived.';
+      err.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Join →';
+      return;
+    }
+
+    const char = characters.find(c => c.id === selectedId);
+
+    // Upsert player into session (handles rejoining gracefully)
+    await sbClient.from('rpg_session_players').upsert({
+      session_id: session.id,
+      user_id: currentUser.id,
+      character_id: selectedId,
+      status: 'joined'
+    }, { onConflict: 'session_id,user_id' });
+
+    // Store scenario so campaign name shows correctly in game
+    sessionStorage.setItem('campaignScenario', JSON.stringify(session.scenario || {}));
+    localStorage.setItem('campaignScenario', JSON.stringify(session.scenario || {}));
+    sessionStorage.setItem('uwt_session_id', session.id);
+    sessionStorage.setItem('uwt_session_code', session.code);
+    localStorage.setItem('uwt_session_id', session.id);
+    localStorage.setItem('uwt_session_code', session.code);
+    if (char) localStorage.setItem('uwt_selected_character', JSON.stringify(char));
+
+    window.location.href = 'game.html';
   }
 
   // ── Active Sessions ───────────────────────────────────────────
