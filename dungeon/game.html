@@ -623,52 +623,52 @@
 
     /* ── CHARACTER SHEET PANEL ── */
     .char-sheet-panel{
-      position:fixed;top:0;right:-480px;width:460px;height:100vh;
+      position:fixed;top:0;right:-580px;width:560px;height:100vh;
       background:rgba(10,5,3,0.98);border-left:1px solid rgba(196,162,100,0.15);
       z-index:200;overflow-y:auto;
       transition:right 0.3s cubic-bezier(0.4,0,0.2,1);
       backdrop-filter:blur(8px);
     }
     .char-sheet-panel.open{right:0;}
-    .char-sheet-panel::-webkit-scrollbar{width:3px;}
+    .char-sheet-panel::-webkit-scrollbar{width:4px;}
     .char-sheet-panel::-webkit-scrollbar-thumb{background:rgba(196,162,100,0.15);}
 
     .sheet-header{
       display:flex;align-items:flex-start;justify-content:space-between;
-      padding:18px 22px;border-bottom:1px solid rgba(196,162,100,0.12);
+      padding:20px 24px;border-bottom:1px solid rgba(196,162,100,0.12);
       position:sticky;top:0;background:rgba(10,5,3,0.99);z-index:1;
     }
-    .sheet-char-name{font-family:'Playfair Display',serif;font-style:italic;font-size:1.55rem;color:var(--text);line-height:1.1;}
-    .sheet-char-sub{font-family:'Cinzel',serif;font-size:0.68rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--accent);opacity:0.7;margin-top:4px;}
-    .sheet-close{background:none;border:1px solid rgba(255,255,255,0.1);border-radius:2px;color:var(--dim);cursor:pointer;padding:5px 10px;font-size:0.85rem;transition:color 0.15s,border-color 0.15s;}
+    .sheet-char-name{font-family:'Playfair Display',serif;font-style:italic;font-size:2rem;color:var(--text);line-height:1.1;}
+    .sheet-char-sub{font-family:'Cinzel',serif;font-size:0.85rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--accent);opacity:0.7;margin-top:5px;}
+    .sheet-close{background:none;border:1px solid rgba(255,255,255,0.1);border-radius:2px;color:var(--dim);cursor:pointer;padding:6px 12px;font-size:1rem;transition:color 0.15s,border-color 0.15s;}
     .sheet-close:hover{color:var(--accent);border-color:rgba(196,162,100,0.3);}
 
-    .sheet-body{padding:16px 22px;}
-    .sheet-stats-row{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:14px;}
-    .sheet-stat{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:3px;padding:10px 4px;text-align:center;}
-    .sheet-stat-name{font-family:'Cinzel',serif;font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent);opacity:0.6;margin-bottom:5px;}
-    .sheet-stat-val{font-family:'Cinzel',serif;font-size:1.2rem;color:var(--text);line-height:1;}
-    .sheet-stat-mod{font-size:0.72rem;color:var(--dim);margin-top:2px;}
-    .sheet-combat-row{display:flex;gap:8px;margin-bottom:14px;}
-    .sheet-combat-chip{flex:1;background:rgba(255,255,255,0.02);border:1px solid rgba(196,162,100,0.15);border-radius:3px;padding:10px 6px;text-align:center;}
-    .sheet-combat-val{font-family:'Cinzel',serif;font-size:1.25rem;color:var(--accent);line-height:1;}
-    .sheet-combat-lbl{font-family:'Cinzel',serif;font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--dim);margin-top:3px;}
-    .sheet-xp{margin-bottom:14px;}
-    .sheet-xp-row{display:flex;justify-content:space-between;margin-bottom:5px;}
-    .sheet-xp-bar{height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;}
+    .sheet-body{padding:18px 24px;}
+    .sheet-stats-row{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:16px;}
+    .sheet-stat{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:3px;padding:12px 4px;text-align:center;}
+    .sheet-stat-name{font-family:'Cinzel',serif;font-size:0.72rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent);opacity:0.6;margin-bottom:6px;}
+    .sheet-stat-val{font-family:'Cinzel',serif;font-size:1.6rem;color:var(--text);line-height:1;}
+    .sheet-stat-mod{font-size:0.9rem;color:var(--dim);margin-top:3px;}
+    .sheet-combat-row{display:flex;gap:8px;margin-bottom:16px;}
+    .sheet-combat-chip{flex:1;background:rgba(255,255,255,0.02);border:1px solid rgba(196,162,100,0.15);border-radius:3px;padding:12px 6px;text-align:center;}
+    .sheet-combat-val{font-family:'Cinzel',serif;font-size:1.6rem;color:var(--accent);line-height:1;}
+    .sheet-combat-lbl{font-family:'Cinzel',serif;font-size:0.72rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--dim);margin-top:4px;}
+    .sheet-xp{margin-bottom:16px;}
+    .sheet-xp-row{display:flex;justify-content:space-between;margin-bottom:6px;}
+    .sheet-xp-bar{height:5px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;}
     .sheet-xp-fill{height:100%;background:linear-gradient(90deg,rgba(139,0,0,0.7),rgba(196,162,100,0.7));border-radius:2px;transition:width 0.5s ease;}
-    .sheet-section-label{font-family:'Cinzel',serif;font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:rgba(196,162,100,0.5);margin-bottom:8px;}
-    .sheet-cols{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+    .sheet-section-label{font-family:'Cinzel',serif;font-size:0.85rem;letter-spacing:0.2em;text-transform:uppercase;color:rgba(196,162,100,0.5);margin-bottom:10px;}
+    .sheet-cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
     .sheet-col{}
-    .sheet-save{display:flex;align-items:center;gap:6px;font-size:0.82rem;color:var(--dim);margin-bottom:5px;}
+    .sheet-save{display:flex;align-items:center;gap:7px;font-size:1rem;color:var(--dim);margin-bottom:6px;}
     .sheet-save.proficient{color:var(--text);}
-    .sheet-save-bullet{font-size:0.68rem;color:rgba(196,162,100,0.5);}
+    .sheet-save-bullet{font-size:0.85rem;color:rgba(196,162,100,0.5);}
     .sheet-save.proficient .sheet-save-bullet{color:var(--accent);}
-    .sheet-skills-grid{display:flex;flex-direction:column;gap:3px;}
-    .sheet-skill{display:flex;align-items:center;gap:5px;font-size:0.78rem;color:var(--dim);}
-    .sheet-skill-name{font-size:0.78rem;color:var(--dim);}
-    .sheet-rest-row{display:flex;gap:8px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.05);}
-    .rest-btn{flex:1;padding:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:2px;font-family:'Cinzel',serif;font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--dim);cursor:pointer;transition:background 0.15s,color 0.15s;}
+    .sheet-skills-grid{display:flex;flex-direction:column;gap:5px;}
+    .sheet-skill{display:flex;align-items:center;gap:6px;font-size:0.95rem;color:var(--dim);}
+    .sheet-skill-name{font-size:0.95rem;color:var(--dim);}
+    .sheet-rest-row{display:flex;gap:8px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.05);}
+    .rest-btn{flex:1;padding:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:2px;font-family:'Cinzel',serif;font-size:0.8rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--dim);cursor:pointer;transition:background 0.15s,color 0.15s;}
     .rest-btn:hover{background:rgba(196,162,100,0.08);color:var(--accent);border-color:rgba(196,162,100,0.25);}
     .rest-btn.long{border-color:rgba(139,0,0,0.3);color:rgba(196,100,100,0.6);}
     .rest-btn.long:hover{background:rgba(139,0,0,0.12);color:rgba(200,100,100,0.9);}
@@ -2040,9 +2040,9 @@
           <div class="sheet-combat-chip"><div class="sheet-combat-val">${calcAC(character.cls,s)}</div><div class="sheet-combat-lbl">AC</div></div>
           <div class="sheet-combat-chip" style="min-width:80px">
             <div style="display:flex;align-items:center;gap:6px;justify-content:center">
-              <button onclick="adjustHP(-1)" style="width:20px;height:20px;border-radius:2px;border:1px solid rgba(139,0,0,0.4);background:rgba(139,0,0,0.15);color:rgba(200,100,100,0.8);cursor:pointer;font-size:0.8rem;line-height:1;padding:0">−</button>
+              <button onclick="adjustHP(-1)" style="width:26px;height:26px;border-radius:2px;border:1px solid rgba(139,0,0,0.4);background:rgba(139,0,0,0.15);color:rgba(200,100,100,0.8);cursor:pointer;font-size:1rem;line-height:1;padding:0">−</button>
               <div class="sheet-combat-val" id="sheetHpVal">${currentHP}</div>
-              <button onclick="adjustHP(1)" style="width:20px;height:20px;border-radius:2px;border:1px solid rgba(60,120,60,0.4);background:rgba(40,100,40,0.15);color:rgba(100,200,100,0.8);cursor:pointer;font-size:0.8rem;line-height:1;padding:0">+</button>
+              <button onclick="adjustHP(1)" style="width:26px;height:26px;border-radius:2px;border:1px solid rgba(60,120,60,0.4);background:rgba(40,100,40,0.15);color:rgba(100,200,100,0.8);cursor:pointer;font-size:1rem;line-height:1;padding:0">+</button>
             </div>
             <div class="sheet-combat-lbl">HP / ${character.max_hp||character.hp||10}</div>
           </div>
@@ -2051,7 +2051,7 @@
           <div class="sheet-combat-chip"><div class="sheet-combat-val" style="color:rgba(196,162,100,0.85)">${characterGold}</div><div class="sheet-combat-lbl">Gold (gp)</div></div>
         </div>
         <div class="sheet-xp">
-          <div class="sheet-xp-row"><span style="font-family:Cinzel,serif;font-size:0.55rem;letter-spacing:0.15em;color:var(--dim)">XP</span><span style="font-family:Cinzel,serif;font-size:0.55rem;color:var(--accent)">${characterXP} / ${xpNext}</span></div>
+          <div class="sheet-xp-row"><span style="font-family:Cinzel,serif;font-size:0.85rem;letter-spacing:0.15em;color:var(--dim)">XP</span><span style="font-family:Cinzel,serif;font-size:0.85rem;color:var(--accent)">${characterXP} / ${xpNext}</span></div>
           <div class="sheet-xp-bar"><div class="sheet-xp-fill" style="width:${xpPct}%"></div></div>
         </div>
         <div class="sheet-cols">
@@ -2059,8 +2059,8 @@
             <div class="sheet-section-label">Saving Throws</div>
             ${keys.map(k=>{const v=statVal(s,k);const m=statMod(v)+(saves.includes(k)?pb:0);return`<div class="sheet-save ${saves.includes(k)?'proficient':''}"><span class="sheet-save-bullet">${saves.includes(k)?'●':'○'}</span><span>${m>=0?'+':''}${m} ${names[k].slice(0,3)}</span></div>`;}).join('')}
             <div class="sheet-section-label" style="margin-top:10px">Background</div>
-            <div style="font-size:0.75rem;color:var(--dim);font-style:italic;line-height:1.5">${cap(character.background||'Folk Hero')}</div>
-            <div style="font-size:0.7rem;color:rgba(196,162,100,0.5);margin-top:2px">${cap(character.alignment||'Neutral Good')}</div>
+            <div style="font-size:1rem;color:var(--dim);font-style:italic;line-height:1.5">${cap(character.background||'Folk Hero')}</div>
+            <div style="font-size:0.9rem;color:rgba(196,162,100,0.5);margin-top:4px">${cap(character.alignment||'Neutral Good')}</div>
           </div>
           <div class="sheet-col">
             <div class="sheet-section-label">Skills</div>
@@ -2072,7 +2072,7 @@
           <button class="rest-btn long" onclick="restoreResources('long');el('charSheetPanel').classList.remove('open')">Long Rest</button>
         </div>
         <div style="padding-top:10px;border-top:1px solid rgba(255,255,255,0.04);margin-top:2px">
-          <button onclick="endSession()" style="width:100%;padding:8px;background:transparent;border:1px solid rgba(255,255,255,0.08);border-radius:2px;font-family:'Cinzel',serif;font-size:0.52rem;letter-spacing:0.2em;text-transform:uppercase;color:rgba(232,213,183,0.3);cursor:pointer;transition:color 0.15s,border-color 0.15s;" onmouseover="this.style.color='rgba(200,80,80,0.7)';this.style.borderColor='rgba(139,0,0,0.3)'" onmouseout="this.style.color='rgba(232,213,183,0.3)';this.style.borderColor='rgba(255,255,255,0.08)'">End Session &amp; Exit</button>
+          <button onclick="endSession()" style="width:100%;padding:11px;background:transparent;border:1px solid rgba(255,255,255,0.08);border-radius:2px;font-family:'Cinzel',serif;font-size:0.8rem;letter-spacing:0.2em;text-transform:uppercase;color:rgba(232,213,183,0.3);cursor:pointer;transition:color 0.15s,border-color 0.15s;" onmouseover="this.style.color='rgba(200,80,80,0.7)';this.style.borderColor='rgba(139,0,0,0.3)'" onmouseout="this.style.color='rgba(232,213,183,0.3)';this.style.borderColor='rgba(255,255,255,0.08)'">End Session &amp; Exit</button>
         </div>
       </div>`;
     panel.classList.add('open');
