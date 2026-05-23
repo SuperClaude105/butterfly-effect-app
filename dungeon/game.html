@@ -389,6 +389,14 @@
     .quick-hp-label{font-family:'Cinzel',serif;font-size:0.52rem;letter-spacing:0.2em;text-transform:uppercase;color:rgba(60,170,60,0.55);}
     .quick-hp-val{font-family:'Cinzel',serif;font-size:1.35rem;font-weight:600;color:rgba(80,210,80,0.85);line-height:1;}
 
+    /* XP bar */
+    .xp-bar-wrap{margin-top:8px;width:100%;}
+    .xp-bar-header{display:flex;justify-content:space-between;margin-bottom:3px;}
+    .xp-bar-lv{font-family:'Cinzel',serif;font-size:0.52rem;letter-spacing:0.2em;text-transform:uppercase;color:rgba(196,162,100,0.55);}
+    .xp-bar-amt{font-family:'Cinzel',serif;font-size:0.52rem;letter-spacing:0.08em;color:rgba(196,162,100,0.35);}
+    .xp-bar-track{height:3px;background:rgba(255,255,255,0.05);border-radius:2px;overflow:hidden;}
+    .xp-bar-fill{height:100%;background:linear-gradient(90deg,rgba(139,0,0,0.8),rgba(196,162,100,0.7));border-radius:2px;transition:width 0.6s ease;}
+
     /* Waiting panel */
     .waiting-panel{
       padding:12px 20px;
@@ -615,7 +623,7 @@
 
     /* ── CHARACTER SHEET PANEL ── */
     .char-sheet-panel{
-      position:fixed;top:0;right:-380px;width:360px;height:100vh;
+      position:fixed;top:0;right:-480px;width:460px;height:100vh;
       background:rgba(10,5,3,0.98);border-left:1px solid rgba(196,162,100,0.15);
       z-index:200;overflow-y:auto;
       transition:right 0.3s cubic-bezier(0.4,0,0.2,1);
@@ -627,40 +635,40 @@
 
     .sheet-header{
       display:flex;align-items:flex-start;justify-content:space-between;
-      padding:16px 18px;border-bottom:1px solid rgba(196,162,100,0.12);
+      padding:18px 22px;border-bottom:1px solid rgba(196,162,100,0.12);
       position:sticky;top:0;background:rgba(10,5,3,0.99);z-index:1;
     }
-    .sheet-char-name{font-family:'Playfair Display',serif;font-style:italic;font-size:1.2rem;color:var(--text);line-height:1.1;}
-    .sheet-char-sub{font-family:'Cinzel',serif;font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--accent);opacity:0.7;margin-top:3px;}
-    .sheet-close{background:none;border:1px solid rgba(255,255,255,0.1);border-radius:2px;color:var(--dim);cursor:pointer;padding:4px 8px;font-size:0.75rem;transition:color 0.15s,border-color 0.15s;}
+    .sheet-char-name{font-family:'Playfair Display',serif;font-style:italic;font-size:1.55rem;color:var(--text);line-height:1.1;}
+    .sheet-char-sub{font-family:'Cinzel',serif;font-size:0.68rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--accent);opacity:0.7;margin-top:4px;}
+    .sheet-close{background:none;border:1px solid rgba(255,255,255,0.1);border-radius:2px;color:var(--dim);cursor:pointer;padding:5px 10px;font-size:0.85rem;transition:color 0.15s,border-color 0.15s;}
     .sheet-close:hover{color:var(--accent);border-color:rgba(196,162,100,0.3);}
 
-    .sheet-body{padding:14px 18px;}
-    .sheet-stats-row{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin-bottom:12px;}
-    .sheet-stat{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:3px;padding:8px 4px;text-align:center;}
-    .sheet-stat-name{font-family:'Cinzel',serif;font-size:0.44rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent);opacity:0.6;margin-bottom:4px;}
-    .sheet-stat-val{font-family:'Cinzel',serif;font-size:1rem;color:var(--text);line-height:1;}
-    .sheet-stat-mod{font-size:0.6rem;color:var(--dim);margin-top:1px;}
-    .sheet-combat-row{display:flex;gap:8px;margin-bottom:12px;}
-    .sheet-combat-chip{flex:1;background:rgba(255,255,255,0.02);border:1px solid rgba(196,162,100,0.15);border-radius:3px;padding:8px 6px;text-align:center;}
-    .sheet-combat-val{font-family:'Cinzel',serif;font-size:1.1rem;color:var(--accent);line-height:1;}
-    .sheet-combat-lbl{font-family:'Cinzel',serif;font-size:0.44rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--dim);margin-top:2px;}
-    .sheet-xp{margin-bottom:12px;}
-    .sheet-xp-row{display:flex;justify-content:space-between;margin-bottom:4px;}
-    .sheet-xp-bar{height:3px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;}
+    .sheet-body{padding:16px 22px;}
+    .sheet-stats-row{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:14px;}
+    .sheet-stat{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:3px;padding:10px 4px;text-align:center;}
+    .sheet-stat-name{font-family:'Cinzel',serif;font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent);opacity:0.6;margin-bottom:5px;}
+    .sheet-stat-val{font-family:'Cinzel',serif;font-size:1.2rem;color:var(--text);line-height:1;}
+    .sheet-stat-mod{font-size:0.72rem;color:var(--dim);margin-top:2px;}
+    .sheet-combat-row{display:flex;gap:8px;margin-bottom:14px;}
+    .sheet-combat-chip{flex:1;background:rgba(255,255,255,0.02);border:1px solid rgba(196,162,100,0.15);border-radius:3px;padding:10px 6px;text-align:center;}
+    .sheet-combat-val{font-family:'Cinzel',serif;font-size:1.25rem;color:var(--accent);line-height:1;}
+    .sheet-combat-lbl{font-family:'Cinzel',serif;font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--dim);margin-top:3px;}
+    .sheet-xp{margin-bottom:14px;}
+    .sheet-xp-row{display:flex;justify-content:space-between;margin-bottom:5px;}
+    .sheet-xp-bar{height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;}
     .sheet-xp-fill{height:100%;background:linear-gradient(90deg,rgba(139,0,0,0.7),rgba(196,162,100,0.7));border-radius:2px;transition:width 0.5s ease;}
-    .sheet-section-label{font-family:'Cinzel',serif;font-size:0.52rem;letter-spacing:0.2em;text-transform:uppercase;color:rgba(196,162,100,0.5);margin-bottom:6px;}
-    .sheet-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+    .sheet-section-label{font-family:'Cinzel',serif;font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:rgba(196,162,100,0.5);margin-bottom:8px;}
+    .sheet-cols{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
     .sheet-col{}
-    .sheet-save{display:flex;align-items:center;gap:5px;font-size:0.7rem;color:var(--dim);margin-bottom:3px;}
+    .sheet-save{display:flex;align-items:center;gap:6px;font-size:0.82rem;color:var(--dim);margin-bottom:5px;}
     .sheet-save.proficient{color:var(--text);}
-    .sheet-save-bullet{font-size:0.55rem;color:rgba(196,162,100,0.5);}
+    .sheet-save-bullet{font-size:0.68rem;color:rgba(196,162,100,0.5);}
     .sheet-save.proficient .sheet-save-bullet{color:var(--accent);}
-    .sheet-skills-grid{display:flex;flex-direction:column;gap:2px;}
-    .sheet-skill{display:flex;align-items:center;gap:4px;font-size:0.65rem;color:var(--dim);}
-    .sheet-skill-name{font-size:0.65rem;color:var(--dim);}
-    .sheet-rest-row{display:flex;gap:8px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.05);}
-    .rest-btn{flex:1;padding:9px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:2px;font-family:'Cinzel',serif;font-size:0.55rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--dim);cursor:pointer;transition:background 0.15s,color 0.15s;}
+    .sheet-skills-grid{display:flex;flex-direction:column;gap:3px;}
+    .sheet-skill{display:flex;align-items:center;gap:5px;font-size:0.78rem;color:var(--dim);}
+    .sheet-skill-name{font-size:0.78rem;color:var(--dim);}
+    .sheet-rest-row{display:flex;gap:8px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.05);}
+    .rest-btn{flex:1;padding:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:2px;font-family:'Cinzel',serif;font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--dim);cursor:pointer;transition:background 0.15s,color 0.15s;}
     .rest-btn:hover{background:rgba(196,162,100,0.08);color:var(--accent);border-color:rgba(196,162,100,0.25);}
     .rest-btn.long{border-color:rgba(139,0,0,0.3);color:rgba(196,100,100,0.6);}
     .rest-btn.long:hover{background:rgba(139,0,0,0.12);color:rgba(200,100,100,0.9);}
@@ -1116,6 +1124,14 @@
           <div class="quick-stat" id="qAc"><span class="quick-stat-label">AC</span><span class="quick-stat-val">—</span></div>
           <div class="quick-hp" id="qHp"><span class="quick-hp-label">HP</span><span class="quick-hp-val" id="qHpVal">— / —</span></div>
         </div>
+        <!-- XP bar -->
+        <div class="xp-bar-wrap" id="xpBarWrap">
+          <div class="xp-bar-header">
+            <span class="xp-bar-lv" id="xpLevelLabel">LV 1</span>
+            <span class="xp-bar-amt" id="xpAmountLabel">0 / 300 XP</span>
+          </div>
+          <div class="xp-bar-track"><div class="xp-bar-fill" id="xpBarFill" style="width:0%"></div></div>
+        </div>
         <!-- Class resource tracker -->
         <div class="resource-tracker" id="resourceTracker" style="display:none"></div>
       </div>
@@ -1550,6 +1566,16 @@
   let characterXP    = character?.xp    || 0;
   let characterLevel = character?.level || 1;
 
+  function updateXPBar() {
+    const lvl    = characterLevel;
+    const xpPrev = XP_LEVELS[lvl - 1] || 0;
+    const xpNext = XP_LEVELS[lvl]     || XP_LEVELS[XP_LEVELS.length - 1];
+    const pct    = xpNext > xpPrev ? Math.min(100, ((characterXP - xpPrev) / (xpNext - xpPrev)) * 100) : 100;
+    if (el('xpLevelLabel'))  el('xpLevelLabel').textContent  = `LV ${lvl}`;
+    if (el('xpAmountLabel')) el('xpAmountLabel').textContent = `${characterXP} / ${xpNext} XP`;
+    if (el('xpBarFill'))     el('xpBarFill').style.width     = pct + '%';
+  }
+
   function awardXP(amount) {
     if (!amount || !character) return;
     characterXP += amount;
@@ -1564,6 +1590,7 @@
       addToFeed('system', `⭐ ${character.name} reached Level ${characterLevel}!`);
       if (window.sbClient && character.id) sbClient.from('rpg_characters').update({ xp: characterXP, level: characterLevel }).eq('id', character.id);
     }
+    updateXPBar();
   }
 
   // ── ENEMIES / ALLIES / NPCS ──────────────────────────────────────
@@ -2199,6 +2226,7 @@
     if (el('qAc'))   el('qAc').innerHTML   = `<span class="quick-stat-label">AC</span><span class="quick-stat-val">${calcAC(character.cls,s)}</span>`;
     if (el('qHpVal')) el('qHpVal').textContent = `${currentHP} / ${character.max_hp||character.hp||10}`;
     if (el('actionInput')) el('actionInput').placeholder = `What does ${character.name} do? Be specific — the DM will call for rolls as needed…`;
+    updateXPBar();
   }
   if (scenario && el('campaignTitle')) el('campaignTitle').textContent = scenario.name;
 
