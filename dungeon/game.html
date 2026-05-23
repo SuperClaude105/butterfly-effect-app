@@ -691,6 +691,22 @@
       cursor:default;font-size:0.9rem;
     }
     .map-token-enemy.dead{opacity:0.28;filter:grayscale(1);}
+    .map-token-ally{
+      background:rgba(15,55,120,0.9);
+      border:2px solid rgba(80,150,255,0.8);
+      color:#a8d4ff;font-size:0.65rem;font-weight:700;
+      cursor:default;
+    }
+    .map-token-ally.hidden-ally{
+      opacity:0.45;border-style:dashed;
+      border-color:rgba(80,150,255,0.5);
+    }
+    .map-token-npc{
+      background:rgba(100,55,0,0.9);
+      border:2px solid rgba(220,140,30,0.75);
+      color:#f5c97a;font-size:0.75rem;
+      cursor:default;
+    }
     .map-drag-ghost{
       position:fixed;z-index:9998;
       width:26px;height:26px;border-radius:50%;
@@ -1438,10 +1454,31 @@
     }
   }
 
-  // ── ENEMIES ───────────────────────────────────────────────────────
+  // ── ENEMIES / ALLIES / NPCS ──────────────────────────────────────
   let ENEMIES = [];
+  let ALLIES  = []; // { name, emoji, hidden }
+  let NPCS    = []; // { name, emoji } — hostiles not yet in formal combat
   let INIT_ORDER = [];
   window.getEnemies = () => ENEMIES;
+  window.getAllies   = () => ALLIES;
+  window.getNPCs    = () => NPCS;
+  // Manual helpers (usable from console to seed current session)
+  window.addAlly = (name, emoji, hidden = false) => {
+    if (!ALLIES.find(a => a.name === name)) ALLIES.push({ name, emoji, hidden });
+    window.updateMapAllies?.();
+  };
+  window.revealAlly = (name) => {
+    const a = ALLIES.find(a => a.name === name);
+    if (a) { a.hidden = false; window.updateMapAllies?.(); }
+  };
+  window.addNPC = (name, emoji) => {
+    if (!NPCS.find(n => n.name === name)) NPCS.push({ name, emoji });
+    window.updateMapNPCs?.();
+  };
+  window.removeNPC = (name) => {
+    NPCS = NPCS.filter(n => n.name !== name);
+    window.updateMapNPCs?.();
+  };
   let currentInitIdx = 0;
 
   function buildInitOrder() {
@@ -1635,6 +1672,16 @@
       anyEnemy = true;
     }
     if (anyEnemy) { INIT_ORDER = buildInitOrder(); currentInitIdx = 0; renderInitTracker(); renderEnemies(); }
+    // Allies
+    for (const m of text.matchAll(/\[ALLY:\s*([^,\]]+),\s*([^,\]]+?)(?:,\s*(hidden))?\]/gi)) {
+      if (!ALLIES.find(a => a.name === m[1].trim())) { ALLIES.push({ name: m[1].trim(), emoji: m[2].trim(), hidden: !!m[3] }); window.updateMapAllies?.(); }
+    }
+    for (const m of text.matchAll(/\[ALLY_REVEAL:\s*([^\]]+)\]/gi)) { window.revealAlly?.(m[1].trim()); }
+    // NPCs
+    for (const m of text.matchAll(/\[NPC:\s*([^,\]]+),\s*([^\]]+)\]/gi)) {
+      if (!NPCS.find(n => n.name === m[1].trim())) { NPCS.push({ name: m[1].trim(), emoji: m[2].trim() }); window.updateMapNPCs?.(); }
+    }
+    for (const m of text.matchAll(/\[NPC_REMOVE:\s*([^\]]+)\]/gi)) { window.removeNPC?.(m[1].trim()); }
     const rollM = text.match(/\[ROLL:\s*([^,\]]+),\s*(\d+),\s*([^\]]+)\]/);
     if (rollM && !isRestoringHistory) showDiceOverlay(rollM[1].trim(), parseInt(rollM[2]), rollM[3].trim());
     const xpM = text.match(/\[XP:\s*(\d+)\]/);
@@ -2325,6 +2372,8 @@ function buildMiniMap(sceneId) {
     container.innerHTML = html;
     placePlayer();
     placeEnemies();
+    placeAllies();
+    placeNPCs();
   }
 
   function placePlayer() {
@@ -2359,10 +2408,56 @@ function buildMiniMap(sceneId) {
     });
   }
 
+  function placeAllies() {
+    document.querySelectorAll('.map-token-ally').forEach(t => t.remove());
+    const allies = window.getAllies ? window.getAllies() : [];
+    if (!allies.length) return;
+    const def = MAP_DEFS[sceneId] || MAP_DEFS.vault;
+    allies.forEach((a, i) => {
+      // Place allies west/behind the player start
+      const col = Math.min(COLS-2, Math.max(1, def.start[0] - 3 - (i % 2)));
+      const row = Math.min(ROWS-2, Math.max(1, def.start[1] + Math.floor(i / 2)));
+      const c = getCellEl(col, row);
+      if (!c) return;
+      const tok = document.createElement('div');
+      tok.className = 'map-token map-token-ally' + (a.hidden ? ' hidden-ally' : '');
+      tok.textContent = a.emoji || '🐉';
+      tok.title = `${a.name} · ${a.hidden ? 'Hidden ally' : 'Ally'}`;
+      c.appendChild(tok);
+    });
+  }
+
+  function placeNPCs() {
+    document.querySelectorAll('.map-token-npc').forEach(t => t.remove());
+    const npcs = window.getNPCs ? window.getNPCs() : [];
+    if (!npcs.length) return;
+    const def = MAP_DEFS[sceneId] || MAP_DEFS.vault;
+    npcs.forEach((n, i) => {
+      // Place NPCs north/east of player, spread in a loose cluster
+      const col = Math.min(COLS-2, Math.max(1, def.start[0] + 2 + (i % 3)));
+      const row = Math.min(ROWS-2, Math.max(1, def.start[1] - 2 + Math.floor(i / 3)));
+      const c = getCellEl(col, row);
+      if (!c) return;
+      const tok = document.createElement('div');
+      tok.className = 'map-token map-token-npc';
+      tok.textContent = n.emoji || '👤';
+      tok.title = n.name;
+      c.appendChild(tok);
+    });
+  }
+
   // Called by renderEnemies() in the main script whenever enemy state changes
   window.updateMapEnemies = function () {
     if (!window.MAP_OPEN) return;
     placeEnemies();
+  };
+  window.updateMapAllies = function () {
+    if (!window.MAP_OPEN) return;
+    placeAllies();
+  };
+  window.updateMapNPCs = function () {
+    if (!window.MAP_OPEN) return;
+    placeNPCs();
   };
 
   // ── DRAG ─────────────────────────────────────────────────────────
