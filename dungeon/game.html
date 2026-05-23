@@ -348,21 +348,38 @@
     .submit-btn:hover{opacity:0.88;}
     .submit-btn:active{transform:scale(0.98);}
     .dice-btn{
-      padding:8px 14px;
+      padding:11px 16px;
       background:rgba(90,50,24,0.2);
       border:1px solid rgba(90,50,24,0.4);border-radius:2px;
-      font-family:'Cinzel',serif;font-size:0.58rem;letter-spacing:0.2em;text-transform:uppercase;
-      color:rgba(196,162,100,0.6);cursor:pointer;white-space:nowrap;
+      font-family:'Cinzel',serif;font-size:0.68rem;letter-spacing:0.2em;text-transform:uppercase;
+      color:rgba(196,162,100,0.7);cursor:pointer;white-space:nowrap;
       transition:background 0.15s,color 0.15s;
     }
     .dice-btn:hover{background:rgba(90,50,24,0.35);color:var(--accent);}
 
     .char-quick-ref{
-      display:flex;gap:12px;margin-top:8px;align-items:center;
+      display:flex;gap:10px;margin-top:10px;align-items:stretch;flex-wrap:wrap;
     }
-    .quick-stat{font-family:'Cinzel',serif;font-size:0.68rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--dim);}
-    .quick-stat strong{color:var(--text);}
-    .quick-hp{font-family:'Cinzel',serif;font-size:0.7rem;letter-spacing:0.1em;color:rgba(60,170,60,0.65);}
+    .quick-stat{
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      padding:6px 10px;
+      background:rgba(255,255,255,0.025);
+      border:1px solid rgba(255,255,255,0.07);
+      border-radius:2px;
+      gap:1px;
+    }
+    .quick-stat-label{font-family:'Cinzel',serif;font-size:0.52rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--dim);}
+    .quick-stat-val{font-family:'Cinzel',serif;font-size:1.35rem;font-weight:600;color:var(--text);line-height:1;}
+    .quick-hp{
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      padding:6px 12px;
+      background:rgba(30,80,30,0.15);
+      border:1px solid rgba(60,170,60,0.2);
+      border-radius:2px;
+      gap:1px;
+    }
+    .quick-hp-label{font-family:'Cinzel',serif;font-size:0.52rem;letter-spacing:0.2em;text-transform:uppercase;color:rgba(60,170,60,0.55);}
+    .quick-hp-val{font-family:'Cinzel',serif;font-size:1.35rem;font-weight:600;color:rgba(80,210,80,0.85);line-height:1;}
 
     /* Waiting panel */
     .waiting-panel{
@@ -516,22 +533,46 @@
 
     /* Ideas toggle button */
     .ideas-btn{
-      padding:8px 12px;background:rgba(196,162,100,0.05);
+      padding:11px 16px;background:rgba(196,162,100,0.05);
       border:1px solid rgba(196,162,100,0.18);border-radius:2px;
-      font-family:'Cinzel',serif;font-size:0.52rem;letter-spacing:0.18em;text-transform:uppercase;
-      color:rgba(196,162,100,0.55);cursor:pointer;white-space:nowrap;
+      font-family:'Cinzel',serif;font-size:0.68rem;letter-spacing:0.18em;text-transform:uppercase;
+      color:rgba(196,162,100,0.65);cursor:pointer;white-space:nowrap;
       transition:background 0.15s,color 0.15s;
     }
     .ideas-btn:hover{background:rgba(196,162,100,0.1);color:var(--accent);}
 
-    /* Shared Vision runes */
-    .vision-runes{display:flex;align-items:center;gap:7px;margin-top:7px;}
-    .rune-track{display:flex;gap:2px;}
-    .rune{font-size:0.62rem;transition:opacity 0.4s,color 0.4s;cursor:default;user-select:none;}
-    .rune.active{color:rgba(170,110,230,0.8);}
-    .rune.spent{color:rgba(255,255,255,0.1);}
-    .vision-label{font-family:'Cinzel',serif;font-size:0.5rem;letter-spacing:0.18em;text-transform:uppercase;color:rgba(160,100,220,0.4);}
-    .vision-hint{font-family:'Cinzel',serif;font-size:0.47rem;letter-spacing:0.1em;text-transform:uppercase;color:rgba(160,100,220,0.25);margin-left:auto;}
+    /* Shared Vision strip — sits atop the scene image area */
+    .vision-strip{
+      width:100%;flex-shrink:0;
+      display:flex;align-items:center;justify-content:center;gap:10px;
+      padding:8px 16px;
+      background:rgba(7,4,4,0.9);
+      border-bottom:1px solid rgba(160,100,220,0.12);
+    }
+    .vision-label{font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;color:rgba(160,100,220,0.5);}
+    .rune-track{display:flex;gap:4px;}
+    .rune{font-size:1rem;transition:opacity 0.4s,color 0.4s;cursor:default;user-select:none;line-height:1;}
+    .rune.active{color:rgba(170,110,230,0.85);}
+    .rune.spent{color:rgba(255,255,255,0.08);}
+    .vision-hint{font-family:'Cinzel',serif;font-size:0.5rem;letter-spacing:0.12em;text-transform:uppercase;color:rgba(160,100,220,0.28);}
+
+    /* Multiplayer: who has/hasn't acted */
+    .mp-waiting-panel{padding:10px 20px;display:flex;flex-direction:column;gap:8px;}
+    .mp-waiting-title{font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.22em;text-transform:uppercase;color:var(--dim);}
+    .mp-player-row{display:flex;align-items:center;gap:8px;}
+    .mp-av{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-size:0.6rem;flex-shrink:0;}
+    .mp-av.waiting{background:rgba(196,162,100,0.08);border:1px solid rgba(196,162,100,0.2);color:var(--dim);}
+    .mp-av.done{background:rgba(30,100,55,0.2);border:1px solid rgba(60,170,80,0.35);color:rgba(80,210,100,0.8);}
+    .mp-name{font-family:'Cinzel',serif;font-size:0.65rem;letter-spacing:0.1em;color:var(--dim);}
+    .mp-check{font-size:0.7rem;color:rgba(80,210,80,0.7);margin-left:auto;}
+    .mp-resolve-btn{
+      padding:8px 18px;background:linear-gradient(140deg,rgba(50,130,70,0.4),rgba(30,90,50,0.4));
+      border:1px solid rgba(60,170,80,0.4);border-radius:2px;
+      font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;
+      color:rgba(80,210,100,0.85);cursor:pointer;margin-top:4px;
+      transition:background 0.15s;
+    }
+    .mp-resolve-btn:hover{background:linear-gradient(140deg,rgba(50,150,80,0.5),rgba(30,110,60,0.5));}
 
     /* ── CHARACTER SHEET PANEL ── */
     .char-sheet-panel{
@@ -685,7 +726,7 @@
       top:50%;left:50%;transform:translate(-50%,-50%);
     }
     .map-token-player{
-      background:rgba(139,0,0,0.9);
+      background:rgba(30,150,70,0.9);
       border:2px solid rgba(220,90,90,0.75);
       color:rgba(255,210,210,0.95);
       cursor:grab;
@@ -693,6 +734,11 @@
       z-index:12;
     }
     .map-token-player:active{cursor:grabbing;}
+    .map-token-player-other{
+      background:rgba(20,110,55,0.85);
+      border:1.5px solid rgba(80,220,130,0.55);
+      box-shadow:0 0 6px rgba(30,150,70,0.35);
+    }
     .map-token-enemy{
       background:rgba(70,15,15,0.9);
       border:2px solid rgba(150,35,35,0.55);
@@ -917,6 +963,13 @@
   <div class="table-col" id="tableCol">
     <button class="col-expand-btn table-expand-btn" title="Expand table" onclick="togglePane('table')">⤢</button>
 
+    <!-- Shared Vision rune strip (always visible at top of table column) -->
+    <div class="vision-strip" id="visionStrip">
+      <span class="vision-label">Shared Vision</span>
+      <div class="rune-track" id="runeTrack"></div>
+      <span class="vision-hint">type /vision</span>
+    </div>
+
     <!-- Scene image (shown when DM generates one) -->
     <div class="scene-image-wrap" id="sceneImageWrap" style="display:none">
       <img class="scene-image" id="sceneImage" src="" alt="Scene">
@@ -1018,28 +1071,24 @@
           </div>
         </div>
         <div class="char-quick-ref">
-          <span class="quick-stat" id="qStr">STR <strong>—</strong></span>
-          <span class="quick-stat" id="qDex">DEX <strong>—</strong></span>
-          <span class="quick-stat" id="qCon">CON <strong>—</strong></span>
-          <span class="quick-stat" id="qAc">AC <strong>—</strong></span>
-          <span class="quick-hp" id="qHp">HP — / —</span>
-        </div>
-        <!-- Shared Vision rune charges -->
-        <div class="vision-runes">
-          <span class="vision-label">Shared Vision</span>
-          <div class="rune-track" id="runeTrack"></div>
-          <span class="vision-hint">type /vision</span>
+          <div class="quick-stat" id="qStr"><span class="quick-stat-label">STR</span><span class="quick-stat-val">—</span></div>
+          <div class="quick-stat" id="qDex"><span class="quick-stat-label">DEX</span><span class="quick-stat-val">—</span></div>
+          <div class="quick-stat" id="qCon"><span class="quick-stat-label">CON</span><span class="quick-stat-val">—</span></div>
+          <div class="quick-stat" id="qAc"><span class="quick-stat-label">AC</span><span class="quick-stat-val">—</span></div>
+          <div class="quick-hp" id="qHp"><span class="quick-hp-label">HP</span><span class="quick-hp-val" id="qHpVal">— / —</span></div>
         </div>
         <!-- Class resource tracker -->
         <div class="resource-tracker" id="resourceTracker" style="display:none"></div>
       </div>
 
-      <!-- Waiting panel (shown after submit) -->
+      <!-- Waiting panel (shown while DM streams) -->
       <div class="waiting-panel" id="waitingPanel" style="display:none">
         <div class="waiting-dots"><span></span><span></span><span></span></div>
         <div class="waiting-text">The DM is responding</div>
         <span style="margin-left:auto;font-family:'Cinzel',serif;font-size:0.52rem;letter-spacing:0.12em;text-transform:uppercase;color:rgba(60,200,60,0.5)">✓ Action submitted</span>
       </div>
+      <!-- Multiplayer waiting panel (waiting for other players) -->
+      <div class="mp-waiting-panel" id="mpWaitingPanel" style="display:none"></div>
     </div>
 
   </div><!-- /narrative-col -->
@@ -1052,10 +1101,11 @@
     <div class="header-sep"></div>
     <div class="map-scene-name" id="mapSceneName">The Sunless Citadel</div>
     <div class="map-legend">
-      <div class="legend-item"><span class="legend-sw" style="background:rgba(139,0,0,0.85);border:1px solid rgba(200,80,80,0.5)"></span>Party</div>
-      <div class="legend-item"><span class="legend-sw" style="background:rgba(70,15,15,0.85);border:1px solid rgba(150,35,35,0.5)"></span>Enemies</div>
+      <div class="legend-item"><span class="legend-sw" style="background:rgba(30,150,70,0.85);border:1px solid rgba(80,220,130,0.5)"></span>Players</div>
+      <div class="legend-item"><span class="legend-sw" style="background:rgba(15,55,120,0.85);border:1px solid rgba(60,130,220,0.5)"></span>Allies</div>
+      <div class="legend-item"><span class="legend-sw" style="background:rgba(140,80,0,0.85);border:1px solid rgba(220,140,40,0.5)"></span>Unknown</div>
+      <div class="legend-item"><span class="legend-sw" style="background:rgba(139,0,0,0.85);border:1px solid rgba(200,80,80,0.5)"></span>Enemies</div>
       <div class="legend-item"><span class="legend-sw" style="background:#141210;border:0.5px solid rgba(196,162,100,0.08)"></span>Explored</div>
-      <div class="legend-item"><span class="legend-sw" style="background:#0b0907;border:0.5px solid rgba(255,255,255,0.04)"></span>Fog of War</div>
     </div>
     <div class="header-sep"></div>
     <div class="map-hint" id="mapMoveHint">Drag your token to move · Reveals fog</div>
@@ -1119,9 +1169,16 @@
   const scenario  = (() => { try { return JSON.parse(sessionStorage.getItem('campaignScenario')); } catch(e) { return null; } })();
   let sessionId   = sessionStorage.getItem('uwt_session_id');
   let currentUser = null;
-  let isDMThinking    = false;
-  let pendingRoll     = null;
-  let imagesRemaining = 12;
+  let isDMThinking       = false;
+  let pendingRoll        = null;
+  let imagesRemaining    = 12;
+  // Multiplayer state
+  let totalActivePlayers = 1;
+  let currentTurnNumber  = 0;
+  let myActionSubmitted  = false;
+  let submittedPlayers   = {}; // { user_id: { name, character_name } }
+  let sessionHostId      = null;
+  let OTHER_PLAYERS      = []; // { user_id, name, initial, character_name, pos_col, pos_row }
 
   // Normalize stat from flat number or {base,bonus,total} object
   function statVal(stats, key) {
@@ -1598,7 +1655,8 @@
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({
           session_id: sessionId,
-          action,
+          action: action || '[MULTI_ACTION]',
+          actions: opts.actions || null,
           vision_requested: opts.vision_requested === true,
           character: character ? {
             id: character.id, name: character.name, race: character.race, cls: character.cls,
@@ -1643,8 +1701,10 @@
             if (data.text) { fullText += data.text; textEl.innerHTML = formatDMText(fullText); feed.scrollTop = feed.scrollHeight; if (fullText.includes('[SCENE:') && !document.getElementById('tableCol')?.classList.contains('has-scene-image')) primeSceneLoading(); }
             if (data.scene_image) showSceneImage(data.scene_image, data.scene_desc || '');
             if (data.images_remaining !== undefined) { imagesRemaining = data.images_remaining; updateVisionRunes(); }
-            if (data._debug) console.log('[DALL-E DEBUG]', JSON.stringify(data._debug, null, 2));
-            if (data.done) processDirectives(fullText);
+            if (data.done) {
+              processDirectives(fullText);
+              if (data.turn_number !== undefined) currentTurnNumber = data.turn_number;
+            }
           } catch {}
         }
       }
@@ -1757,20 +1817,108 @@
     const val = el('actionInput').value.trim();
     if (!val || isDMThinking) return;
     if (/^\/vision\b/i.test(val)) { el('actionInput').value = ''; castSharedVision(); return; }
-    if (turnCount >= TURNS_PER_CREDIT) {
-      el('creditModal').classList.add('visible');
-      return;
-    }
+    if (turnCount >= TURNS_PER_CREDIT) { el('creditModal').classList.add('visible'); return; }
+
     const name = character ? character.name.split(' ')[0] : 'You';
     const cls  = character ? cap(character.cls) : 'Adventurer';
     addToFeed('action', val, { name, cls });
     el('actionInput').value = '';
-    el('yourTurnPanel').style.display = 'none';
-    el('waitingPanel').style.display  = 'flex';
-    el('ideasPanel').style.display    = 'none';
+    el('ideasPanel').style.display = 'none';
     updateTurnCounter();
     if (INIT_ORDER.length) { currentInitIdx = (currentInitIdx + 1) % INIT_ORDER.length; renderInitTracker(); }
-    await callDM(val);
+
+    if (totalActivePlayers <= 1) {
+      // Solo: fire DM immediately
+      el('yourTurnPanel').style.display = 'none';
+      el('waitingPanel').style.display  = 'flex';
+      await callDM(val);
+    } else {
+      // Multiplayer: save action, wait for all players
+      myActionSubmitted = true;
+      submittedPlayers[currentUser.id] = { name, character_name: character?.name || name };
+      renderMPWaitingPanel();
+      el('yourTurnPanel').style.display = 'none';
+      el('waitingPanel').style.display  = 'none';
+      el('mpWaitingPanel').style.display = 'flex';
+
+      // Save to turn_actions table
+      await sbClient.from('rpg_turn_actions').insert({
+        session_id: sessionId,
+        user_id: currentUser.id,
+        character_id: character?.id || null,
+        character_name: character?.name || name,
+        character_race: character?.race || '',
+        character_cls:  character?.cls  || '',
+        character_data: character ? {
+          id: character.id, name: character.name, race: character.race, cls: character.cls,
+          level: character.level||1, hp: currentHP, max_hp: character.max_hp||character.hp||10,
+          gold: characterGold,
+          stats: { str: statVal(character.stats,'str'), dex: statVal(character.stats,'dex'), con: statVal(character.stats,'con'), int: statVal(character.stats,'int'), wis: statVal(character.stats,'wis'), cha: statVal(character.stats,'cha') },
+        } : {},
+        action: val,
+        turn_number: currentTurnNumber,
+      });
+
+      // Check if all players have now submitted
+      await checkAllSubmitted();
+    }
+  }
+
+  function renderMPWaitingPanel() {
+    const panel = el('mpWaitingPanel');
+    if (!panel) return;
+    const allPlayers = [
+      { id: currentUser?.id, name: character?.name?.split(' ')[0] || 'You' },
+      ...OTHER_PLAYERS.map(p => ({ id: p.user_id, name: p.character_name || p.name })),
+    ];
+    const rows = allPlayers.map(p => {
+      const done = !!submittedPlayers[p.id];
+      return `<div class="mp-player-row">
+        <div class="mp-av ${done ? 'done' : 'waiting'}">${(p.name||'?')[0].toUpperCase()}</div>
+        <span class="mp-name">${p.name}</span>
+        ${done ? '<span class="mp-check">✓ Ready</span>' : '<span class="mp-check" style="color:var(--dim);opacity:0.4">…</span>'}
+      </div>`;
+    }).join('');
+    const allReady = allPlayers.every(p => submittedPlayers[p.id]);
+    panel.innerHTML = `
+      <div class="mp-waiting-title">Waiting for the party…</div>
+      ${rows}
+      ${allReady ? '<button class="mp-resolve-btn" onclick="fireCombinedDM()">⚔ Resolve Turn</button>' : ''}
+    `;
+  }
+
+  async function checkAllSubmitted() {
+    const { count } = await sbClient.from('rpg_turn_actions')
+      .select('*', { count: 'exact', head: true })
+      .eq('session_id', sessionId)
+      .eq('turn_number', currentTurnNumber);
+    if (count >= totalActivePlayers) {
+      await fireCombinedDM();
+    }
+  }
+
+  async function fireCombinedDM() {
+    if (isDMThinking) return;
+    // Fetch all actions for this turn
+    const { data: turnActions } = await sbClient.from('rpg_turn_actions')
+      .select('*').eq('session_id', sessionId).eq('turn_number', currentTurnNumber);
+    if (!turnActions || !turnActions.length) return;
+
+    // Build actions array for edge function
+    const actions = turnActions.map(ta => ({
+      character: ta.character_data && Object.keys(ta.character_data).length ? ta.character_data : null,
+      action: ta.action,
+    }));
+
+    el('mpWaitingPanel').style.display = 'none';
+    el('waitingPanel').style.display  = 'flex';
+
+    await callDM(null, { actions });
+
+    // After DM responds: reset multiplayer state
+    myActionSubmitted = false;
+    submittedPlayers  = {};
+    currentTurnNumber++;
   }
 
   // ── IDEAS ─────────────────────────────────────────────────────────
@@ -2006,11 +2154,11 @@
   if (character) {
     const s = character.stats;
     if (el('turnChar')) el('turnChar').textContent = `${character.name} · ${cap(character.cls)} Lv ${character.level||1}`;
-    if (el('qStr'))     el('qStr').innerHTML = `STR <strong>${statVal(s,'str')}</strong>`;
-    if (el('qDex'))     el('qDex').innerHTML = `DEX <strong>${statVal(s,'dex')}</strong>`;
-    if (el('qCon'))     el('qCon').innerHTML = `CON <strong>${statVal(s,'con')}</strong>`;
-    if (el('qAc'))      el('qAc').innerHTML  = `AC <strong>${calcAC(character.cls,s)}</strong>`;
-    if (el('qHp'))      el('qHp').textContent = `HP ${currentHP} / ${character.max_hp||character.hp||10}`;
+    if (el('qStr'))  el('qStr').innerHTML  = `<span class="quick-stat-label">STR</span><span class="quick-stat-val">${statVal(s,'str')}</span>`;
+    if (el('qDex'))  el('qDex').innerHTML  = `<span class="quick-stat-label">DEX</span><span class="quick-stat-val">${statVal(s,'dex')}</span>`;
+    if (el('qCon'))  el('qCon').innerHTML  = `<span class="quick-stat-label">CON</span><span class="quick-stat-val">${statVal(s,'con')}</span>`;
+    if (el('qAc'))   el('qAc').innerHTML   = `<span class="quick-stat-label">AC</span><span class="quick-stat-val">${calcAC(character.cls,s)}</span>`;
+    if (el('qHpVal')) el('qHpVal').textContent = `${currentHP} / ${character.max_hp||character.hp||10}`;
     if (el('actionInput')) el('actionInput').placeholder = `What does ${character.name} do? Be specific — the DM will call for rolls as needed…`;
   }
   if (scenario && el('campaignTitle')) el('campaignTitle').textContent = scenario.name;
@@ -2046,13 +2194,31 @@
       }
     }
 
-    // Restore game state (enemies, combat, image charges)
+    // Restore game state (enemies, combat, image charges, turn number)
     if (sessionId) {
       const { data: gs } = await sbClient.from('rpg_game_state').select('*').eq('session_id', sessionId).single();
       if (gs?.enemies?.length) { ENEMIES = gs.enemies; renderEnemies(); }
       const gsRes = (gs?.resources) || {};
       imagesRemaining = Math.max(0, 12 - (gsRes.images_used || 0));
+      currentTurnNumber = gs?.current_turn || 0;
       updateVisionRunes();
+
+      // Load active player count and host
+      const { data: sPlayers } = await sbClient.from('rpg_session_players')
+        .select('*, rpg_characters(name, cls)').eq('session_id', sessionId).eq('status', 'joined');
+      totalActivePlayers = sPlayers?.length || 1;
+      const { data: sess } = await sbClient.from('rpg_sessions').select('host_id').eq('id', sessionId).single();
+      sessionHostId = sess?.host_id || null;
+      // Build OTHER_PLAYERS list
+      OTHER_PLAYERS = (sPlayers || []).filter(p => p.user_id !== currentUser?.id).map(p => ({
+        user_id: p.user_id,
+        name: p.rpg_characters?.name?.split(' ')[0] || 'Player',
+        character_name: p.rpg_characters?.name || 'Player',
+        initial: (p.rpg_characters?.name || 'P')[0].toUpperCase(),
+        pos_col: p.pos_col ?? 10,
+        pos_row: p.pos_row ?? 8,
+      }));
+      window.updateMapOtherPlayers?.();
     }
 
     // Restore or start message feed
@@ -2096,37 +2262,62 @@
       if (codeVal) codeVal.textContent = code;
     }
 
+    // Expose to battle map IIFE
+    window._currentUserId = currentUser?.id;
+    window._otherPlayersRef = OTHER_PLAYERS;
+    window.sbClient = sbClient;
+
     // Load real player seats
     await loadSessionPlayers();
 
     // Build scenario mini-map
     buildMiniMap(scenario?.id || 'vault');
 
-    // Realtime: messages from other players + DM responses
+    // Realtime: messages, turn actions, player joins
     if (sessionId) {
       sbClient.channel('session:' + sessionId)
         .on('postgres_changes', {
-          event:  'INSERT',
-          schema: 'public',
-          table:  'rpg_messages',
+          event: 'INSERT', schema: 'public', table: 'rpg_messages',
           filter: `session_id=eq.${sessionId}`,
         }, payload => {
           const msg = payload.new;
           if (msg.type === 'action' && msg.author_id === currentUser?.id) return;
-          if (msg.type === 'dm' && isDMThinking) return;
+          if (msg.type === 'dm'     && isDMThinking) return;
           const meta = msg.metadata || {};
           if      (msg.type === 'action') addToFeed('action', msg.content, { name: meta.character_name || 'Player', cls: meta.character_cls || 'Adventurer' });
           else if (msg.type === 'dm')     { addToFeed('dm', formatDMText(msg.content)); processDirectives(msg.content); }
           else if (msg.type === 'system') addToFeed('system', msg.content);
         })
         .on('postgres_changes', {
-          event:  'INSERT',
-          schema: 'public',
-          table:  'rpg_session_players',
+          event: 'INSERT', schema: 'public', table: 'rpg_turn_actions',
+          filter: `session_id=eq.${sessionId}`,
+        }, payload => {
+          const ta = payload.new;
+          if (ta.user_id === currentUser?.id) return; // already tracked locally
+          // Mark that player as submitted
+          submittedPlayers[ta.user_id] = { character_name: ta.character_name };
+          if (el('mpWaitingPanel').style.display !== 'none') renderMPWaitingPanel();
+          // If I've already submitted and now everyone is in, I fire (if I'm host or last)
+          if (myActionSubmitted) checkAllSubmitted();
+        })
+        .on('postgres_changes', {
+          event: 'UPDATE', schema: 'public', table: 'rpg_session_players',
+          filter: `session_id=eq.${sessionId}`,
+        }, payload => {
+          // Another player moved — update their position
+          const p = payload.new;
+          const op = OTHER_PLAYERS.find(o => o.user_id === p.user_id);
+          if (op) { op.pos_col = p.pos_col; op.pos_row = p.pos_row; window.updateMapOtherPlayers?.(); }
+        })
+        .on('postgres_changes', {
+          event: 'INSERT', schema: 'public', table: 'rpg_session_players',
           filter: `session_id=eq.${sessionId}`,
         }, () => {
-          // A new player joined — refresh seats
           loadSessionPlayers();
+          // Refresh player count
+          sbClient.from('rpg_session_players').select('*', { count: 'exact', head: true })
+            .eq('session_id', sessionId).eq('status', 'joined')
+            .then(({ count }) => { if (count) totalActivePlayers = count; });
         })
         .subscribe();
     }
@@ -2238,8 +2429,8 @@ function renderExplorationMap() {
 
     // Player token on current room
     if (isCurrent) {
-      inner += `<circle cx="${cx}" cy="${cy}" r="6" fill="rgba(139,0,0,0.85)" stroke="rgba(200,80,80,0.65)" stroke-width="1.5"/>`;
-      inner += `<text x="${cx}" y="${cy + 2}" font-family="serif" font-size="6" fill="rgba(255,200,200,0.95)" text-anchor="middle">${playerInitial}</text>`;
+      inner += `<circle cx="${cx}" cy="${cy}" r="6" fill="rgba(30,150,70,0.85)" stroke="rgba(80,220,130,0.65)" stroke-width="1.5"/>`;
+      inner += `<text x="${cx}" y="${cy + 2}" font-family="serif" font-size="6" fill="rgba(180,255,200,0.95)" text-anchor="middle">${playerInitial}</text>`;
     }
   });
 
@@ -2248,7 +2439,7 @@ function renderExplorationMap() {
   }
 
   // Legend
-  inner += `<circle cx="12" cy="${H-8}" r="3" fill="rgba(139,0,0,0.7)" stroke="rgba(200,80,80,0.5)" stroke-width="0.8"/>`;
+  inner += `<circle cx="12" cy="${H-8}" r="3" fill="rgba(30,150,70,0.7)" stroke="rgba(80,220,130,0.5)" stroke-width="0.8"/>`;
   inner += `<text x="17" y="${H-5}" font-family="serif" font-size="3.5" fill="rgba(196,162,100,0.3)">You</text>`;
 
   svg.innerHTML = `
@@ -2416,13 +2607,14 @@ function buildMiniMap(sceneId) {
       }
     container.innerHTML = html;
     placePlayer();
+    placeOtherPlayers();
     placeEnemies();
     placeAllies();
     placeNPCs();
   }
 
   function placePlayer() {
-    document.querySelectorAll('.map-token-player').forEach(t => t.remove());
+    document.querySelectorAll('.map-token-player:not(.map-token-player-other)').forEach(t => t.remove());
     const c = getCellEl(playerPos.col, playerPos.row);
     if (!c) return;
     let chr = null;
@@ -2432,6 +2624,22 @@ function buildMiniMap(sceneId) {
     tok.textContent = (chr?.name?.[0] || 'P').toUpperCase();
     tok.title = (chr?.name || 'Player') + ' · Drag to move';
     c.appendChild(tok);
+  }
+
+  function placeOtherPlayers() {
+    document.querySelectorAll('.map-token-player-other').forEach(t => t.remove());
+    const others = window.OTHER_PLAYERS || [];
+    others.forEach(p => {
+      const col = p.pos_col ?? 10;
+      const row = p.pos_row ?? 8;
+      const c = getCellEl(col, row);
+      if (!c) return;
+      const tok = document.createElement('div');
+      tok.className = 'map-token map-token-player map-token-player-other';
+      tok.textContent = p.initial || 'P';
+      tok.title = `${p.character_name || p.name} (Player)`;
+      c.appendChild(tok);
+    });
   }
 
   function placeEnemies() {
@@ -2496,13 +2704,12 @@ function buildMiniMap(sceneId) {
     if (!window.MAP_OPEN) return;
     placeEnemies();
   };
-  window.updateMapAllies = function () {
+  window.updateMapAllies = function () { if (!window.MAP_OPEN) return; placeAllies(); };
+  window.updateMapNPCs   = function () { if (!window.MAP_OPEN) return; placeNPCs(); };
+  window.updateMapOtherPlayers = function () {
+    window.OTHER_PLAYERS = window._otherPlayersRef || [];
     if (!window.MAP_OPEN) return;
-    placeAllies();
-  };
-  window.updateMapNPCs = function () {
-    if (!window.MAP_OPEN) return;
-    placeNPCs();
+    placeOtherPlayers();
   };
 
   // ── DRAG ─────────────────────────────────────────────────────────
@@ -2559,7 +2766,17 @@ function buildMiniMap(sceneId) {
     if (hit) {
       playerPos = { col: hit.col, row: hit.row };
       revealFog(hit.col, hit.row, 3);
-      renderGrid(); // rebuilds innerHTML, range classes are gone
+      renderGrid();
+      // Persist position so other players see it
+      try {
+        const sid = sessionStorage.getItem('uwt_session_id');
+        const uid = window._currentUserId;
+        if (sid && uid && window.sbClient) {
+          window.sbClient.from('rpg_session_players')
+            .update({ pos_col: hit.col, pos_row: hit.row })
+            .eq('session_id', sid).eq('user_id', uid);
+        }
+      } catch(e) {}
     }
   });
 
