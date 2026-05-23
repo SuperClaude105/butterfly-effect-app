@@ -108,6 +108,11 @@
     .table-col.has-scene-image .players-wrap {
       width:min(calc(100% - 40px), calc(55vh - 160px));
     }
+    /* fullscreen: keep artwork same height, let table grow to fill remaining space */
+    .game-layout.table-full .table-col.has-scene-image .scene-image-wrap { height:45%; }
+    .game-layout.table-full .table-col.has-scene-image .players-wrap {
+      width:min(calc(100% - 60px), calc(55vh - 30px));
+    }
 
     /* ── LEFT: TABLE COLUMN ── */
     .table-col{
@@ -1583,6 +1588,7 @@
             const data = JSON.parse(line.slice(6));
             if (data.text) { fullText += data.text; textEl.innerHTML = formatDMText(fullText); feed.scrollTop = feed.scrollHeight; if (fullText.includes('[SCENE:') && !document.getElementById('tableCol')?.classList.contains('has-scene-image')) primeSceneLoading(); }
             if (data.scene_image) showSceneImage(data.scene_image, data.scene_desc || '');
+            if (data._debug) console.log('[DALL-E DEBUG]', JSON.stringify(data._debug, null, 2));
             if (data.done) processDirectives(fullText);
           } catch {}
         }
