@@ -1617,9 +1617,11 @@
       .replace(/\n\n/g,'<br><br>').trim();
   }
 
+  let isRestoringHistory = false;
+
   function processDirectives(text) {
     if (text.includes('[COMBAT_START]')) {
-      addToFeed('system', 'Combat begins — Roll for Initiative');
+      if (!isRestoringHistory) addToFeed('system', 'Combat begins — Roll for Initiative');
       INIT_ORDER = buildInitOrder(); currentInitIdx = 0;
       renderInitTracker();
     }
@@ -1634,7 +1636,7 @@
     }
     if (anyEnemy) { INIT_ORDER = buildInitOrder(); currentInitIdx = 0; renderInitTracker(); renderEnemies(); }
     const rollM = text.match(/\[ROLL:\s*([^,\]]+),\s*(\d+),\s*([^\]]+)\]/);
-    if (rollM) showDiceOverlay(rollM[1].trim(), parseInt(rollM[2]), rollM[3].trim());
+    if (rollM && !isRestoringHistory) showDiceOverlay(rollM[1].trim(), parseInt(rollM[2]), rollM[3].trim());
     const xpM = text.match(/\[XP:\s*(\d+)\]/);
     if (xpM) awardXP(parseInt(xpM[1]));
     // Gold award/deduct: [GOLD:+50] or [GOLD:-10]
@@ -1821,13 +1823,22 @@
         else { dcLine.textContent=`${total} < DC ${dc} — Failed`; dcLine.className='roll-dc-line'; dcLine.style.background='rgba(100,20,20,0.2)'; dcLine.style.borderColor='rgba(200,60,60,0.3)'; dcLine.style.color='rgba(220,80,80,0.8)'; }
         el('rollDismiss').style.display = '';
         addToFeed('dice','',{who:character?character.name.split(' ')[0]:'Player',stat:abi,dc,result:total,pass});
+        pendingRoll = { ability: abi, dc, total, pass, mod };
       }
     }, 70);
   }
 
   function dismissDice() {
     el('diceOverlay').classList.remove('visible');
-    pendingRoll = null;
+    if (pendingRoll) {
+      const { ability, dc, total, pass, mod } = pendingRoll;
+      const d20 = total - mod;
+      const outcome = pass ? 'Success' : 'Failure';
+      el('yourTurnPanel').style.display = 'none';
+      el('waitingPanel').style.display  = 'flex';
+      callDM(`[DICE RESULT] ${ability} check vs DC ${dc}: rolled ${total} (d20: ${d20}, modifier: ${mod>=0?'+':''}${mod}) — ${outcome}. Narrate the outcome.`);
+      pendingRoll = null;
+    }
   }
 
   // ── SESSION CODE ─────────────────────────────────────────────────
@@ -1960,19 +1971,22 @@
         // Fresh session — fire opening DM narration
         setTimeout(() => callDM('Begin the adventure. Set the opening scene with vivid atmosphere and give me a clear first situation to react to.'), 1000);
       } else {
-        // Reconnecting — reload last 50 messages into the feed
-        const { data: msgs } = await sbClient.from('rpg_messages')
+        // Reconnecting — reload last 60 messages into the feed (newest first, then reverse for display)
+        const { data: msgsRaw } = await sbClient.from('rpg_messages')
           .select('*').eq('session_id', sessionId)
-          .order('created_at', { ascending: true }).limit(50);
+          .order('created_at', { ascending: false }).limit(60);
+        const msgs = msgsRaw ? msgsRaw.reverse() : [];
         if (msgs && msgs.length) {
           el('feed').innerHTML = '';
           addToFeed('system', `Session resumed · ${scenario?.name || 'Campaign'}`);
+          isRestoringHistory = true;
           msgs.forEach(msg => {
             const meta = msg.metadata || {};
             if      (msg.type === 'dm')     { addToFeed('dm', formatDMText(msg.content)); processDirectives(msg.content); }
-            else if (msg.type === 'action') addToFeed('action', msg.content, { name: meta.character_name || 'Player', cls: meta.character_cls || 'Adventurer' });
+            else if (msg.type === 'action') addToFeed('action', msg.content, { name: meta.character_name || 'Player', cls: meta.character_class || meta.character_cls || 'Adventurer' });
             else if (msg.type === 'system') addToFeed('system', msg.content);
           });
+          isRestoringHistory = false;
           // Restore turn count from message history (display only — do not increment)
           turnCount = msgs.filter(m => m.type === 'action').length;
           refreshTurnDisplay();
