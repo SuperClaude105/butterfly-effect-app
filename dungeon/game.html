@@ -78,11 +78,14 @@
     .game-layout.chat-full .narrative-col{flex:1;}
 
     /* ── SCENE IMAGE (always-on vision window) ── */
+    /* Absolutely positioned so flex overflow never clips it */
     .scene-image-wrap{
-      width:100%;flex-shrink:0;height:clamp(180px,40vh,420px);
-      position:relative;overflow:hidden;
+      position:absolute;top:0;left:0;right:0;
+      height:clamp(200px,38vh,390px);
+      overflow:hidden;
       border-bottom:1px solid rgba(196,162,100,0.1);
       background:#060304;
+      z-index:2;
     }
     .scene-image{
       width:100%;height:100%;object-fit:cover;
@@ -114,7 +117,8 @@
     }
 
     /* table-col always uses image-present layout */
-    .table-col { justify-content:flex-end !important; }
+    /* padding-top matches image height so flex children start below the image */
+    .table-col { justify-content:flex-end !important; padding-top:clamp(200px,38vh,390px) !important; }
     .table-col .players-wrap {
       width:min(calc(100% - 40px), calc(55vh - 160px));
     }
