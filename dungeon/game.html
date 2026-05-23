@@ -1410,9 +1410,8 @@
   }
 
   async function endSession() {
-    if (sessionId && window.sbClient) {
-      try { await sbClient.from('rpg_sessions').update({ status: 'ended' }).eq('id', sessionId); } catch(e) {}
-    }
+    // Just navigate away — session stays active so it appears in Active Campaigns on the characters page.
+    // localStorage keeps the session ID for instant resume. sessionStorage can be cleared (tab-scoped).
     sessionStorage.removeItem('uwt_session_id');
     sessionStorage.removeItem('uwt_session_code');
     window.location.href = 'characters.html';
