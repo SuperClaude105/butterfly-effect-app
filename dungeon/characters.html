@@ -156,6 +156,32 @@
     /* Loading state */
     .loading-state{text-align:center;padding:60px 20px;color:var(--dim);font-style:italic;}
 
+    /* Active Sessions */
+    .active-sessions-grid{display:flex;gap:14px;flex-wrap:wrap;}
+    .session-card{
+      position:relative;
+      background:var(--surface);border:1px solid rgba(196,162,100,0.2);border-radius:3px;
+      padding:18px 20px 16px;min-width:240px;max-width:320px;flex:1;
+      display:flex;flex-direction:column;gap:8px;
+      transition:border-color 0.2s,box-shadow 0.2s;
+    }
+    .session-card:hover{border-color:rgba(196,162,100,0.45);box-shadow:0 4px 24px rgba(196,162,100,0.08);}
+    .session-campaign{font-family:'Playfair Display',serif;font-style:italic;font-size:1.05rem;color:var(--text);}
+    .session-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+    .session-code{font-family:'Cinzel',serif;font-size:0.52rem;letter-spacing:0.2em;color:rgba(196,162,100,0.45);background:rgba(196,162,100,0.07);border:1px solid rgba(196,162,100,0.15);border-radius:2px;padding:2px 7px;}
+    .session-char{font-size:0.7rem;font-style:italic;color:var(--dim);}
+    .session-turn{font-family:'Cinzel',serif;font-size:0.52rem;letter-spacing:0.12em;color:var(--dim);}
+    .session-resume-btn{
+      margin-top:6px;padding:9px 0;
+      background:linear-gradient(140deg,rgba(139,0,0,0.5),rgba(90,0,0,0.5));
+      border:1px solid rgba(139,0,0,0.45);border-radius:2px;
+      font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.25em;text-transform:uppercase;
+      color:var(--accent);cursor:pointer;
+      transition:opacity 0.15s,background 0.15s;
+      width:100%;
+    }
+    .session-resume-btn:hover{opacity:0.85;background:linear-gradient(140deg,rgba(160,0,0,0.6),rgba(110,0,0,0.6));}
+
     /* User info in header */
     .user-info{display:flex;align-items:center;gap:10px;}
     .user-name{font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.15em;color:var(--dim);}
@@ -189,6 +215,12 @@
 
   <div class="characters-grid" id="charactersGrid">
     <!-- rendered by JS -->
+  </div>
+
+  <!-- Active Sessions -->
+  <div id="activeSessionsSection" style="display:none;margin-top:44px;">
+    <div class="section-label">Active Campaigns</div>
+    <div class="active-sessions-grid" id="activeSessionsGrid"></div>
   </div>
 
 </div>
@@ -439,6 +471,78 @@
     window.location.href = 'scenario.html';
   }
 
+  // ── Active Sessions ───────────────────────────────────────────
+  let activeSessions = [];
+
+  async function loadActiveSessions() {
+    const { data: sp } = await sbClient
+      .from('rpg_session_players')
+      .select('session_id, character_id, rpg_characters(name, cls, race)')
+      .eq('user_id', currentUser.id)
+      .eq('status', 'joined');
+
+    if (!sp || sp.length === 0) return;
+
+    const sessionIds = sp.map(r => r.session_id);
+    const { data: sessions } = await sbClient
+      .from('rpg_sessions')
+      .select('id, code, scenario, created_at, updated_at')
+      .in('id', sessionIds)
+      .eq('status', 'active')
+      .order('updated_at', { ascending: false });
+
+    if (!sessions || sessions.length === 0) return;
+
+    // Attach character info to each session
+    activeSessions = sessions.map(s => {
+      const player = sp.find(p => p.session_id === s.id);
+      return { ...s, character: player?.rpg_characters || null, characterId: player?.character_id || null };
+    });
+
+    renderActiveSessions();
+  }
+
+  function renderActiveSessions() {
+    const section = document.getElementById('activeSessionsSection');
+    const grid    = document.getElementById('activeSessionsGrid');
+    if (!activeSessions.length) { section.style.display = 'none'; return; }
+
+    section.style.display = 'block';
+    grid.innerHTML = activeSessions.map(s => {
+      const name = s.scenario?.name || 'Unnamed Campaign';
+      const char = s.character;
+      const charLine = char ? `${char.name} · ${capitalise(char.race)} ${capitalise(char.cls)}` : 'Unknown character';
+      const when = timeSince(s.updated_at || s.created_at);
+      return `
+        <div class="session-card">
+          <div class="session-campaign">${name}</div>
+          <div class="session-meta">
+            <span class="session-code">${s.code}</span>
+            <span class="session-turn">Last active ${when}</span>
+          </div>
+          <div class="session-char">${charLine}</div>
+          <button class="session-resume-btn" onclick="resumeSession('${s.id}','${s.code}','${s.characterId}')">Resume →</button>
+        </div>`;
+    }).join('');
+  }
+
+  function resumeSession(sessionId, sessionCode, characterId) {
+    // Set session in both storages
+    sessionStorage.setItem('uwt_session_id', sessionId);
+    sessionStorage.setItem('uwt_session_code', sessionCode);
+    localStorage.setItem('uwt_session_id', sessionId);
+    localStorage.setItem('uwt_session_code', sessionCode);
+
+    // Set the character that was in this session
+    const session = activeSessions.find(s => s.id === sessionId);
+    if (session?.character) {
+      const char = characters.find(c => c.id === characterId) || session.character;
+      localStorage.setItem('uwt_selected_character', JSON.stringify(char));
+    }
+
+    window.location.href = 'game.html';
+  }
+
   // ── Init ──────────────────────────────────────────────────────
   function waitForSb(cb) {
     if (window.sbClient) { cb(); return; }
@@ -453,6 +557,7 @@
     document.getElementById('userNameDisplay').textContent = displayName;
 
     await loadCharacters();
+    await loadActiveSessions();
   });
 </script>
 </body>
