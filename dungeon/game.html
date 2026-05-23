@@ -1225,8 +1225,8 @@
 
   // ── DATA ──────────────────────────────────────────────────────────
   const character = (() => { try { return JSON.parse(localStorage.getItem('uwt_selected_character')); } catch(e) { return null; } })();
-  const scenario  = (() => { try { return JSON.parse(sessionStorage.getItem('campaignScenario')); } catch(e) { return null; } })();
-  let sessionId   = sessionStorage.getItem('uwt_session_id');
+  const scenario  = (() => { try { return JSON.parse(sessionStorage.getItem('campaignScenario') || localStorage.getItem('campaignScenario')); } catch(e) { return null; } })();
+  let sessionId   = sessionStorage.getItem('uwt_session_id') || localStorage.getItem('uwt_session_id');
   let currentUser = null;
   let isDMThinking       = false;
   let pendingRoll        = null;
@@ -2151,7 +2151,7 @@
 
   // ── SESSION CODE ─────────────────────────────────────────────────
   function copySessionCode() {
-    const code = sessionStorage.getItem('uwt_session_code');
+    const code = sessionStorage.getItem('uwt_session_code') || localStorage.getItem('uwt_session_code');
     if (!code) return;
     navigator.clipboard.writeText(code).then(() => {
       const btn = el('copyCodeBtn');
@@ -2261,6 +2261,8 @@
         sessionId = ns.id;
         sessionStorage.setItem('uwt_session_id', sessionId);
         sessionStorage.setItem('uwt_session_code', code);
+        localStorage.setItem('uwt_session_id', sessionId);
+        localStorage.setItem('uwt_session_code', code);
         await sbClient.from('rpg_session_players').insert({ session_id:sessionId, user_id:currentUser.id, character_id:character?.id||null, status:'joined' });
         await sbClient.from('rpg_game_state').insert({ session_id:sessionId, current_room:'entrance', initiative_order:[], current_initiative_idx:0, enemies:[], round_number:0, combat_active:false, resources:{} });
       }
@@ -2330,7 +2332,7 @@
     }
 
     // Show session code in header
-    const code = sessionStorage.getItem('uwt_session_code');
+    const code = sessionStorage.getItem('uwt_session_code') || localStorage.getItem('uwt_session_code');
     if (code) {
       const display = el('sessionCodeDisplay');
       const codeVal = el('sessionCodeVal');
@@ -2859,7 +2861,7 @@ function buildMiniMap(sceneId) {
       renderGrid();
       // Persist position so other players see it
       try {
-        const sid = sessionStorage.getItem('uwt_session_id');
+        const sid = sessionStorage.getItem('uwt_session_id') || localStorage.getItem('uwt_session_id');
         const uid = window._currentUserId;
         if (sid && uid && window.sbClient) {
           window.sbClient.from('rpg_session_players')
