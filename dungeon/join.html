@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Join a Campaign — The Unwritten Table</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Playfair+Display:ital,wght@0,700;1,400;1,700&family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="supabase-client.js"></script>
+  <style>
+    :root{--primary:#8B0000;--accent:#c4a264;--bg:#070404;--surface:#100606;--text:#e8d5b7;--dim:rgba(232,213,183,0.45);}
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+    html,body{height:100%;overflow:hidden;}
+    body{font-family:'EB Garamond',Georgia,serif;background:var(--bg);color:var(--text);display:flex;align-items:center;justify-content:center;}
+    body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 70% 60% at 50% 40%,rgba(139,0,0,0.15) 0%,transparent 70%);pointer-events:none;}
+    body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");pointer-events:none;z-index:9999;opacity:0.55;}
+
+    .card{
+      position:relative;z-index:10;
+      background:var(--surface);
+      border:1px solid rgba(196,162,100,0.18);
+      border-radius:4px;
+      padding:48px 52px;
+      max-width:480px;width:90%;
+      text-align:center;
+      box-shadow:0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(196,162,100,0.06);
+    }
+
+    .brand{font-family:'Cinzel',serif;font-size:0.55rem;letter-spacing:0.35em;text-transform:uppercase;color:rgba(196,162,100,0.4);margin-bottom:28px;}
+
+    .invite-label{font-family:'Cinzel',serif;font-size:0.58rem;letter-spacing:0.3em;text-transform:uppercase;color:rgba(196,162,100,0.5);margin-bottom:10px;}
+
+    .campaign-name{font-family:'Playfair Display',serif;font-style:italic;font-size:1.9rem;color:var(--text);line-height:1.15;margin-bottom:8px;}
+
+    .campaign-desc{font-size:0.88rem;line-height:1.7;color:var(--dim);font-style:italic;margin-bottom:6px;}
+
+    .session-meta{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:28px;}
+    .meta-tag{font-family:'Cinzel',serif;font-size:0.5rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--dim);background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:2px;padding:3px 9px;}
+
+    .divider{height:1px;background:linear-gradient(to right,transparent,rgba(196,162,100,0.15),transparent);margin-bottom:28px;}
+
+    .cta-label{font-size:0.82rem;color:var(--dim);margin-bottom:18px;line-height:1.6;}
+
+    .join-btn{
+      display:block;width:100%;padding:16px;border-radius:2px;
+      background:linear-gradient(140deg,#7A0000,#5A0000);
+      border:1px solid rgba(139,0,0,0.5);
+      font-family:'Cinzel',serif;font-size:0.7rem;letter-spacing:0.3em;text-transform:uppercase;
+      color:var(--accent);cursor:pointer;text-decoration:none;
+      box-shadow:0 4px 28px rgba(139,0,0,0.3);
+      transition:opacity 0.15s,transform 0.1s;
+      margin-bottom:12px;
+    }
+    .join-btn:hover{opacity:0.87;}
+    .join-btn:active{transform:scale(0.99);}
+
+    .signup-link{font-size:0.75rem;color:var(--dim);font-style:italic;}
+    .signup-link a{color:var(--accent);text-decoration:none;}
+    .signup-link a:hover{text-decoration:underline;}
+
+    .error-state{font-family:'Cinzel',serif;font-size:0.62rem;letter-spacing:0.15em;color:rgba(220,80,80,0.7);margin-top:16px;display:none;}
+    .loading{font-family:'Cinzel',serif;font-size:0.58rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--dim);animation:pulse 1.5s ease-in-out infinite;}
+    @keyframes pulse{0%,100%{opacity:0.4;}50%{opacity:0.9;}}
+  </style>
+</head>
+<body>
+<div class="card" id="card">
+  <div class="brand">The Unwritten Table</div>
+  <div class="loading" id="loadingState">Finding campaign…</div>
+  <div id="inviteContent" style="display:none;">
+    <div class="invite-label">You've been invited to join</div>
+    <div class="campaign-name" id="inviteCampaignName">—</div>
+    <div class="campaign-desc" id="inviteCampaignDesc"></div>
+    <div class="session-meta" id="inviteMeta"></div>
+    <div class="divider"></div>
+    <div class="cta-label" id="inviteCtaLabel">Select a character and join the table.</div>
+    <a href="#" class="join-btn" id="joinBtn">Join the Campaign →</a>
+    <div class="signup-link" id="signupLine"></div>
+  </div>
+  <div class="error-state" id="errorState"></div>
+</div>
+
+<script>
+  function waitForSb(cb) { if (window.sbClient) { cb(); return; } setTimeout(() => waitForSb(cb), 50); }
+
+  waitForSb(async () => {
+    const params = new URLSearchParams(window.location.search);
+    const code   = params.get('code')?.toUpperCase();
+
+    const loading = document.getElementById('loadingState');
+    const content = document.getElementById('inviteContent');
+    const errEl   = document.getElementById('errorState');
+
+    if (!code) {
+      loading.style.display = 'none';
+      errEl.textContent = 'No campaign code in this link.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    // Look up session
+    const { data: session, error } = await sbClient
+      .from('rpg_sessions')
+      .select('id, code, scenario, status')
+      .eq('code', code)
+      .single();
+
+    loading.style.display = 'none';
+
+    if (error || !session) {
+      errEl.textContent = 'Campaign not found. The link may be invalid.';
+      errEl.style.display = 'block';
+      return;
+    }
+    if (session.status === 'ended') {
+      errEl.textContent = 'This campaign has already ended.';
+      errEl.style.display = 'block';
+      return;
+    }
+    if (session.status === 'archived') {
+      errEl.textContent = 'This campaign has been archived.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    // Populate invite card
+    const sc = session.scenario || {};
+    document.getElementById('inviteCampaignName').textContent = sc.name || 'A Campaign';
+    document.getElementById('inviteCampaignDesc').textContent = sc.context || '';
+
+    const meta = document.getElementById('inviteMeta');
+    if (sc.difficulty) meta.innerHTML += `<span class="meta-tag">${sc.difficulty}</span>`;
+    if (sc.id)         meta.innerHTML += `<span class="meta-tag">${sc.id.replace(/-/g,' ')}</span>`;
+
+    // Check if already logged in
+    const { data: { user } } = await sbClient.auth.getUser();
+    const charPage = `characters.html?join=${code}`;
+
+    if (user) {
+      document.getElementById('inviteCtaLabel').textContent = 'Choose your character and take your seat at the table.';
+      document.getElementById('joinBtn').href = charPage;
+      document.getElementById('signupLine').style.display = 'none';
+    } else {
+      document.getElementById('inviteCtaLabel').textContent = 'Sign in or create a free account to join.';
+      document.getElementById('joinBtn').textContent = 'Sign In to Join →';
+      document.getElementById('joinBtn').href = `auth.html?next=${encodeURIComponent(charPage)}`;
+      document.getElementById('signupLine').innerHTML =
+        `Don't have an account? <a href="auth.html?tab=signup&next=${encodeURIComponent(charPage)}">Create one free →</a>`;
+    }
+
+    content.style.display = 'block';
+  });
+</script>
+</body>
+</html>

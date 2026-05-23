@@ -667,6 +667,19 @@
 
     await loadCharacters();
     await loadActiveSessions();
+
+    // Auto-fill join code from invite link (?join=CODE)
+    const urlParams = new URLSearchParams(window.location.search);
+    const joinCode  = urlParams.get('join');
+    if (joinCode) {
+      const input = document.getElementById('codeInput');
+      if (input) {
+        input.value = joinCode.toUpperCase();
+        // Show a small banner so the user knows why the code is pre-filled
+        const label = document.querySelector('.cta-right-label');
+        if (label) label.textContent = '🎲 Join your friend\'s campaign';
+      }
+    }
   });
 </script>
 </body>

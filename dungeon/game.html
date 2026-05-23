@@ -1045,7 +1045,8 @@
   <div id="sessionCodeDisplay" style="display:none;align-items:center;gap:6px;padding:3px 10px;border:1px solid rgba(196,162,100,0.15);border-radius:2px;">
     <span style="font-family:'Cinzel',serif;font-size:0.46rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--dim)">Code</span>
     <span id="sessionCodeVal" style="font-family:'Cinzel',serif;font-size:0.65rem;letter-spacing:0.35em;color:var(--accent)">——</span>
-    <button onclick="copySessionCode()" id="copyCodeBtn" title="Copy code for friends" style="background:none;border:1px solid rgba(196,162,100,0.18);border-radius:2px;color:var(--dim);cursor:pointer;padding:2px 8px;font-family:'Cinzel',serif;font-size:0.46rem;letter-spacing:0.15em;text-transform:uppercase;transition:color 0.15s,border-color 0.15s;" onmouseover="this.style.color='var(--accent)';this.style.borderColor='rgba(196,162,100,0.4)'" onmouseout="this.style.color='var(--dim)';this.style.borderColor='rgba(196,162,100,0.18)'">Copy</button>
+    <button onclick="copySessionCode()" id="copyCodeBtn" title="Copy code" style="background:none;border:1px solid rgba(196,162,100,0.18);border-radius:2px;color:var(--dim);cursor:pointer;padding:2px 8px;font-family:'Cinzel',serif;font-size:0.46rem;letter-spacing:0.15em;text-transform:uppercase;transition:color 0.15s,border-color 0.15s;" onmouseover="this.style.color='var(--accent)';this.style.borderColor='rgba(196,162,100,0.4)'" onmouseout="this.style.color='var(--dim)';this.style.borderColor='rgba(196,162,100,0.18)'">Copy</button>
+    <button onclick="shareInviteLink()" id="shareBtn" title="Copy invite link to share with friends" style="background:none;border:1px solid rgba(196,162,100,0.18);border-radius:2px;color:var(--dim);cursor:pointer;padding:2px 8px;font-family:'Cinzel',serif;font-size:0.46rem;letter-spacing:0.15em;text-transform:uppercase;transition:color 0.15s,border-color 0.15s;" onmouseover="this.style.color='var(--accent)';this.style.borderColor='rgba(196,162,100,0.4)'" onmouseout="this.style.color='var(--dim)';this.style.borderColor='rgba(196,162,100,0.18)'">Share</button>
   </div>
   <div class="header-spacer"></div>
   <div class="turn-counter">
@@ -2317,6 +2318,16 @@
     navigator.clipboard.writeText(code).then(() => {
       const btn = el('copyCodeBtn');
       if (btn) { btn.textContent = 'Copied!'; setTimeout(() => { btn.textContent = 'Copy'; }, 2000); }
+    });
+  }
+
+  function shareInviteLink() {
+    const code = sessionStorage.getItem('uwt_session_code') || localStorage.getItem('uwt_session_code');
+    if (!code) return;
+    const link = `https://entertheunwritten.com/dungeon/join.html?code=${code}`;
+    navigator.clipboard.writeText(link).then(() => {
+      const btn = el('shareBtn');
+      if (btn) { btn.textContent = 'Copied!'; setTimeout(() => { btn.textContent = 'Share'; }, 2000); }
     });
   }
 
