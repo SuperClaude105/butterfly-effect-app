@@ -979,7 +979,7 @@
   <div class="header-sep"></div>
   <button onclick="endSession()" style="font-family:'Cinzel',serif;font-size:0.52rem;letter-spacing:0.2em;text-transform:uppercase;color:rgba(232,213,183,0.35);background:none;text-decoration:none;padding:4px 10px;border:1px solid rgba(255,255,255,0.06);border-radius:2px;white-space:nowrap;cursor:pointer;transition:color 0.15s,border-color 0.15s;" onmouseover="this.style.color='var(--accent)';this.style.borderColor='rgba(196,162,100,0.3)'" onmouseout="this.style.color='rgba(232,213,183,0.35)';this.style.borderColor='rgba(255,255,255,0.06)'">← Exit</button>
   <div class="header-sep"></div>
-  <div class="campaign-name" id="campaignTitle">The Sunless Citadel</div>
+  <div class="campaign-name" id="campaignTitle">The Unwritten Table</div>
   <div id="sessionCodeDisplay" style="display:none;align-items:center;gap:6px;padding:3px 10px;border:1px solid rgba(196,162,100,0.15);border-radius:2px;">
     <span style="font-family:'Cinzel',serif;font-size:0.46rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--dim)">Code</span>
     <span id="sessionCodeVal" style="font-family:'Cinzel',serif;font-size:0.65rem;letter-spacing:0.35em;color:var(--accent)">——</span>
@@ -2270,6 +2270,14 @@
 
     // Restore game state (enemies, combat, image charges, turn number)
     if (sessionId) {
+      // If scenario name wasn't in sessionStorage (e.g. after a manual session restore), pull it from DB
+      if (!scenario) {
+        const { data: sess } = await sbClient.from('rpg_sessions').select('scenario').eq('id', sessionId).single();
+        if (sess?.scenario?.name && el('campaignTitle')) {
+          el('campaignTitle').textContent = sess.scenario.name;
+        }
+      }
+
       const { data: gs } = await sbClient.from('rpg_game_state').select('*').eq('session_id', sessionId).single();
       if (gs?.enemies?.length) { ENEMIES = gs.enemies; renderEnemies(); }
       const gsRes = (gs?.resources) || {};
