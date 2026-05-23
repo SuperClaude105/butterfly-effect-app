@@ -524,6 +524,15 @@
     }
     .ideas-btn:hover{background:rgba(196,162,100,0.1);color:var(--accent);}
 
+    /* Shared Vision runes */
+    .vision-runes{display:flex;align-items:center;gap:7px;margin-top:7px;}
+    .rune-track{display:flex;gap:2px;}
+    .rune{font-size:0.62rem;transition:opacity 0.4s,color 0.4s;cursor:default;user-select:none;}
+    .rune.active{color:rgba(170,110,230,0.8);}
+    .rune.spent{color:rgba(255,255,255,0.1);}
+    .vision-label{font-family:'Cinzel',serif;font-size:0.5rem;letter-spacing:0.18em;text-transform:uppercase;color:rgba(160,100,220,0.4);}
+    .vision-hint{font-family:'Cinzel',serif;font-size:0.47rem;letter-spacing:0.1em;text-transform:uppercase;color:rgba(160,100,220,0.25);margin-left:auto;}
+
     /* ── CHARACTER SHEET PANEL ── */
     .char-sheet-panel{
       position:fixed;top:0;right:-380px;width:360px;height:100vh;
@@ -1015,6 +1024,12 @@
           <span class="quick-stat" id="qAc">AC <strong>—</strong></span>
           <span class="quick-hp" id="qHp">HP — / —</span>
         </div>
+        <!-- Shared Vision rune charges -->
+        <div class="vision-runes">
+          <span class="vision-label">Shared Vision</span>
+          <div class="rune-track" id="runeTrack"></div>
+          <span class="vision-hint">type /vision</span>
+        </div>
         <!-- Class resource tracker -->
         <div class="resource-tracker" id="resourceTracker" style="display:none"></div>
       </div>
@@ -1104,8 +1119,9 @@
   const scenario  = (() => { try { return JSON.parse(sessionStorage.getItem('campaignScenario')); } catch(e) { return null; } })();
   let sessionId   = sessionStorage.getItem('uwt_session_id');
   let currentUser = null;
-  let isDMThinking = false;
-  let pendingRoll  = null;
+  let isDMThinking    = false;
+  let pendingRoll     = null;
+  let imagesRemaining = 12;
 
   // Normalize stat from flat number or {base,bonus,total} object
   function statVal(stats, key) {
@@ -1560,7 +1576,7 @@
   }
 
   // ── STREAMING AI DM ───────────────────────────────────────────────
-  async function callDM(action) {
+  async function callDM(action, opts = {}) {
     if (isDMThinking) return;
     isDMThinking = true;
     el('submitBtn').disabled = true;
@@ -1583,6 +1599,7 @@
         body: JSON.stringify({
           session_id: sessionId,
           action,
+          vision_requested: opts.vision_requested === true,
           character: character ? {
             id: character.id, name: character.name, race: character.race, cls: character.cls,
             level: character.level||1, hp: currentHP, max_hp: character.max_hp||character.hp||10,
@@ -1625,6 +1642,7 @@
             const data = JSON.parse(line.slice(6));
             if (data.text) { fullText += data.text; textEl.innerHTML = formatDMText(fullText); feed.scrollTop = feed.scrollHeight; if (fullText.includes('[SCENE:') && !document.getElementById('tableCol')?.classList.contains('has-scene-image')) primeSceneLoading(); }
             if (data.scene_image) showSceneImage(data.scene_image, data.scene_desc || '');
+            if (data.images_remaining !== undefined) { imagesRemaining = data.images_remaining; updateVisionRunes(); }
             if (data._debug) console.log('[DALL-E DEBUG]', JSON.stringify(data._debug, null, 2));
             if (data.done) processDirectives(fullText);
           } catch {}
@@ -1712,9 +1730,33 @@
   }
 
   // ── SUBMIT ACTION ─────────────────────────────────────────────────
+  async function castSharedVision() {
+    if (isDMThinking) return;
+    if (imagesRemaining <= 0) {
+      addToFeed('system', 'Your Shared Vision runes are depleted for this session.');
+      return;
+    }
+    el('yourTurnPanel').style.display = 'none';
+    el('waitingPanel').style.display  = 'flex';
+    await callDM('[SHARED_VISION]', { vision_requested: true });
+  }
+
+  function updateVisionRunes() {
+    const track = el('runeTrack');
+    if (!track) return;
+    track.innerHTML = '';
+    for (let i = 0; i < 12; i++) {
+      const r = document.createElement('span');
+      r.className = `rune ${i < imagesRemaining ? 'active' : 'spent'}`;
+      r.textContent = '✦';
+      track.appendChild(r);
+    }
+  }
+
   async function submitAction() {
     const val = el('actionInput').value.trim();
     if (!val || isDMThinking) return;
+    if (/^\/vision\b/i.test(val)) { el('actionInput').value = ''; castSharedVision(); return; }
     if (turnCount >= TURNS_PER_CREDIT) {
       el('creditModal').classList.add('visible');
       return;
@@ -2004,10 +2046,13 @@
       }
     }
 
-    // Restore game state (enemies, combat)
+    // Restore game state (enemies, combat, image charges)
     if (sessionId) {
       const { data: gs } = await sbClient.from('rpg_game_state').select('*').eq('session_id', sessionId).single();
       if (gs?.enemies?.length) { ENEMIES = gs.enemies; renderEnemies(); }
+      const gsRes = (gs?.resources) || {};
+      imagesRemaining = Math.max(0, 12 - (gsRes.images_used || 0));
+      updateVisionRunes();
     }
 
     // Restore or start message feed
