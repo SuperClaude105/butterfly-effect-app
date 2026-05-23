@@ -120,10 +120,10 @@
     /* padding-top matches image height so flex children start below the image */
     .table-col { justify-content:flex-end !important; padding-top:clamp(200px,38vh,390px) !important; }
     .table-col .players-wrap {
-      width:min(calc(100% - 40px), calc(55vh - 160px));
+      width:calc(100% - 20px);
     }
     .game-layout.table-full .table-col .players-wrap {
-      width:min(calc(100% - 60px), calc(55vh - 30px));
+      width:calc(100% - 40px);
     }
 
     /* ── LEFT: TABLE COLUMN ── */
@@ -141,11 +141,11 @@
     /* Player strips around table */
     .players-wrap{
       display:grid;
-      grid-template-columns:1fr 5fr 1fr;
-      grid-template-rows:1fr 5fr 1fr;
+      grid-template-columns:1fr 6fr 1fr;
+      grid-template-rows:1fr 3fr 1fr;
       gap:0;
       width:min(calc(100% - 40px), calc(100vh - 160px));
-      aspect-ratio:1;
+      aspect-ratio:2/1;
     }
 
     /* Table frame (compact) */
@@ -1050,7 +1050,7 @@
         <div class="stud-sm bl"></div><div class="stud-sm br"></div>
         <div class="table-surface-sm">
           <!-- DUNGEON MAP SVG -->
-          <svg class="dungeon-map" id="tableMiniMap" viewBox="0 0 198 168" xmlns="http://www.w3.org/2000/svg">
+          <svg class="dungeon-map" id="tableMiniMap" viewBox="0 0 270 108" xmlns="http://www.w3.org/2000/svg">
             <defs>
               <pattern id="grid" width="12" height="12" patternUnits="userSpaceOnUse">
                 <path d="M 12 0 L 0 0 0 12" fill="none" stroke="rgba(196,162,100,0.06)" stroke-width="0.5"/>
@@ -2454,9 +2454,9 @@ function updateCurrentLocation(name) {
 function renderExplorationMap() {
   const svg = document.getElementById('tableMiniMap');
   if (!svg) return;
-  const W = 198, H = 168;
-  const COLS = 2;
-  const RW = 80, RH = 32, GAP_X = 18, GAP_Y = 10;
+  const W = 270, H = 108;
+  const COLS = 3;
+  const RW = 68, RH = 26, GAP_X = 16, GAP_Y = 8;
   const TOTAL_W = COLS * RW + (COLS - 1) * GAP_X;
   const START_X = (W - TOTAL_W) / 2;
   const START_Y = 12;
@@ -2511,9 +2511,9 @@ function renderExplorationMap() {
     inner += `<text x="${W/2}" y="${H/2}" font-family="serif" font-size="5.5" fill="rgba(196,162,100,0.18)" text-anchor="middle">EXPLORING…</text>`;
   }
 
-  // Legend
-  inner += `<circle cx="12" cy="${H-8}" r="3" fill="rgba(30,150,70,0.7)" stroke="rgba(80,220,130,0.5)" stroke-width="0.8"/>`;
-  inner += `<text x="17" y="${H-5}" font-family="serif" font-size="3.5" fill="rgba(196,162,100,0.3)">You</text>`;
+  // Legend — top-left corner so it never overlaps rooms
+  inner += `<circle cx="8" cy="8" r="3" fill="rgba(30,150,70,0.7)" stroke="rgba(80,220,130,0.5)" stroke-width="0.8"/>`;
+  inner += `<text x="13" y="11" font-family="serif" font-size="3.5" fill="rgba(196,162,100,0.3)">You</text>`;
 
   svg.innerHTML = `
     <defs>
