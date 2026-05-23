@@ -2439,14 +2439,14 @@ function renderExplorationMap() {
     inner += `<rect x="${x}" y="${y}" width="${RW}" height="${RH}" fill="rgba(196,162,100,${fillO})" stroke="rgba(196,162,100,${strokeO})" stroke-width="${sw}" rx="2"/>`;
     if (isCurrent) inner += `<rect x="${x}" y="${y}" width="${RW}" height="${RH}" fill="none" stroke="rgba(196,162,100,0.12)" stroke-width="5" rx="2"/>`;
 
-    // Label (up to 2 lines)
+    // Label anchored to top of room rect so player token at center doesn't cover it
     const words = loc.toUpperCase().split(' ');
     if (words.length <= 2) {
-      inner += `<text x="${cx}" y="${cy + 2.5}" font-family="serif" font-size="5" fill="rgba(196,162,100,${textO})" text-anchor="middle">${loc.toUpperCase()}</text>`;
+      inner += `<text x="${cx}" y="${y + 8}" font-family="serif" font-size="5" fill="rgba(196,162,100,${textO})" text-anchor="middle">${loc.toUpperCase()}</text>`;
     } else {
       const mid = Math.ceil(words.length / 2);
-      inner += `<text x="${cx}" y="${cy - 1.5}" font-family="serif" font-size="4.5" fill="rgba(196,162,100,${textO})" text-anchor="middle">${words.slice(0,mid).join(' ')}</text>`;
-      inner += `<text x="${cx}" y="${cy + 6}" font-family="serif" font-size="4.5" fill="rgba(196,162,100,${textO})" text-anchor="middle">${words.slice(mid).join(' ')}</text>`;
+      inner += `<text x="${cx}" y="${y + 6}" font-family="serif" font-size="4.5" fill="rgba(196,162,100,${textO})" text-anchor="middle">${words.slice(0,mid).join(' ')}</text>`;
+      inner += `<text x="${cx}" y="${y + 12}" font-family="serif" font-size="4.5" fill="rgba(196,162,100,${textO})" text-anchor="middle">${words.slice(mid).join(' ')}</text>`;
     }
 
     // Player token on current room
