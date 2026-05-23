@@ -928,49 +928,7 @@
               </radialGradient>
             </defs>
 
-            <!-- Background -->
-            <rect width="198" height="168" fill="#0C0A07"/>
-            <!-- Grid -->
-            <rect width="198" height="168" fill="url(#grid)"/>
-
-            <!-- ── ROOMS ── -->
-            <!-- Entry Chamber (explored, visited) -->
-            <rect x="8" y="62" width="44" height="36" fill="rgba(196,162,100,0.05)" stroke="rgba(196,162,100,0.2)" stroke-width="1" rx="1"/>
-            <text x="30" y="76" font-family="serif" font-size="4" fill="rgba(196,162,100,0.35)" text-anchor="middle">ENTRY</text>
-            <text x="30" y="82" font-family="serif" font-size="4" fill="rgba(196,162,100,0.35)" text-anchor="middle">CHAMBER</text>
-
-            <!-- Corridor E from entry -->
-            <rect x="52" y="76" width="18" height="8" fill="rgba(196,162,100,0.04)" stroke="rgba(196,162,100,0.12)" stroke-width="0.5"/>
-
-            <!-- Guard Post (CURRENT ROOM — highlighted) -->
-            <rect x="70" y="56" width="58" height="48" fill="rgba(196,162,100,0.09)" stroke="rgba(196,162,100,0.45)" stroke-width="1.5" rx="1"/>
-            <!-- Glow on current room -->
-            <rect x="70" y="56" width="58" height="48" fill="none" stroke="rgba(196,162,100,0.15)" stroke-width="4" rx="1"/>
-            <text x="99" y="70" font-family="serif" font-size="4.5" fill="rgba(196,162,100,0.5)" text-anchor="middle">GUARD POST</text>
-
-            <!-- North alcove off guard post -->
-            <rect x="86" y="46" width="26" height="10" fill="rgba(196,162,100,0.04)" stroke="rgba(196,162,100,0.15)" stroke-width="0.5"/>
-
-            <!-- Corridor S from guard post -->
-            <rect x="90" y="104" width="16" height="18" fill="rgba(30,25,20,0.5)" stroke="rgba(196,162,100,0.08)" stroke-width="0.5"/>
-            <rect x="90" y="104" width="16" height="18" fill="url(#fogGrad)"/>
-
-            <!-- Main Hall (foggy) -->
-            <rect x="66" y="120" width="64" height="40" fill="rgba(20,16,12,0.6)" stroke="rgba(196,162,100,0.1)" stroke-width="1" rx="1"/>
-            <rect x="66" y="120" width="64" height="40" fill="url(#fogGrad)"/>
-            <text x="98" y="142" font-family="serif" font-size="4" fill="rgba(196,162,100,0.2)" text-anchor="middle">???</text>
-
-            <!-- West section (unexplored) -->
-            <rect x="8" y="120" width="50" height="40" fill="rgba(12,10,7,0.85)" stroke="rgba(255,255,255,0.04)" stroke-width="0.5" rx="1"/>
-
-            <!-- East section -->
-            <rect x="138" y="56" width="52" height="48" fill="rgba(12,10,7,0.85)" stroke="rgba(255,255,255,0.04)" stroke-width="0.5" rx="1"/>
-
-            <!-- ── PLAYER TOKEN (you) ── -->
-            <circle cx="99" cy="85" r="5" fill="rgba(139,0,0,0.8)" stroke="rgba(200,80,80,0.6)" stroke-width="1.5"/>
-            <text id="miniMapPlayerInitial" x="99" y="88" font-family="serif" font-size="5" fill="rgba(255,200,200,0.9)" text-anchor="middle">?</text>
-
-            <!-- enemies populated dynamically by JS -->
+            <!-- populated dynamically by renderExplorationMap() -->
           </svg>
         </div>
       </div>
@@ -1645,7 +1603,7 @@
     return text
       .replace(/\[ROLL:[^\]]*\]/g,'').replace(/\[COMBAT_START\]/g,'').replace(/\[COMBAT_END\]/g,'')
       .replace(/\[ENEMY:[^\]]*\]/g,'').replace(/\[XP:[^\]]*\]/g,'').replace(/\[SCENE:[^\]]*\]/g,'')
-      .replace(/\[GOLD:[^\]]*\]/g,'').replace(/\[SHOP_OPEN\]/g,'')
+      .replace(/\[LOCATION:[^\]]*\]/g,'').replace(/\[GOLD:[^\]]*\]/g,'').replace(/\[SHOP_OPEN\]/g,'')
       .replace(/^#{1,3}\s+/gm,'')
       .replace(/^---+$/gm,'')
       .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')
@@ -1679,6 +1637,9 @@
     }
     // Open merchant shop: [SHOP_OPEN]
     if (text.includes('[SHOP_OPEN]')) window.openShopFromDM();
+    // Update mini-map location
+    const locM = text.match(/\[LOCATION:\s*([^\]]+)\]/);
+    if (locM) updateCurrentLocation(locM[1].trim());
   }
 
   function addMockDMResponse(action) {
@@ -2002,7 +1963,7 @@
           addToFeed('system', `Session resumed · ${scenario?.name || 'Campaign'}`);
           msgs.forEach(msg => {
             const meta = msg.metadata || {};
-            if      (msg.type === 'dm')     addToFeed('dm', formatDMText(msg.content));
+            if      (msg.type === 'dm')     { addToFeed('dm', formatDMText(msg.content)); processDirectives(msg.content); }
             else if (msg.type === 'action') addToFeed('action', msg.content, { name: meta.character_name || 'Player', cls: meta.character_cls || 'Adventurer' });
             else if (msg.type === 'system') addToFeed('system', msg.content);
           });
@@ -2107,92 +2068,93 @@
 
 <script>
 // ── MINI-MAP (table SVG) ──────────────────────────────────────────
-function buildMiniMap(sceneId) {
+let visitedLocations = [];
+let currentLocationName = '';
+
+function updateCurrentLocation(name) {
+  if (!name) return;
+  currentLocationName = name;
+  if (!visitedLocations.includes(name)) visitedLocations.push(name);
+  renderExplorationMap();
+}
+
+function renderExplorationMap() {
   const svg = document.getElementById('tableMiniMap');
   if (!svg) return;
+  const W = 198, H = 168;
+  const COLS = 2;
+  const RW = 80, RH = 32, GAP_X = 18, GAP_Y = 10;
+  const TOTAL_W = COLS * RW + (COLS - 1) * GAP_X;
+  const START_X = (W - TOTAL_W) / 2;
+  const START_Y = 12;
+  const playerInitial = (window.currentCharacter?.name || '?')[0].toUpperCase();
 
-  const SHARED_DEFS = `
+  let inner = '';
+  visitedLocations.forEach((loc, i) => {
+    const col = i % COLS;
+    const row = Math.floor(i / COLS);
+    const x = START_X + col * (RW + GAP_X);
+    const y = START_Y + row * (RH + GAP_Y);
+    const cx = x + RW / 2, cy = y + RH / 2;
+    const isCurrent = loc === currentLocationName;
+
+    // Connector line to previous room
+    if (i > 0) {
+      const pi = i - 1;
+      const pc = pi % COLS, pr = Math.floor(pi / COLS);
+      const px = START_X + pc * (RW + GAP_X) + RW / 2;
+      const py = START_Y + pr * (RH + GAP_Y) + RH / 2;
+      inner += `<line x1="${px}" y1="${py}" x2="${cx}" y2="${cy}" stroke="rgba(196,162,100,0.18)" stroke-width="0.8" stroke-dasharray="3,2"/>`;
+    }
+
+    const fillO = isCurrent ? '0.12' : '0.05';
+    const strokeO = isCurrent ? '0.55' : '0.18';
+    const sw = isCurrent ? '1.5' : '0.8';
+    const textO = isCurrent ? '0.65' : '0.28';
+    inner += `<rect x="${x}" y="${y}" width="${RW}" height="${RH}" fill="rgba(196,162,100,${fillO})" stroke="rgba(196,162,100,${strokeO})" stroke-width="${sw}" rx="2"/>`;
+    if (isCurrent) inner += `<rect x="${x}" y="${y}" width="${RW}" height="${RH}" fill="none" stroke="rgba(196,162,100,0.12)" stroke-width="5" rx="2"/>`;
+
+    // Label (up to 2 lines)
+    const words = loc.toUpperCase().split(' ');
+    if (words.length <= 2) {
+      inner += `<text x="${cx}" y="${cy + 2.5}" font-family="serif" font-size="5" fill="rgba(196,162,100,${textO})" text-anchor="middle">${loc.toUpperCase()}</text>`;
+    } else {
+      const mid = Math.ceil(words.length / 2);
+      inner += `<text x="${cx}" y="${cy - 1.5}" font-family="serif" font-size="4.5" fill="rgba(196,162,100,${textO})" text-anchor="middle">${words.slice(0,mid).join(' ')}</text>`;
+      inner += `<text x="${cx}" y="${cy + 6}" font-family="serif" font-size="4.5" fill="rgba(196,162,100,${textO})" text-anchor="middle">${words.slice(mid).join(' ')}</text>`;
+    }
+
+    // Player token on current room
+    if (isCurrent) {
+      inner += `<circle cx="${cx}" cy="${cy}" r="6" fill="rgba(139,0,0,0.85)" stroke="rgba(200,80,80,0.65)" stroke-width="1.5"/>`;
+      inner += `<text x="${cx}" y="${cy + 2}" font-family="serif" font-size="6" fill="rgba(255,200,200,0.95)" text-anchor="middle">${playerInitial}</text>`;
+    }
+  });
+
+  if (visitedLocations.length === 0) {
+    inner += `<text x="${W/2}" y="${H/2}" font-family="serif" font-size="5.5" fill="rgba(196,162,100,0.18)" text-anchor="middle">EXPLORING…</text>`;
+  }
+
+  // Legend
+  inner += `<circle cx="12" cy="${H-8}" r="3" fill="rgba(139,0,0,0.7)" stroke="rgba(200,80,80,0.5)" stroke-width="0.8"/>`;
+  inner += `<text x="17" y="${H-5}" font-family="serif" font-size="3.5" fill="rgba(196,162,100,0.3)">You</text>`;
+
+  svg.innerHTML = `
     <defs>
       <pattern id="grid" width="12" height="12" patternUnits="userSpaceOnUse">
-        <path d="M 12 0 L 0 0 0 12" fill="none" stroke="GRID_COLOR" stroke-width="0.5"/>
+        <path d="M 12 0 L 0 0 0 12" fill="none" stroke="rgba(196,162,100,0.04)" stroke-width="0.5"/>
       </pattern>
-      <radialGradient id="fogGrad" cx="50%" cy="50%" r="50%">
-        <stop offset="0%" stop-color="FOG_MID" stop-opacity="0.55"/>
-        <stop offset="100%" stop-color="FOG_MID" stop-opacity="0.88"/>
-      </radialGradient>
-    </defs>`;
+    </defs>
+    <rect width="${W}" height="${H}" fill="#0C0A07"/>
+    <rect width="${W}" height="${H}" fill="url(#grid)"/>
+    ${inner}`;
+}
 
-  if (sceneId === 'court') {
-    svg.innerHTML = SHARED_DEFS
-      .replace(/GRID_COLOR/g, 'rgba(100,140,200,0.05)')
-      .replace(/FOG_MID/g, '#080C14') + `
-      <rect width="198" height="168" fill="#090C16"/>
-      <rect width="198" height="168" fill="url(#grid)"/>
-      <!-- Entrance Hall (explored) -->
-      <rect x="8" y="100" width="40" height="40" fill="rgba(100,140,200,0.07)" stroke="rgba(100,140,200,0.22)" stroke-width="1" rx="1"/>
-      <text x="28" y="120" font-family="serif" font-size="3.5" fill="rgba(120,160,220,0.35)" text-anchor="middle">ENTRANCE</text>
-      <!-- Corridor (explored) -->
-      <rect x="48" y="110" width="24" height="14" fill="rgba(100,140,200,0.05)" stroke="rgba(100,140,200,0.1)" stroke-width="0.5"/>
-      <!-- Grand Ballroom (CURRENT) -->
-      <rect x="72" y="44" width="90" height="84" fill="rgba(80,120,200,0.09)" stroke="rgba(120,160,220,0.5)" stroke-width="1.5" rx="1"/>
-      <rect x="72" y="44" width="90" height="84" fill="none" stroke="rgba(100,150,220,0.14)" stroke-width="4" rx="1"/>
-      <text x="117" y="60" font-family="serif" font-size="4.5" fill="rgba(140,180,240,0.5)" text-anchor="middle">GRAND BALLROOM</text>
-      <!-- West Gallery (explored) -->
-      <rect x="14" y="44" width="56" height="52" fill="rgba(100,140,200,0.06)" stroke="rgba(100,140,200,0.18)" stroke-width="1" rx="1"/>
-      <text x="42" y="72" font-family="serif" font-size="3.5" fill="rgba(120,160,220,0.3)" text-anchor="middle">W. GALLERY</text>
-      <!-- East Alcove (fogged) -->
-      <rect x="164" y="44" width="26" height="36" fill="rgba(8,10,18,0.75)" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>
-      <rect x="164" y="44" width="26" height="36" fill="url(#fogGrad)"/>
-      <!-- Service Corridor (fogged) -->
-      <rect x="164" y="82" width="26" height="50" fill="rgba(8,10,18,0.75)" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>
-      <rect x="164" y="82" width="26" height="50" fill="url(#fogGrad)"/>
-      <!-- Stage (fogged) -->
-      <rect x="86" y="132" width="62" height="26" fill="rgba(8,10,18,0.75)" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>
-      <rect x="86" y="132" width="62" height="26" fill="url(#fogGrad)"/>
-      <text x="117" y="147" font-family="serif" font-size="4" fill="rgba(120,160,220,0.18)" text-anchor="middle">???</text>
-      <!-- Player token (you) -->
-      <circle cx="110" cy="90" r="5" fill="rgba(139,0,0,0.8)" stroke="rgba(200,80,80,0.6)" stroke-width="1.5"/>
-      <text id="miniMapPlayerInitial" x="110" y="93" font-family="serif" font-size="5" fill="rgba(255,200,200,0.9)" text-anchor="middle">?</text>
-      <!-- Legend -->
-      <circle cx="12" cy="158" r="3" fill="rgba(139,0,0,0.7)" stroke="rgba(200,80,80,0.5)" stroke-width="0.8"/>
-      <text x="17" y="161" font-family="serif" font-size="3.5" fill="rgba(120,160,220,0.3)">You</text>
-      <text x="145" y="161" font-family="serif" font-size="3.5" fill="rgba(120,160,220,0.22)">● You are here</text>`;
+function buildMiniMap(sceneId) {
+  // Renders empty map on load; fills in as DM emits [LOCATION:] directives
+  renderExplorationMap();
 
-  } else if (sceneId === 'dark') {
-    svg.innerHTML = SHARED_DEFS
-      .replace(/GRID_COLOR/g, 'rgba(70,100,50,0.05)')
-      .replace(/FOG_MID/g, '#060704') + `
-      <rect width="198" height="168" fill="#080704"/>
-      <rect width="198" height="168" fill="url(#grid)"/>
-      <!-- North Road (explored) -->
-      <rect x="88" y="8" width="18" height="44" fill="rgba(70,100,50,0.07)" stroke="rgba(90,130,60,0.2)" stroke-width="0.5"/>
-      <!-- The Inn (explored) -->
-      <rect x="8" y="48" width="44" height="62" fill="rgba(70,100,50,0.07)" stroke="rgba(90,130,60,0.22)" stroke-width="1" rx="1"/>
-      <text x="30" y="70" font-family="serif" font-size="3.5" fill="rgba(100,150,70,0.35)" text-anchor="middle">THE INN</text>
-      <!-- Town Square (CURRENT) -->
-      <rect x="56" y="48" width="92" height="68" fill="rgba(60,90,40,0.09)" stroke="rgba(90,150,60,0.45)" stroke-width="1.5" rx="1"/>
-      <rect x="56" y="48" width="92" height="68" fill="none" stroke="rgba(80,130,50,0.14)" stroke-width="4" rx="1"/>
-      <text x="102" y="64" font-family="serif" font-size="4.5" fill="rgba(100,160,70,0.5)" text-anchor="middle">TOWN SQUARE</text>
-      <!-- Church/Ruins (fogged) -->
-      <rect x="152" y="48" width="38" height="52" fill="rgba(6,7,4,0.8)" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>
-      <rect x="152" y="48" width="38" height="52" fill="url(#fogGrad)"/>
-      <!-- Market Stalls (fogged) -->
-      <rect x="56" y="120" width="72" height="30" fill="rgba(6,7,4,0.8)" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>
-      <rect x="56" y="120" width="72" height="30" fill="url(#fogGrad)"/>
-      <text x="92" y="137" font-family="serif" font-size="4" fill="rgba(90,140,60,0.18)" text-anchor="middle">???</text>
-      <!-- Fields (fogged) -->
-      <rect x="8" y="114" width="44" height="40" fill="rgba(6,7,4,0.8)" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>
-      <rect x="8" y="114" width="44" height="40" fill="url(#fogGrad)"/>
-      <!-- Player token (you) -->
-      <circle cx="96" cy="88" r="5" fill="rgba(139,0,0,0.8)" stroke="rgba(200,80,80,0.6)" stroke-width="1.5"/>
-      <text id="miniMapPlayerInitial" x="96" y="91" font-family="serif" font-size="5" fill="rgba(255,200,200,0.9)" text-anchor="middle">?</text>
-      <!-- Legend -->
-      <circle cx="12" cy="158" r="3" fill="rgba(139,0,0,0.7)" stroke="rgba(200,80,80,0.5)" stroke-width="0.8"/>
-      <text x="17" y="161" font-family="serif" font-size="3.5" fill="rgba(100,150,70,0.3)">You</text>
-      <text x="145" y="161" font-family="serif" font-size="3.5" fill="rgba(90,130,60,0.22)">● You are here</text>`;
 
-  }
-  // vault: SVG content already in HTML — no change needed
 }
 </script>
 
