@@ -2170,8 +2170,11 @@
         turn_number: currentTurnNumber,
       });
 
-      // Check if all players have now submitted
-      await checkAllSubmitted();
+      // Only the host fires the DM — avoids race condition where both clients call fireCombinedDM
+      if (currentUser.id === sessionHostId) {
+        await checkAllSubmitted();
+      }
+      // Non-host just waits; the DM message arriving via Realtime will reset their state
     }
   }
 
@@ -2696,9 +2699,28 @@
           if (msg.type === 'action' && msg.author_id === currentUser?.id) return;
           if (msg.type === 'dm'     && isDMThinking) return;
           const meta = msg.metadata || {};
-          if      (msg.type === 'action') addToFeed('action', msg.content, { name: meta.character_name || 'Player', cls: meta.character_cls || 'Adventurer' });
-          else if (msg.type === 'dm')     { addToFeed('dm', formatDMText(msg.content)); processDirectives(msg.content); }
-          else if (msg.type === 'system') addToFeed('system', msg.content);
+          if (msg.type === 'action') {
+            addToFeed('action', msg.content, { name: meta.character_name || 'Player', cls: meta.character_cls || 'Adventurer' });
+          } else if (msg.type === 'dm') {
+            addToFeed('dm', formatDMText(msg.content));
+            processDirectives(msg.content);
+            // Non-host: reset multiplayer waiting state now that the DM has responded
+            if (currentUser.id !== sessionHostId) {
+              el('mpWaitingPanel').style.display = 'none';
+              el('waitingPanel').style.display   = 'none';
+              el('yourTurnPanel').style.display  = '';
+              el('submitBtn').disabled = false;
+              myActionSubmitted = false;
+              submittedPlayers  = {};
+              currentTurnNumber++;
+            }
+            // Sync scene image for non-host if saved in message metadata
+            if (meta.scene_image && currentUser.id !== sessionHostId) {
+              showSceneImage(meta.scene_image, meta.scene_label || '');
+            }
+          } else if (msg.type === 'system') {
+            addToFeed('system', msg.content);
+          }
         })
         .on('postgres_changes', {
           event: 'INSERT', schema: 'public', table: 'rpg_turn_actions',
@@ -2709,8 +2731,8 @@
           // Mark that player as submitted
           submittedPlayers[ta.user_id] = { character_name: ta.character_name };
           if (el('mpWaitingPanel').style.display !== 'none') renderMPWaitingPanel();
-          // If I've already submitted and now everyone is in, I fire (if I'm host or last)
-          if (myActionSubmitted) checkAllSubmitted();
+          // Only the host fires the combined DM to avoid race conditions
+          if (myActionSubmitted && currentUser.id === sessionHostId) checkAllSubmitted();
         })
         .on('postgres_changes', {
           event: 'UPDATE', schema: 'public', table: 'rpg_session_players',
@@ -2730,6 +2752,17 @@
           sbClient.from('rpg_session_players').select('*', { count: 'exact', head: true })
             .eq('session_id', sessionId).eq('status', 'joined')
             .then(({ count }) => { if (count) totalActivePlayers = count; });
+        })
+        .on('postgres_changes', {
+          event: 'UPDATE', schema: 'public', table: 'rpg_game_state',
+          filter: `session_id=eq.${sessionId}`,
+        }, payload => {
+          // Sync scene image to non-host players when it updates
+          const gs = payload.new;
+          const gsRes = gs.resources || {};
+          if (gsRes.last_scene_image && currentUser.id !== sessionHostId) {
+            showSceneImage(gsRes.last_scene_image, gsRes.last_scene_label || '');
+          }
         })
         .subscribe();
     }
