@@ -1052,6 +1052,12 @@
     <button onclick="shareInviteLink()" id="shareBtn" title="Copy invite link to share with friends" style="background:none;border:1px solid rgba(196,162,100,0.18);border-radius:2px;color:var(--dim);cursor:pointer;padding:2px 8px;font-family:'Cinzel',serif;font-size:0.46rem;letter-spacing:0.15em;text-transform:uppercase;transition:color 0.15s,border-color 0.15s;" onmouseover="this.style.color='var(--accent)';this.style.borderColor='rgba(196,162,100,0.4)'" onmouseout="this.style.color='var(--dim)';this.style.borderColor='rgba(196,162,100,0.18)'">Share</button>
     <button onclick="openLFGModal()" id="lfgBtn" title="Post to Discord looking-for-players channel" style="background:none;border:1px solid rgba(88,101,242,0.3);border-radius:2px;color:rgba(88,101,242,0.65);cursor:pointer;padding:2px 8px;font-family:'Cinzel',serif;font-size:0.46rem;letter-spacing:0.15em;text-transform:uppercase;transition:color 0.15s,border-color 0.15s,background 0.15s;" onmouseover="this.style.color='rgba(130,145,255,0.95)';this.style.borderColor='rgba(88,101,242,0.6)';this.style.background='rgba(88,101,242,0.06)'" onmouseout="this.style.color='rgba(88,101,242,0.65)';this.style.borderColor='rgba(88,101,242,0.3)';this.style.background='none'">⚔ Find Players</button>
     <button id="asyncToggleBtn" onclick="toggleAsyncMode()" title="Async mode: players can submit when available, no need to be online simultaneously" style="display:none;background:none;border:1px solid rgba(255,255,255,0.08);border-radius:2px;color:var(--dim);cursor:pointer;padding:2px 8px;font-family:'Cinzel',serif;font-size:0.46rem;letter-spacing:0.15em;text-transform:uppercase;transition:color 0.15s,border-color 0.15s,background 0.15s;">⏰ Async</button>
+    <select id="asyncTimeoutSel" onchange="setAsyncTimeout(this.value)" title="Auto-proceed: kick absent players after this many hours" style="display:none;background:rgba(10,8,6,0.9);border:1px solid rgba(196,162,100,0.2);border-radius:2px;color:rgba(196,162,100,0.65);cursor:pointer;padding:2px 6px;font-family:'Cinzel',serif;font-size:0.44rem;letter-spacing:0.1em;text-transform:uppercase;">
+      <option value="12">12h</option>
+      <option value="24" selected>24h</option>
+      <option value="48">48h</option>
+      <option value="72">72h</option>
+    </select>
   </div>
   <div class="header-spacer"></div>
   <div class="turn-counter">
@@ -2407,23 +2413,45 @@
     }
   }
 
+  async function kickPlayer(userId, playerName) {
+    if (sessionId && window.sbClient) {
+      await sbClient.from('rpg_session_players')
+        .update({ status: 'away' })
+        .eq('session_id', sessionId)
+        .eq('user_id', userId)
+        .catch(() => {});
+    }
+    OTHER_PLAYERS = OTHER_PLAYERS.filter(p => p.user_id !== userId);
+    totalActivePlayers = Math.max(1, totalActivePlayers - 1);
+    delete submittedPlayers[userId];
+    renderMPWaitingPanel();
+    addToFeed('system', `⚔ ${playerName} has been removed from the party.`);
+    if (myActionSubmitted && currentUser?.id === sessionHostId) {
+      await checkAllSubmitted();
+    }
+  }
+
   function renderMPWaitingPanel() {
     const panel = el('mpWaitingPanel');
     if (!panel) return;
     const allPlayers = [
-      { id: currentUser?.id, name: character?.name?.split(' ')[0] || 'You' },
-      ...OTHER_PLAYERS.map(p => ({ id: p.user_id, name: p.character_name || p.name })),
+      { id: currentUser?.id, name: character?.name?.split(' ')[0] || 'You', isSelf: true },
+      ...OTHER_PLAYERS.map(p => ({ id: p.user_id, name: p.character_name || p.name, isSelf: false })),
     ];
+    const isHost = currentUser?.id === sessionHostId;
     const rows = allPlayers.map(p => {
       const done = !!submittedPlayers[p.id];
-      return `<div class="mp-player-row">
+      const kickBtn = isHost && !p.isSelf && !done
+        ? `<button onclick="kickPlayer('${p.id}','${(p.name||'Player').replace(/'/g,"\\'")}'" title="Remove ${p.name} from party" style="margin-left:auto;background:none;border:1px solid rgba(139,0,0,0.3);border-radius:2px;color:rgba(180,80,80,0.6);cursor:pointer;padding:1px 6px;font-size:0.55rem;line-height:1.4;transition:color 0.15s,border-color 0.15s" onmouseover="this.style.color='rgba(220,80,80,0.9)';this.style.borderColor='rgba(180,40,40,0.6)'" onmouseout="this.style.color='rgba(180,80,80,0.6)';this.style.borderColor='rgba(139,0,0,0.3)'">✕ Kick</button>`
+        : '';
+      return `<div class="mp-player-row" style="gap:8px">
         <div class="mp-av ${done ? 'done' : 'waiting'}">${(p.name||'?')[0].toUpperCase()}</div>
         <span class="mp-name">${p.name}</span>
         ${done ? '<span class="mp-check">✓ Ready</span>' : '<span class="mp-check" style="color:var(--dim);opacity:0.4">…</span>'}
+        ${kickBtn}
       </div>`;
     }).join('');
     const allReady = allPlayers.every(p => submittedPlayers[p.id]);
-    const isHost   = currentUser?.id === sessionHostId;
     const pending  = allPlayers.filter(p => !submittedPlayers[p.id]);
     panel.innerHTML = `
       <div class="mp-waiting-title">Waiting for the party…</div>
@@ -2917,6 +2945,10 @@
       if (currentUser.id === sessionHostId) {
         window._showAsyncToggle?.();
         if (gsRes.async_mode) { asyncMode = true; window.toggleAsyncMode?.(); }
+        if (gsRes.async_timeout_hours) {
+          const sel = document.getElementById('asyncTimeoutSel');
+          if (sel) sel.value = gsRes.async_timeout_hours;
+        }
       }
       // Build OTHER_PLAYERS list
       OTHER_PLAYERS = (sPlayers || []).filter(p => p.user_id !== currentUser?.id).map(p => ({
@@ -3591,18 +3623,21 @@ function buildMiniMap(sceneId) {
 function toggleAsyncMode() {
   asyncMode = !asyncMode;
   const btn = document.getElementById('asyncToggleBtn');
+  const sel = document.getElementById('asyncTimeoutSel');
   if (!btn) return;
   if (asyncMode) {
     btn.style.color = 'rgba(196,162,100,0.85)';
     btn.style.borderColor = 'rgba(196,162,100,0.3)';
     btn.style.background = 'rgba(196,162,100,0.06)';
     btn.title = 'Async mode ON — players can submit when available';
+    if (sel) sel.style.display = '';
     addToFeed('system', '⏰ Async mode enabled — players can submit their actions whenever they\'re ready. No need to be online at the same time.');
   } else {
     btn.style.color = 'var(--dim)';
     btn.style.borderColor = 'rgba(255,255,255,0.08)';
     btn.style.background = 'none';
     btn.title = 'Async mode: players can submit when available, no need to be online simultaneously';
+    if (sel) sel.style.display = 'none';
     addToFeed('system', '⏰ Async mode disabled — back to real-time play.');
   }
   // Persist to DB
@@ -3611,6 +3646,16 @@ function toggleAsyncMode() {
       .update({ resources: { ...gameStateResources, async_mode: asyncMode }, updated_at: new Date().toISOString() })
       .eq('session_id', sessionId).catch(() => {});
     gameStateResources = { ...gameStateResources, async_mode: asyncMode };
+  }
+}
+
+function setAsyncTimeout(hours) {
+  const h = parseInt(hours) || 24;
+  gameStateResources = { ...gameStateResources, async_timeout_hours: h };
+  if (window.sbClient && sessionId) {
+    sbClient.from('rpg_game_state')
+      .update({ resources: gameStateResources, updated_at: new Date().toISOString() })
+      .eq('session_id', sessionId).catch(() => {});
   }
 }
 
@@ -3623,12 +3668,25 @@ window._showAsyncToggle = function() {
 // Check on load if all players have submitted an async turn (host only)
 window._checkAsyncPendingTurn = async function() {
   if (!sessionId || !window.sbClient) return;
-  const { count } = await sbClient.from('rpg_turn_actions')
-    .select('*', { count: 'exact', head: true })
+  const { data: turnRows, count } = await sbClient.from('rpg_turn_actions')
+    .select('created_at', { count: 'exact' })
     .eq('session_id', sessionId)
-    .eq('turn_number', window._currentTurnNumber || 0);
+    .eq('turn_number', window._currentTurnNumber || 0)
+    .order('created_at', { ascending: true })
+    .limit(1);
   if (count >= totalActivePlayers && count > 0) {
     addToFeed('system', `⏰ All ${count} players have submitted — ready to resolve the turn. Click the Resolve button when ready.`);
+    return;
+  }
+  // Auto-timeout: if at least one player has submitted and the timeout window has elapsed, proceed without the rest
+  if (count > 0 && turnRows?.length) {
+    const oldestMs = new Date(turnRows[0].created_at).getTime();
+    const elapsedH = (Date.now() - oldestMs) / 3_600_000;
+    const timeoutH = gameStateResources?.async_timeout_hours ?? 24;
+    if (elapsedH >= timeoutH) {
+      addToFeed('system', `⏰ Async timeout reached (${timeoutH}h) — proceeding without missing players.`);
+      await proceedSolo();
+    }
   }
 };
 </script>
