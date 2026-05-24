@@ -725,7 +725,10 @@
     .sheet-save.proficient .sheet-save-bullet{color:var(--accent);}
     .sheet-skills-grid{display:flex;flex-direction:column;gap:4px;}
     .sheet-skill{display:flex;align-items:center;gap:5px;font-size:0.82rem;color:var(--dim);}
+    .sheet-skill.proficient{color:var(--text);}
+    .sheet-skill.proficient .sheet-save-bullet{color:var(--accent);}
     .sheet-skill-name{font-size:0.82rem;color:var(--dim);}
+    .sheet-skill.proficient .sheet-skill-name{color:var(--text);}
     .sheet-rest-row{display:flex;gap:8px;padding-top:11px;border-top:1px solid rgba(255,255,255,0.05);}
     .rest-btn{flex:1;padding:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:2px;font-family:'Cinzel',serif;font-size:0.68rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--dim);cursor:pointer;transition:background 0.15s,color 0.15s;}
     .rest-btn:hover{background:rgba(196,162,100,0.08);color:var(--accent);border-color:rgba(196,162,100,0.25);}
@@ -1059,9 +1062,9 @@
   <button class="sheet-btn" onclick="toggleSheet()">📜 Character</button>
   <button class="map-btn" onclick="toggleMap()">🗺 Map</button>
 
-  <div class="header-credit">
+  <div class="header-credit" id="headerCredit">
     <div class="credit-dot"></div>
-    1 Credit Active
+    <span id="creditLabel">— Credits</span>
   </div>
 </header>
 
@@ -1110,6 +1113,7 @@
     <!-- Vision window (always visible — placeholder until Shared Vision is cast) -->
     <div class="scene-image-wrap" id="sceneImageWrap">
       <img class="scene-image" id="sceneImage" src="" alt="Scene" style="opacity:0">
+      <div id="sceneImageLabel" style="position:absolute;bottom:32px;left:0;right:0;text-align:center;font-family:'Cinzel',serif;font-size:0.52rem;letter-spacing:0.2em;text-transform:uppercase;color:rgba(196,162,100,0.55);pointer-events:none;"></div>
       <div class="scene-image-loading" id="sceneImageLoading" style="display:none">Rendering vision…</div>
       <div class="scene-image-placeholder" id="sceneImagePlaceholder">
         <span class="scene-image-placeholder-glyph">✦</span>
@@ -1418,11 +1422,23 @@
   function initResources() {
     if (!character) return;
     const saved = JSON.parse(localStorage.getItem('uwt_res_' + character.id) || '{}');
+    // Also merge any DB-persisted resources (overrides localStorage — more reliable across devices)
+    const dbSaved = gameStateResources['res_' + character.id] || {};
+    const merged = { ...saved, ...dbSaved };
     allResources().forEach(r => {
       const max = r.max(character);
-      resources[r.key] = saved[r.key] !== undefined ? Math.min(saved[r.key], max) : max;
+      resources[r.key] = merged[r.key] !== undefined ? Math.min(merged[r.key], max) : max;
     });
     renderResources();
+  }
+
+  function persistResources() {
+    if (!sessionId || !window.sbClient || !character?.id) return;
+    const key = 'res_' + character.id;
+    gameStateResources = { ...gameStateResources, [key]: resources };
+    sbClient.from('rpg_game_state')
+      .update({ resources: gameStateResources, updated_at: new Date().toISOString() })
+      .eq('session_id', sessionId).catch(() => {});
   }
 
   function useResource(key) {
@@ -1430,6 +1446,7 @@
     resources[key]--;
     localStorage.setItem('uwt_res_' + (character?.id || 'x'), JSON.stringify(resources));
     renderResources();
+    persistResources();
   }
 
   function restoreResources(restType) {
@@ -1441,6 +1458,7 @@
     });
     localStorage.setItem('uwt_res_' + character.id, JSON.stringify(resources));
     renderResources();
+    persistResources();
     addToFeed('system', restType === 'long' ? '🌙 Long rest — all resources restored.' : '⏱ Short rest — short-rest resources restored.');
   }
 
@@ -1483,7 +1501,14 @@
   }
 
   // ── HP / TURN TRACKING ────────────────────────────────────────────
-  let currentHP = character?.hp || 10;
+  // max_hp is stored separately; character.hp tracks current HP after damage.
+  // If max_hp missing (old characters), initialise it from base hp before any damage this session.
+  if (character && !character.max_hp) {
+    character.max_hp = character.hp || 10;
+    if (window.sbClient && character.id)
+      sbClient.from('rpg_characters').update({ max_hp: character.max_hp }).eq('id', character.id).catch(() => {});
+  }
+  let currentHP = character?.hp || character?.max_hp || 10;
   let turnCount = 0;
 
   const TURNS_PER_CREDIT = 60;
@@ -1583,6 +1608,8 @@
     }
     sessionStorage.removeItem('uwt_session_id');
     sessionStorage.removeItem('uwt_session_code');
+    localStorage.removeItem('uwt_session_id');
+    localStorage.removeItem('uwt_session_code');
     window.location.href = 'characters.html';
   }
 
@@ -1893,6 +1920,8 @@
       addToFeed('system', `⭐ ${character.name} reached Level ${characterLevel}!`);
       if (el('turnChar')) el('turnChar').textContent = `${character.name} · ${cap(character.cls)} Lv ${characterLevel}`;
       if (window.sbClient && character.id) sbClient.from('rpg_characters').update({ xp: characterXP, level: characterLevel }).eq('id', character.id);
+    } else if (window.sbClient && character.id) {
+      sbClient.from('rpg_characters').update({ xp: characterXP }).eq('id', character.id).catch(() => {});
     }
     updateXPBar();
   }
@@ -1902,6 +1931,7 @@
   let ALLIES  = []; // { name, emoji, hidden }
   let NPCS    = []; // { name, emoji } — hostiles not yet in formal combat
   let INIT_ORDER = [];
+  let sceneMode = 'explore'; // overridden by [SCENE_MODE:social|combat|explore] directive
   window.getEnemies = () => ENEMIES;
   window.getAllies   = () => ALLIES;
   window.getNPCs    = () => NPCS;
@@ -1930,7 +1960,15 @@
     const dexMod  = character ? statMod(statVal(character.stats,'dex')) : 0;
     const order   = [{ name:myFirst, icon:myGlyph, init:Math.floor(Math.random()*20)+1+dexMod, bg:'rgba(139,0,0,0.22)', border:'rgba(139,0,0,0.6)', player:true }];
     ENEMIES.forEach(e => order.push({ name:e.name, icon:e.emoji||'👾', init:Math.floor(Math.random()*15)+3, bg:'rgba(100,0,0,0.15)', border:'rgba(150,40,40,0.35)', player:false }));
-    return order.sort((a,b) => b.init - a.init);
+    const sorted = order.sort((a,b) => b.init - a.init);
+    // Persist so all clients share the same roll (host is authoritative)
+    if (sessionId && window.sbClient) {
+      sbClient.from('rpg_game_state')
+        .update({ resources: { ...gameStateResources, init_order: sorted }, updated_at: new Date().toISOString() })
+        .eq('session_id', sessionId).catch(() => {});
+      gameStateResources = { ...gameStateResources, init_order: sorted };
+    }
+    return sorted;
   }
 
   function renderInitTracker() {
@@ -1966,7 +2004,8 @@
       const dot = el('encounterDot'); const lbl = el('encounterLabel');
       if (dot) { dot.style.background='rgba(60,200,60,0.7)'; dot.style.boxShadow='0 0 6px rgba(60,200,60,0.5)'; dot.style.animation='none'; }
       if (lbl) lbl.textContent = 'Combat · Victory!';
-      const xp = ENEMIES.reduce((s,e) => s+(e.xp||50), 0);
+      // XP from directive if provided; otherwise estimate from max HP (rough CR proxy)
+      const xp = ENEMIES.reduce((s,e) => s+(e.xp ?? Math.max(10, Math.round(e.maxHp * 2.5))), 0);
       awardXP(xp);
     }
     if (window.updateMapEnemies) window.updateMapEnemies();
@@ -1975,6 +2014,12 @@
   function changeEnemyHp(idx, delta) {
     ENEMIES[idx].hp = Math.min(ENEMIES[idx].maxHp, Math.max(0, ENEMIES[idx].hp + delta));
     renderEnemies();
+    // Persist to DB so all clients stay in sync
+    if (sessionId && window.sbClient) {
+      sbClient.from('rpg_game_state')
+        .update({ enemies: ENEMIES, updated_at: new Date().toISOString() })
+        .eq('session_id', sessionId).catch(() => {});
+    }
   }
 
   // ── FEED HELPERS ──────────────────────────────────────────────────
@@ -2031,7 +2076,7 @@
           session_summary: sessionSummary || '',
           character: character ? {
             id: character.id, name: character.name, race: character.race, cls: character.cls,
-            level: character.level||1, hp: currentHP, max_hp: character.max_hp||character.hp||10,
+            level: character.level||1, hp: currentHP, max_hp: character.max_hp||10,
             gold: characterGold,
             backstory: character.backstory || '',
             stats: { str: statVal(character.stats,'str'), dex: statVal(character.stats,'dex'), con: statVal(character.stats,'con'), int: statVal(character.stats,'int'), wis: statVal(character.stats,'wis'), cha: statVal(character.stats,'cha') },
@@ -2091,8 +2136,14 @@
     } finally {
       isDMThinking = false;
       el('submitBtn').disabled = false;
-      el('yourTurnPanel').style.display = '';
-      el('waitingPanel').style.display  = 'none';
+      // In multiplayer the host fires the DM; non-host turn panels are reset via Realtime.
+      // Only re-show yourTurnPanel for solo sessions or the non-host player.
+      const isMultiplayer = totalActivePlayers > 1;
+      const isHostFiring  = currentUser?.id === sessionHostId;
+      if (!isMultiplayer || !isHostFiring) {
+        el('yourTurnPanel').style.display = '';
+        el('waitingPanel').style.display  = 'none';
+      }
     }
   }
 
@@ -2101,8 +2152,8 @@
       .replace(/\[ROLL:[^\]]*\]/g,'').replace(/\[COMBAT_START\]/g,'').replace(/\[COMBAT_END\]/g,'')
       .replace(/\[ENEMY:[^\]]*\]/g,'').replace(/\[XP:[^\]]*\]/g,'').replace(/\[SCENE:[^\]]*\]/g,'')
       .replace(/\[LOCATION:[^\]]*\]/g,'').replace(/\[GOLD:[^\]]*\]/g,'').replace(/\[SHOP_OPEN\]/g,'')
-      .replace(/\[CLUE:[^\]]*\]/g,'')
-      .replace(/\[PRIVATE_HINT:[^\]]*\]/g,'')
+      .replace(/\[CLUE:[\s\S]*?\]/g,'')
+      .replace(/\[PRIVATE_HINT:[\s\S]*?\]/g,'')
       .replace(/^#{1,3}\s+/gm,'')
       .replace(/^---+$/gm,'')
       .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')
@@ -2123,21 +2174,23 @@
       renderEnemies(); renderInitTracker();
     }
     let anyEnemy = false;
-    for (const m of text.matchAll(/\[ENEMY:\s*([^,\]]+),\s*(\d+),\s*(\d+),\s*([^\]]+)\]/g)) {
-      ENEMIES.push({ name:m[1].trim(), hp:parseInt(m[2]), maxHp:parseInt(m[2]), ac:parseInt(m[3]), emoji:m[4].trim() });
+    for (const m of text.matchAll(/\[ENEMY:\s*([^,\]]+),\s*(\d+),\s*(\d+),\s*([^,\]]+)(?:,\s*(\d+))?\]/g)) {
+      ENEMIES.push({ name:m[1].trim(), hp:parseInt(m[2]), maxHp:parseInt(m[2]), ac:parseInt(m[3]), emoji:m[4].trim(), xp:m[5]?parseInt(m[5]):null });
       anyEnemy = true;
     }
     if (anyEnemy) { INIT_ORDER = buildInitOrder(); currentInitIdx = 0; renderInitTracker(); renderEnemies(); }
-    // Allies
-    for (const m of text.matchAll(/\[ALLY:\s*([^,\]]+),\s*([^,\]]+?)(?:,\s*(hidden))?\]/gi)) {
-      if (!ALLIES.find(a => a.name === m[1].trim())) { ALLIES.push({ name: m[1].trim(), emoji: m[2].trim(), hidden: !!m[3] }); window.updateMapAllies?.(); }
+    // Allies — skip during history restore to avoid ghost allies from old sessions
+    if (!isRestoringHistory) {
+      for (const m of text.matchAll(/\[ALLY:\s*([^,\]]+),\s*([^,\]]+?)(?:,\s*(hidden))?\]/gi)) {
+        if (!ALLIES.find(a => a.name === m[1].trim())) { ALLIES.push({ name: m[1].trim(), emoji: m[2].trim(), hidden: !!m[3] }); window.updateMapAllies?.(); }
+      }
+      for (const m of text.matchAll(/\[ALLY_REVEAL:\s*([^\]]+)\]/gi)) { window.revealAlly?.(m[1].trim()); }
+      // NPCs
+      for (const m of text.matchAll(/\[NPC:\s*([^,\]]+),\s*([^\]]+)\]/gi)) {
+        if (!NPCS.find(n => n.name === m[1].trim())) { NPCS.push({ name: m[1].trim(), emoji: m[2].trim() }); window.updateMapNPCs?.(); }
+      }
+      for (const m of text.matchAll(/\[NPC_REMOVE:\s*([^\]]+)\]/gi)) { window.removeNPC?.(m[1].trim()); }
     }
-    for (const m of text.matchAll(/\[ALLY_REVEAL:\s*([^\]]+)\]/gi)) { window.revealAlly?.(m[1].trim()); }
-    // NPCs
-    for (const m of text.matchAll(/\[NPC:\s*([^,\]]+),\s*([^\]]+)\]/gi)) {
-      if (!NPCS.find(n => n.name === m[1].trim())) { NPCS.push({ name: m[1].trim(), emoji: m[2].trim() }); window.updateMapNPCs?.(); }
-    }
-    for (const m of text.matchAll(/\[NPC_REMOVE:\s*([^\]]+)\]/gi)) { window.removeNPC?.(m[1].trim()); }
     const rollM = text.match(/\[ROLL:\s*([^,\]]+),\s*(\d+),\s*([^\]]+)\]/);
     if (rollM && !isRestoringHistory) showDiceOverlay(rollM[1].trim(), parseInt(rollM[2]), rollM[3].trim());
     const xpM = text.match(/\[XP:\s*(\d+)\]/);
@@ -2151,6 +2204,9 @@
     // Update mini-map location
     const locM = text.match(/\[LOCATION:\s*([^\]]+)\]/);
     if (locM) updateCurrentLocation(locM[1].trim());
+    // Scene mode for ideas context: [SCENE_MODE:social|explore|combat]
+    const modeM = text.match(/\[SCENE_MODE:\s*(social|explore|combat)\]/i);
+    if (modeM) sceneMode = modeM[1].toLowerCase();
     // Private clues via Discord DM
     if (!isRestoringHistory) {
       for (const m of text.matchAll(/\[CLUE:\s*([^\]]+)\]/g)) {
@@ -2207,13 +2263,19 @@
         body: JSON.stringify({ message: clueText, character_name: charName, campaign_name: campaignName }),
       });
 
+      const feed = el('feed');
       if (resp.ok) {
-        // Show a subtle in-feed notification
+        const result = await resp.json().catch(() => ({}));
         const note = document.createElement('div');
         note.className = 'msg-system';
-        note.style.cssText = 'color:rgba(88,101,242,0.6);font-size:0.72rem;font-style:italic;';
-        note.textContent = '📨 The Dungeon Master passes you a private note — check your Discord.';
-        const feed = el('feed');
+        note.style.cssText = 'font-size:0.72rem;font-style:italic;';
+        if (result.ok === false && result.reason === 'Discord not connected') {
+          note.style.color = 'rgba(200,120,60,0.7)';
+          note.textContent = '📨 The DM sent you a private hint — link your Discord in your profile to receive it.';
+        } else {
+          note.style.color = 'rgba(88,101,242,0.6)';
+          note.textContent = '📨 The Dungeon Master passes you a private note — check your Discord.';
+        }
         if (feed) { feed.appendChild(note); feed.scrollTop = feed.scrollHeight; }
       }
     } catch {}
@@ -2301,7 +2363,7 @@
         character_cls:  character?.cls  || '',
         character_data: character ? {
           id: character.id, name: character.name, race: character.race, cls: character.cls,
-          level: character.level||1, hp: currentHP, max_hp: character.max_hp||character.hp||10,
+          level: character.level||1, hp: currentHP, max_hp: character.max_hp||10,
           gold: characterGold,
           stats: { str: statVal(character.stats,'str'), dex: statVal(character.stats,'dex'), con: statVal(character.stats,'con'), int: statVal(character.stats,'int'), wis: statVal(character.stats,'wis'), cha: statVal(character.stats,'cha') },
         } : {},
@@ -2385,8 +2447,21 @@
   }
 
   async function proceedSolo() {
-    // Host escapes multiplayer wait — fires DM with only the actions submitted so far
+    // Host escapes multiplayer wait — fires DM with only the actions submitted so far.
+    // Mark missing players as 'away' so the live count re-fetch doesn't restore them.
     totalActivePlayers = 1;
+    if (sessionId && window.sbClient) {
+      const submittedIds = Object.keys(submittedPlayers);
+      const allIds = [currentUser?.id, ...OTHER_PLAYERS.map(p => p.user_id)].filter(Boolean);
+      const missingIds = allIds.filter(id => !submittedIds.includes(id) && id !== currentUser?.id);
+      if (missingIds.length) {
+        sbClient.from('rpg_session_players')
+          .update({ status: 'away' })
+          .eq('session_id', sessionId)
+          .in('user_id', missingIds)
+          .catch(() => {});
+      }
+    }
     await fireCombinedDM();
   }
 
@@ -2401,7 +2476,7 @@
     const panel = el('ideasPanel');
     if (!panel) return;
     if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
-    const ctx  = ENEMIES.some(e => e.hp > 0) ? 'combat' : (scenario?.id === 'court' ? 'social' : 'explore');
+    const ctx  = ENEMIES.some(e => e.hp > 0) ? 'combat' : sceneMode;
     const list = IDEAS[ctx];
     panel.innerHTML = `<div class="ideas-header"><span>💡 Ideas — ${ctx}</span><button onclick="el('ideasPanel').style.display='none'" style="background:none;border:none;color:var(--dim);cursor:pointer">✕</button></div><div class="ideas-list">${list.map(t=>`<button class="idea-chip" onclick="useIdea(this.textContent.trim())">${t}</button>`).join('')}</div>`;
     panel.style.display = 'block';
@@ -2416,6 +2491,20 @@
   // ── CHARACTER SHEET ───────────────────────────────────────────────
   const SAVING_THROWS = { barbarian:['str','con'], fighter:['str','con'], paladin:['wis','cha'], ranger:['str','dex'], rogue:['dex','int'], wizard:['int','wis'], cleric:['wis','cha'], druid:['int','wis'], monk:['str','dex'], bard:['dex','cha'], sorcerer:['con','cha'], warlock:['wis','cha'] };
   const SKILLS = [{n:'Acrobatics',s:'dex'},{n:'Animal Handling',s:'wis'},{n:'Arcana',s:'int'},{n:'Athletics',s:'str'},{n:'Deception',s:'cha'},{n:'History',s:'int'},{n:'Insight',s:'wis'},{n:'Intimidation',s:'cha'},{n:'Investigation',s:'int'},{n:'Medicine',s:'wis'},{n:'Nature',s:'int'},{n:'Perception',s:'wis'},{n:'Performance',s:'cha'},{n:'Persuasion',s:'cha'},{n:'Religion',s:'int'},{n:'Sleight of Hand',s:'dex'},{n:'Stealth',s:'dex'},{n:'Survival',s:'wis'}];
+  const CLASS_SKILL_PROFS = {
+    barbarian: ['Athletics','Intimidation','Perception','Survival'],
+    fighter:   ['Athletics','Intimidation','Perception','Acrobatics'],
+    paladin:   ['Athletics','Persuasion','Medicine','Religion'],
+    ranger:    ['Stealth','Survival','Perception','Nature'],
+    rogue:     ['Stealth','Sleight of Hand','Deception','Perception'],
+    wizard:    ['Arcana','History','Investigation','Religion'],
+    cleric:    ['Insight','Medicine','Religion','Persuasion'],
+    druid:     ['Nature','Perception','Survival','Animal Handling'],
+    monk:      ['Acrobatics','Athletics','Stealth','Insight'],
+    bard:      ['Deception','Performance','Persuasion','Perception'],
+    sorcerer:  ['Arcana','Persuasion','Intimidation','Deception'],
+    warlock:   ['Arcana','Deception','Intimidation','Investigation'],
+  };
 
   function profBonus(lvl) { return Math.floor((lvl - 1) / 4) + 2; }
 
@@ -2430,8 +2519,9 @@
     const lvl = character.level||1;
     const pb  = profBonus(lvl);
     const saves = SAVING_THROWS[character.cls]||[];
+    const xpPrev = XP_LEVELS[lvl-1]||0;
     const xpNext = XP_LEVELS[lvl]||XP_LEVELS[XP_LEVELS.length-1];
-    const xpPct  = xpNext ? Math.min(100,(characterXP/xpNext)*100) : 100;
+    const xpPct  = xpNext > xpPrev ? Math.min(100,((characterXP-xpPrev)/(xpNext-xpPrev))*100) : 100;
     panel.innerHTML = `
       <div class="sheet-header">
         <div><div class="sheet-char-name">${character.name}</div><div class="sheet-char-sub">${cap(character.race)} ${cap(character.cls)} · Level ${lvl}</div></div>
@@ -2467,7 +2557,7 @@
           </div>
           <div class="sheet-col">
             <div class="sheet-section-label">Skills</div>
-            <div class="sheet-skills-grid">${SKILLS.map(sk=>{const v=statVal(s,sk.s);const m=statMod(v);return`<div class="sheet-skill"><span class="sheet-save-bullet">○</span><span>${m>=0?'+':''}${m}</span><span class="sheet-skill-name">${sk.n}</span></div>`;}).join('')}</div>
+            <div class="sheet-skills-grid">${SKILLS.map(sk=>{const v=statVal(s,sk.s);const m=statMod(v);const prof=(CLASS_SKILL_PROFS[character.cls]||[]).includes(sk.n);const total=m+(prof?pb:0);return`<div class="sheet-skill ${prof?'proficient':''}"><span class="sheet-save-bullet">${prof?'●':'○'}</span><span>${total>=0?'+':''}${total}</span><span class="sheet-skill-name">${sk.n}</span></div>`;}).join('')}</div>
           </div>
         </div>
         <div class="sheet-rest-row">
@@ -2736,6 +2826,16 @@
   waitForSb(async () => {
     currentUser = await requireAuth();
 
+    // Load real credit count from profiles table
+    sbClient.from('profiles').select('credits,is_comped').eq('user_id', currentUser.id).single().then(({ data }) => {
+      const lbl = el('creditLabel');
+      if (!lbl) return;
+      if (data?.is_comped) { lbl.textContent = 'Comped Access'; return; }
+      const c = data?.credits ?? 0;
+      lbl.textContent = c === 1 ? '1 Credit Active' : c > 0 ? `${c} Credits` : 'No Credits';
+      if (c === 0) { const dot = lbl.previousElementSibling; if (dot) dot.style.background = 'rgba(200,60,60,0.7)'; }
+    }).catch(() => {});
+
     // Create solo session if entering game.html directly (not from lobby)
     if (!sessionId && character) {
       const sc   = scenario || {};
@@ -2764,6 +2864,7 @@
 
       const { data: gs } = await sbClient.from('rpg_game_state').select('*').eq('session_id', sessionId).single();
       if (gs?.enemies?.length) { ENEMIES = gs.enemies; renderEnemies(); }
+      if (gs?.resources?.init_order?.length) { INIT_ORDER = gs.resources.init_order; renderInitTracker(); }
       const gsRes = (gs?.resources) || {};
       gameStateResources = gsRes; // cache for merge updates
       imagesRemaining = Math.max(0, 12 - (gsRes.images_used || 0));
@@ -2942,11 +3043,21 @@
           event: 'UPDATE', schema: 'public', table: 'rpg_game_state',
           filter: `session_id=eq.${sessionId}`,
         }, payload => {
-          // Sync scene image to non-host players when it updates
           const gs = payload.new;
           const gsRes = gs.resources || {};
+          // Sync scene image to non-host players
           if (gsRes.last_scene_image && currentUser.id !== sessionHostId) {
             showSceneImage(gsRes.last_scene_image, gsRes.last_scene_label || '');
+          }
+          // Sync enemy HP changes to all non-editing clients
+          if (gs.enemies && currentUser.id !== sessionHostId) {
+            ENEMIES = gs.enemies;
+            renderEnemies();
+          }
+          // Sync initiative order to non-host clients
+          if (gsRes.init_order && currentUser.id !== sessionHostId) {
+            INIT_ORDER = gsRes.init_order;
+            renderInitTracker();
           }
         })
         .subscribe();
