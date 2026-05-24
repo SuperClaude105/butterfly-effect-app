@@ -2493,6 +2493,12 @@
       return;
     }
 
+    // Player joined session but hasn't selected a character yet
+    if (!chr) {
+      seat.innerHTML = `<div class="p-avatar empty" style="opacity:0.45;font-size:0.6rem">…</div><div class="p-name" style="opacity:0.35">Joining…</div><div class="p-hp-bar"><div class="p-hp-fill" style="width:0%"></div></div>`;
+      return;
+    }
+
     const name    = chr?.name?.split(' ')[0] || 'Player';
     const initial = name[0].toUpperCase();
     const maxHP   = chr?.max_hp || chr?.hp || 1;
