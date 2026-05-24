@@ -1048,6 +1048,7 @@
     <button onclick="copySessionCode()" id="copyCodeBtn" title="Copy code" style="background:none;border:1px solid rgba(196,162,100,0.18);border-radius:2px;color:var(--dim);cursor:pointer;padding:2px 8px;font-family:'Cinzel',serif;font-size:0.46rem;letter-spacing:0.15em;text-transform:uppercase;transition:color 0.15s,border-color 0.15s;" onmouseover="this.style.color='var(--accent)';this.style.borderColor='rgba(196,162,100,0.4)'" onmouseout="this.style.color='var(--dim)';this.style.borderColor='rgba(196,162,100,0.18)'">Copy</button>
     <button onclick="shareInviteLink()" id="shareBtn" title="Copy invite link to share with friends" style="background:none;border:1px solid rgba(196,162,100,0.18);border-radius:2px;color:var(--dim);cursor:pointer;padding:2px 8px;font-family:'Cinzel',serif;font-size:0.46rem;letter-spacing:0.15em;text-transform:uppercase;transition:color 0.15s,border-color 0.15s;" onmouseover="this.style.color='var(--accent)';this.style.borderColor='rgba(196,162,100,0.4)'" onmouseout="this.style.color='var(--dim)';this.style.borderColor='rgba(196,162,100,0.18)'">Share</button>
     <button onclick="openLFGModal()" id="lfgBtn" title="Post to Discord looking-for-players channel" style="background:none;border:1px solid rgba(88,101,242,0.3);border-radius:2px;color:rgba(88,101,242,0.65);cursor:pointer;padding:2px 8px;font-family:'Cinzel',serif;font-size:0.46rem;letter-spacing:0.15em;text-transform:uppercase;transition:color 0.15s,border-color 0.15s,background 0.15s;" onmouseover="this.style.color='rgba(130,145,255,0.95)';this.style.borderColor='rgba(88,101,242,0.6)';this.style.background='rgba(88,101,242,0.06)'" onmouseout="this.style.color='rgba(88,101,242,0.65)';this.style.borderColor='rgba(88,101,242,0.3)';this.style.background='none'">⚔ Find Players</button>
+    <button id="asyncToggleBtn" onclick="toggleAsyncMode()" title="Async mode: players can submit when available, no need to be online simultaneously" style="display:none;background:none;border:1px solid rgba(255,255,255,0.08);border-radius:2px;color:var(--dim);cursor:pointer;padding:2px 8px;font-family:'Cinzel',serif;font-size:0.46rem;letter-spacing:0.15em;text-transform:uppercase;transition:color 0.15s,border-color 0.15s,background 0.15s;">⏰ Async</button>
   </div>
   <div class="header-spacer"></div>
   <div class="turn-counter">
@@ -1055,7 +1056,6 @@
     <div class="turn-track"><div class="turn-fill" id="turnFill" style="width:0%"></div></div>
     <span class="turn-num" id="turnNum">0 / 60</span>
   </div>
-  <div class="header-sep"></div>
   <button class="sheet-btn" onclick="toggleSheet()">📜 Character</button>
   <button class="map-btn" onclick="toggleMap()">🗺 Map</button>
 
@@ -1306,7 +1306,7 @@
       Campaign energy is running low. You may seek a natural ending to this chapter, or extend the adventure with another credit.
     </div>
     <div class="credit-modal-btns">
-      <button class="credit-modal-btn primary" onclick="extendCampaign()">Extend Campaign</button>
+      <button class="credit-modal-btn primary" onclick="extendCampaign()">Extend Campaign — $6.99</button>
       <button class="credit-modal-btn secondary" onclick="closeCreditModal()">Seek an Ending</button>
     </div>
   </div>
@@ -1331,6 +1331,9 @@
   let submittedPlayers   = {}; // { user_id: { name, character_name } }
   let sessionHostId      = null;
   let OTHER_PLAYERS      = []; // { user_id, name, initial, character_name, pos_col, pos_row }
+  let gameStateResources = {}; // cached so we can merge updates without overwriting other keys
+  let asyncMode          = false; // play-by-post mode (host-only toggle)
+  let sessionSummary     = ''; // recap text from previous sessions
 
   // Normalize stat from flat number or {base,bonus,total} object
   function statVal(stats, key) {
@@ -1341,6 +1344,38 @@
   }
   function statMod(score) { return Math.floor((score - 10) / 2); }
   function cap(v) { return v ? v.charAt(0).toUpperCase() + v.slice(1) : ''; }
+
+  // ── SPELL SLOT TABLES ─────────────────────────────────────────────
+  // Slots per level [1st,2nd,3rd,4th,5th] indexed by (characterLevel - 1)
+  const FULL_CASTER_SLOTS = [
+    [2,0,0,0,0],[3,0,0,0,0],[4,2,0,0,0],[4,3,0,0,0],[4,3,2,0,0],
+    [4,3,3,0,0],[4,3,3,1,0],[4,3,3,2,0],[4,3,3,3,1],[4,3,3,3,2],
+  ];
+  const HALF_CASTER_SLOTS = [
+    [0,0,0,0,0],[2,0,0,0,0],[3,0,0,0,0],[3,0,0,0,0],[4,2,0,0,0],
+    [4,2,0,0,0],[4,3,0,0,0],[4,3,0,0,0],[4,3,2,0,0],[4,3,2,0,0],
+  ];
+  const FULL_CASTERS = new Set(['wizard','cleric','druid','sorcerer','bard']);
+  const HALF_CASTERS = new Set(['paladin','ranger']);
+  function getSpellSlotMax(cls, level, slotLevel) {
+    const i = Math.max(0, Math.min(level, 10) - 1);
+    if (FULL_CASTERS.has(cls)) return FULL_CASTER_SLOTS[i]?.[slotLevel-1] ?? 0;
+    if (HALF_CASTERS.has(cls)) return HALF_CASTER_SLOTS[i]?.[slotLevel-1] ?? 0;
+    return 0;
+  }
+  // Returns spell slot resource entries for a caster (only non-zero levels)
+  function spellSlotResources(cls, level) {
+    const slots = [];
+    const ordinals = ['I','II','III','IV','V'];
+    for (let sl = 1; sl <= 5; sl++) {
+      const max = getSpellSlotMax(cls, level, sl);
+      if (max > 0) slots.push({
+        key: `s${sl}`, label: ordinals[sl-1], max: c => getSpellSlotMax(c.cls, c.level, sl),
+        rest: 'long', emoji: '✦', spellSlot: true,
+      });
+    }
+    return slots;
+  }
 
   function calcAC(cls, stats) {
     const dex = statMod(statVal(stats, 'dex'));
@@ -1358,24 +1393,32 @@
   const CLASS_RESOURCES = {
     barbarian: [{ key:'rage',  label:'Rage',              max: c => c.level < 3 ? 2 : c.level < 6 ? 3 : 4, rest:'long',  emoji:'🔥' }],
     fighter:   [{ key:'surge', label:'Action Surge',      max: () => 1, rest:'short', emoji:'⚔️' }],
-    paladin:   [{ key:'loh',   label:'Lay on Hands',      max: c => c.level * 5, rest:'long', emoji:'🛡️', isPool:true }],
+    paladin:   [
+      { key:'loh', label:'Lay on Hands', max: c => c.level * 5, rest:'long', emoji:'🛡️', isPool:true },
+    ],
     cleric:    [{ key:'cd',    label:'Channel Divinity',   max: () => 1, rest:'short', emoji:'✝' }],
     druid:     [{ key:'ws',    label:'Wild Shape',         max: () => 2, rest:'short', emoji:'🌙' }],
     monk:      [{ key:'ki',    label:'Ki Points',          max: c => c.level, rest:'short', emoji:'🥋' }],
     rogue:     [{ key:'sa',    label:'Sneak Attack',       max: () => 99, rest:'turn', emoji:'🗡️', display: c => `${Math.ceil(c.level/2)}d6` }],
     bard:      [{ key:'bi',    label:'Bardic Inspiration', max: c => Math.max(1, statMod(statVal(c.stats,'cha'))), rest:'short', emoji:'🎵' }],
     sorcerer:  [{ key:'sp',    label:'Sorcery Points',     max: c => c.level, rest:'long', emoji:'💫' }],
-    warlock:   [{ key:'pm',    label:'Pact Slots',         max: () => 2, rest:'short', emoji:'🌑' }],
+    warlock:   [{ key:'pm',    label:'Pact Slots',         max: c => c.level < 11 ? 2 : c.level < 17 ? 3 : 4, rest:'short', emoji:'🌑' }],
     wizard:    [{ key:'ar',    label:'Arcane Recovery',    max: () => 1, rest:'long', emoji:'📜' }],
     ranger:    [{ key:'hm',    label:"Hunter's Mark",      max: () => 1, rest:'long', emoji:'🏹', display: () => 'Conc.' }],
   };
   let resources = {};
 
+  function allResources() {
+    if (!character) return [];
+    const clsRes = CLASS_RESOURCES[character.cls] || [];
+    const slots  = spellSlotResources(character.cls, character.level || 1);
+    return [...clsRes, ...slots];
+  }
+
   function initResources() {
     if (!character) return;
-    const clsRes = CLASS_RESOURCES[character.cls] || [];
-    const saved  = JSON.parse(localStorage.getItem('uwt_res_' + character.id) || '{}');
-    clsRes.forEach(r => {
+    const saved = JSON.parse(localStorage.getItem('uwt_res_' + character.id) || '{}');
+    allResources().forEach(r => {
       const max = r.max(character);
       resources[r.key] = saved[r.key] !== undefined ? Math.min(saved[r.key], max) : max;
     });
@@ -1391,22 +1434,29 @@
 
   function restoreResources(restType) {
     if (!character) return;
-    (CLASS_RESOURCES[character.cls] || []).forEach(r => {
+    allResources().forEach(r => {
       if (restType === 'long' || r.rest === restType || (restType === 'short' && r.rest === 'turn')) {
         resources[r.key] = r.max(character);
       }
     });
     localStorage.setItem('uwt_res_' + character.id, JSON.stringify(resources));
     renderResources();
+    addToFeed('system', restType === 'long' ? '🌙 Long rest — all resources restored.' : '⏱ Short rest — short-rest resources restored.');
   }
 
   function renderResources() {
     const container = el('resourceTracker');
     if (!container || !character) return;
-    const clsRes = CLASS_RESOURCES[character.cls] || [];
-    if (!clsRes.length) { container.style.display = 'none'; return; }
+    const all = allResources();
+    if (!all.length) { container.style.display = 'none'; return; }
     container.style.display = 'flex';
-    container.innerHTML = clsRes.map(r => {
+    container.style.flexWrap = 'wrap';
+
+    // Split into class features and spell slots
+    const features = all.filter(r => !r.spellSlot);
+    const slots    = all.filter(r =>  r.spellSlot);
+
+    let html = features.map(r => {
       const max = r.max(character);
       const cur = resources[r.key] ?? max;
       const disp = r.display ? r.display(character) : null;
@@ -1416,6 +1466,20 @@
       ).join('');
       return `<div class="resource-chip">${r.emoji} ${r.label} ${disp ? disp + ' ' : ''}<div class="res-pips">${pips}</div><span class="res-count">${cur}/${max}</span></div>`;
     }).join('');
+
+    if (slots.length) {
+      const slotPips = slots.map(r => {
+        const max = r.max(character);
+        const cur = resources[r.key] ?? max;
+        const pips = Array.from({length: max}, (_, i) =>
+          `<div class="res-pip ${i < cur ? 'filled' : ''}" style="width:7px;height:7px;" onclick="useResource('${r.key}')" title="${r.label}-level slot"></div>`
+        ).join('');
+        return `<span style="display:flex;align-items:center;gap:2px;margin-right:6px;"><span style="font-family:'Cinzel',serif;font-size:0.48rem;color:var(--dim);margin-right:2px;">${r.label}</span>${pips}</span>`;
+      }).join('');
+      html += `<div class="resource-chip" style="flex-wrap:wrap;gap:4px;">✦ Spell Slots <div style="display:flex;flex-wrap:wrap;gap:2px;align-items:center;margin-left:4px;">${slotPips}</div></div>`;
+    }
+
+    container.innerHTML = html;
   }
 
   // ── HP / TURN TRACKING ────────────────────────────────────────────
@@ -1445,25 +1509,28 @@
     if (num) num.textContent = `${turnCount} / ${TURNS_PER_CREDIT}`;
     if (fill) {
       fill.style.width = pct + '%';
-      // Shift colour toward red as energy depletes
       if (pct >= 90) {
         fill.style.background = 'linear-gradient(to right,rgba(180,40,20,0.85),rgba(210,20,20,0.95))';
       } else if (pct >= 70) {
         fill.style.background = 'linear-gradient(to right,rgba(196,100,20,0.75),rgba(180,50,20,0.9))';
       }
     }
-    // 10% energy remaining warning (fires once)
+    // Persist energy to DB so page refresh doesn't allow free resets
+    if (sessionId && window.sbClient) {
+      sbClient.from('rpg_game_state')
+        .update({ resources: { ...gameStateResources, energy_turns_used: turnCount }, updated_at: new Date().toISOString() })
+        .eq('session_id', sessionId).catch(() => {});
+    }
     if (pct >= 90 && !creditWarningShown) {
       creditWarningShown = true;
       addToFeed('system', '⌛ The DM senses this chapter nearing its conclusion — campaign energy is low. Seek an ending or extend with another credit.');
       el('creditModalTitle').textContent = 'This Chapter Nears Its End';
-      el('creditModalBody').textContent  = '10% of campaign energy remains. You can seek a natural ending to this chapter, or extend the adventure with another credit.';
+      el('creditModalBody').textContent  = '10% of campaign energy remains. You can seek a natural ending to this chapter, or extend the adventure with another credit ($6.99).';
       el('creditModal').classList.add('visible');
     }
-    // Energy depleted — block further play until extended
     if (pct >= 100) {
       el('creditModalTitle').textContent = 'Campaign Energy Depleted';
-      el('creditModalBody').textContent  = 'This credit has been fully consumed. Extend the campaign to continue the adventure, or end the session here.';
+      el('creditModalBody').textContent  = 'This credit has been fully consumed. Purchase another credit to continue the adventure, or end the session here.';
       el('creditModal').classList.add('visible');
     }
   }
@@ -1473,18 +1540,19 @@
   }
 
   function extendCampaign() {
-    // Placeholder — will wire to Stripe / credits flow
-    turnCount = 0;
-    creditWarningShown = false;
-    const fill = el('turnFill');
-    if (fill) {
-      fill.style.width = '0%';
-      fill.style.background = 'linear-gradient(to right,rgba(196,162,100,0.6),rgba(139,0,0,0.8))';
-    }
-    const num = el('turnNum');
-    if (num) num.textContent = `0 / ${TURNS_PER_CREDIT}`;
+    // Opens Stripe checkout — until wired, show a clear purchase path
     closeCreditModal();
-    addToFeed('system', '✦ Campaign extended — the adventure continues.');
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:2000;background:rgba(4,2,4,0.92);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;';
+    overlay.innerHTML = `
+      <div style="background:#100608;border:1px solid rgba(196,162,100,0.25);border-radius:4px;padding:40px 48px;max-width:460px;width:90%;text-align:center;box-shadow:0 32px 80px rgba(0,0,0,0.8);">
+        <div style="font-size:1.8rem;margin-bottom:16px;">⚜</div>
+        <div style="font-family:'Playfair Display',serif;font-style:italic;font-size:1.4rem;color:var(--accent);margin-bottom:12px;">Extend Your Adventure</div>
+        <div style="font-size:0.88rem;color:var(--dim);line-height:1.7;margin-bottom:24px;">Each credit grants 60 more turns of AI narration ($6.99). To purchase, email us and we'll add credits to your account manually while our payment system is being set up.</div>
+        <a href="mailto:entertheunwritten@hotmail.com?subject=Credit%20Purchase&body=I'd%20like%20to%20purchase%20a%20credit%20for%20The%20Unwritten%20Table." style="display:inline-block;padding:12px 28px;background:linear-gradient(140deg,rgba(139,0,0,0.8),rgba(80,0,0,0.8));border:1px solid rgba(139,0,0,0.5);border-radius:2px;font-family:'Cinzel',serif;font-size:0.62rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--accent);text-decoration:none;">Purchase via Email</a>
+        <button onclick="this.closest('div[style]').remove()" style="display:block;margin:14px auto 0;background:none;border:none;font-family:'Cinzel',serif;font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--dim);cursor:pointer;">Close</button>
+      </div>`;
+    document.body.appendChild(overlay);
   }
 
   function adjustHP(delta) {
@@ -1503,11 +1571,50 @@
   }
 
   async function endSession() {
-    // Just navigate away — session stays active so it appears in Active Campaigns on the characters page.
-    // localStorage keeps the session ID for instant resume. sessionStorage can be cleared (tab-scoped).
+    // Mark this player as 'away' so multiplayer counts don't stay inflated for other players
+    if (sessionId && window.sbClient && currentUser) {
+      await sbClient.from('rpg_session_players')
+        .update({ status: 'away' })
+        .eq('session_id', sessionId)
+        .eq('user_id', currentUser.id)
+        .catch(() => {});
+      // Fire-and-forget: generate a session summary for next resume (don't block navigation)
+      generateSessionSummary().catch(() => {});
+    }
     sessionStorage.removeItem('uwt_session_id');
     sessionStorage.removeItem('uwt_session_code');
     window.location.href = 'characters.html';
+  }
+
+  async function generateSessionSummary() {
+    if (!sessionId || !window.sbClient) return;
+    const { data: { session } } = await sbClient.auth.getSession();
+    if (!session?.access_token) return;
+    // Fetch last 30 messages for summarization
+    const { data: msgs } = await sbClient.from('rpg_messages')
+      .select('type,content').eq('session_id', sessionId)
+      .order('created_at', { ascending: false }).limit(30);
+    if (!msgs?.length) return;
+    const histText = msgs.reverse().map(m => {
+      if (m.type === 'action') return `Player: ${m.content}`;
+      if (m.type === 'dm')     return `DM: ${m.content.slice(0, 300)}`;
+      return null;
+    }).filter(Boolean).join('\n');
+    // Ask the DM edge function for a summary
+    const resp = await fetch(EDGE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+      body: JSON.stringify({ session_id: sessionId, campaign_summary: true, history_text: histText }),
+    });
+    if (!resp.ok) return;
+    const result = await resp.json().catch(() => null);
+    if (result?.summary) {
+      // Save to game state resources so it's available on next load
+      await sbClient.from('rpg_game_state')
+        .update({ resources: { ...gameStateResources, session_summary: result.summary }, updated_at: new Date().toISOString() })
+        .eq('session_id', sessionId)
+        .catch(() => {});
+    }
   }
 
   // ── END CAMPAIGN FLOW ────────────────────────────────────────
@@ -1921,10 +2028,12 @@
           action: action || '[MULTI_ACTION]',
           actions: opts.actions || null,
           vision_requested: opts.vision_requested === true,
+          session_summary: sessionSummary || '',
           character: character ? {
             id: character.id, name: character.name, race: character.race, cls: character.cls,
             level: character.level||1, hp: currentHP, max_hp: character.max_hp||character.hp||10,
             gold: characterGold,
+            backstory: character.backstory || '',
             stats: { str: statVal(character.stats,'str'), dex: statVal(character.stats,'dex'), con: statVal(character.stats,'con'), int: statVal(character.stats,'int'), wis: statVal(character.stats,'wis'), cha: statVal(character.stats,'cha') },
           } : null,
         }),
@@ -2038,6 +2147,9 @@
     // Update mini-map location
     const locM = text.match(/\[LOCATION:\s*([^\]]+)\]/);
     if (locM) updateCurrentLocation(locM[1].trim());
+    // Auto-switch ambient audio based on scene context
+    const ambM = text.match(/\[AMBIENT:\s*([^\]]+)\]/i);
+    if (ambM && !isRestoringHistory) Ambient.autoSwitch(ambM[1].trim().toLowerCase());
     // Private clues via Discord DM
     if (!isRestoringHistory) {
       for (const m of text.matchAll(/\[CLUE:\s*([^\]]+)\]/g)) {
@@ -2176,6 +2288,13 @@
         turn_number: currentTurnNumber,
       });
 
+      // In async mode: show a "safe to close" panel instead of the standard wait panel
+      if (asyncMode) {
+        el('mpWaitingPanel').innerHTML = `
+          <div class="mp-waiting-title" style="color:rgba(196,162,100,0.7);">⏰ Action saved</div>
+          <div style="font-size:0.78rem;color:var(--dim);font-style:italic;line-height:1.6;">You can safely close this tab. You'll get a Discord notification when it's time for the next turn.</div>
+          <button class="mp-resolve-btn" style="margin-top:8px;" onclick="el('mpWaitingPanel').style.display='none';el('yourTurnPanel').style.display='';">Stay &amp; Watch</button>`;
+      }
       // Only the host fires the DM — avoids race condition where both clients call fireCombinedDM
       if (currentUser.id === sessionHostId) {
         await checkAllSubmitted();
@@ -2277,7 +2396,7 @@
   const SAVING_THROWS = { barbarian:['str','con'], fighter:['str','con'], paladin:['wis','cha'], ranger:['str','dex'], rogue:['dex','int'], wizard:['int','wis'], cleric:['wis','cha'], druid:['int','wis'], monk:['str','dex'], bard:['dex','cha'], sorcerer:['con','cha'], warlock:['wis','cha'] };
   const SKILLS = [{n:'Acrobatics',s:'dex'},{n:'Animal Handling',s:'wis'},{n:'Arcana',s:'int'},{n:'Athletics',s:'str'},{n:'Deception',s:'cha'},{n:'History',s:'int'},{n:'Insight',s:'wis'},{n:'Intimidation',s:'cha'},{n:'Investigation',s:'int'},{n:'Medicine',s:'wis'},{n:'Nature',s:'int'},{n:'Perception',s:'wis'},{n:'Performance',s:'cha'},{n:'Persuasion',s:'cha'},{n:'Religion',s:'int'},{n:'Sleight of Hand',s:'dex'},{n:'Stealth',s:'dex'},{n:'Survival',s:'wis'}];
 
-  function profBonus(lvl) { return Math.ceil(lvl/4)+1; }
+  function profBonus(lvl) { return Math.floor((lvl - 1) / 4) + 2; }
 
   function toggleSheet() {
     const panel = el('charSheetPanel');
@@ -2625,8 +2744,18 @@
       const { data: gs } = await sbClient.from('rpg_game_state').select('*').eq('session_id', sessionId).single();
       if (gs?.enemies?.length) { ENEMIES = gs.enemies; renderEnemies(); }
       const gsRes = (gs?.resources) || {};
+      gameStateResources = gsRes; // cache for merge updates
       imagesRemaining = Math.max(0, 12 - (gsRes.images_used || 0));
       currentTurnNumber = gs?.current_turn || 0;
+      // Restore energy counter from DB (prevents free reset via page refresh)
+      if (gsRes.energy_turns_used !== undefined) {
+        turnCount = gsRes.energy_turns_used;
+        refreshTurnDisplay();
+      }
+      // Load session summary for DM context and resume recap
+      if (gsRes.session_summary) {
+        sessionSummary = gsRes.session_summary;
+      }
       updateVisionRunes();
       // Restore last scene image so refresh doesn't lose the vision
       if (gsRes.last_scene_image) {
@@ -2639,6 +2768,11 @@
       totalActivePlayers = sPlayers?.length || 1;
       const { data: sess } = await sbClient.from('rpg_sessions').select('host_id').eq('id', sessionId).single();
       sessionHostId = sess?.host_id || null;
+      // Show async toggle for host; restore async mode state from DB
+      if (currentUser.id === sessionHostId) {
+        window._showAsyncToggle?.();
+        if (gsRes.async_mode) { asyncMode = true; window.toggleAsyncMode?.(); }
+      }
       // Build OTHER_PLAYERS list
       OTHER_PLAYERS = (sPlayers || []).filter(p => p.user_id !== currentUser?.id).map(p => ({
         user_id: p.user_id,
@@ -2667,6 +2801,14 @@
         if (msgs && msgs.length) {
           el('feed').innerHTML = '';
           addToFeed('system', `Session resumed · ${scenario?.name || 'Campaign'}`);
+          // Show session summary recap if returning after a break
+          if (sessionSummary) {
+            const recapDiv = document.createElement('div');
+            recapDiv.className = 'msg-system';
+            recapDiv.style.cssText = 'border-left:2px solid rgba(196,162,100,0.3);padding-left:12px;margin:8px 0;font-style:italic;color:rgba(232,213,183,0.55);';
+            recapDiv.innerHTML = `<span style="font-family:'Cinzel',serif;font-size:0.55rem;letter-spacing:0.2em;text-transform:uppercase;color:rgba(196,162,100,0.4);display:block;margin-bottom:4px;">Previously on your adventure…</span>${sessionSummary}`;
+            el('feed').appendChild(recapDiv);
+          }
           isRestoringHistory = true;
           msgs.forEach(msg => {
             const meta = msg.metadata || {};
@@ -2692,13 +2834,20 @@
       if (codeVal) codeVal.textContent = code;
     }
 
-    // Expose to battle map IIFE
+    // Expose to battle map IIFE and mini-map
     window._currentUserId = currentUser?.id;
     window._otherPlayersRef = OTHER_PLAYERS;
     window.sbClient = sbClient;
+    window.currentCharacter = character; // used by mini-map player token
 
     // Load real player seats
     await loadSessionPlayers();
+
+    // Check for a pending async turn that's ready to resolve
+    if (asyncMode && currentUser.id === sessionHostId) {
+      window._currentTurnNumber = currentTurnNumber;
+      window._checkAsyncPendingTurn?.();
+    }
 
     // Build scenario mini-map
     buildMiniMap(scenario?.id || 'vault');
@@ -3285,6 +3434,206 @@ function buildMiniMap(sceneId) {
 <!-- Map room name tooltip -->
 <div id="mapTooltip"></div>
 
+<script>
+// ── AMBIENT AUDIO ──────────────────────────────────────────────────────────────
+const Ambient = (() => {
+  let ctx = null, masterGain = null, sources = [], currentPreset = null;
+  let vol = 0.3;
+
+  function init() {
+    if (ctx) return;
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = ctx.createGain();
+    masterGain.gain.value = 0;
+    masterGain.connect(ctx.destination);
+  }
+
+  function stop() {
+    sources.forEach(s => { try { s.stop(0); } catch(e) {} });
+    sources = [];
+  }
+
+  // Generates a looping noise buffer shaped for each preset
+  function makeNoise(type) {
+    const sr = ctx.sampleRate, len = sr * 6;
+    const buf = ctx.createBuffer(2, len, sr);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = buf.getChannelData(ch);
+      let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;
+      for (let i = 0; i < len; i++) {
+        const white = Math.random() * 2 - 1;
+        if (type === 'brown') {
+          b0 = (b0 + 0.02 * white) / 1.02;
+          d[i] = b0 * 3.5;
+        } else if (type === 'pink') {
+          b0=0.99886*b0+white*0.0555179; b1=0.99332*b1+white*0.0750759;
+          b2=0.96900*b2+white*0.1538520; b3=0.86650*b3+white*0.3104856;
+          b4=0.55000*b4+white*0.5329522; b5=-0.7616*b5-white*0.0168980;
+          d[i] = (b0+b1+b2+b3+b4+b5+b6+white*0.5362)*0.11;
+          b6 = white * 0.115926;
+        } else {
+          d[i] = white * 0.18;
+        }
+      }
+    }
+    return buf;
+  }
+
+  const PRESETS = {
+    dungeon: { noise:'brown', filters:[
+      { type:'lowpass',  freq:160, Q:0.7 },
+      { type:'peaking',  freq:80,  Q:1.2, gain:6 },
+    ], vol:0.55 },
+    combat: { noise:'pink', filters:[
+      { type:'bandpass', freq:350, Q:0.6 },
+      { type:'peaking',  freq:200, Q:0.8, gain:4 },
+    ], vol:0.6 },
+    tavern: { noise:'pink', filters:[
+      { type:'bandpass', freq:900, Q:0.5 },
+      { type:'highshelf',freq:3000, gain:-8 },
+    ], vol:0.45 },
+    forest: { noise:'white', filters:[
+      { type:'highpass', freq:1800, Q:0.4 },
+      { type:'peaking',  freq:4000, Q:0.7, gain:3 },
+    ], vol:0.35 },
+  };
+
+  function play(id) {
+    if (id === 'off') { fadeTo(0, () => stop()); currentPreset = 'off'; updateUI(); return; }
+    init();
+    if (ctx.state === 'suspended') ctx.resume();
+    stop();
+    currentPreset = id;
+    const preset = PRESETS[id];
+    if (!preset) return;
+    const buf = makeNoise(preset.noise);
+    const src = ctx.createBufferSource();
+    src.buffer = buf; src.loop = true;
+
+    let last = src;
+    for (const f of preset.filters) {
+      const filt = ctx.createBiquadFilter();
+      filt.type = f.type; filt.frequency.value = f.freq; filt.Q.value = f.Q || 1;
+      if (f.gain !== undefined) filt.gain.value = f.gain;
+      last.connect(filt); last = filt;
+    }
+    last.connect(masterGain);
+    src.start(0);
+    sources.push(src);
+    const targetVol = preset.vol * vol;
+    masterGain.gain.cancelScheduledValues(ctx.currentTime);
+    masterGain.gain.setValueAtTime(0, ctx.currentTime);
+    masterGain.gain.linearRampToValueAtTime(targetVol, ctx.currentTime + 2.5);
+    updateUI();
+  }
+
+  function fadeTo(target, cb) {
+    if (!ctx || !masterGain) { if (cb) cb(); return; }
+    masterGain.gain.cancelScheduledValues(ctx.currentTime);
+    masterGain.gain.setValueAtTime(masterGain.gain.value, ctx.currentTime);
+    masterGain.gain.linearRampToValueAtTime(target, ctx.currentTime + 1.5);
+    if (cb) setTimeout(cb, 1600);
+  }
+
+  function setVolume(v) {
+    vol = v / 100;
+    if (ctx && masterGain && currentPreset && currentPreset !== 'off') {
+      const target = (PRESETS[currentPreset]?.vol || 0.4) * vol;
+      masterGain.gain.cancelScheduledValues(ctx.currentTime);
+      masterGain.gain.setValueAtTime(masterGain.gain.value, ctx.currentTime);
+      masterGain.gain.linearRampToValueAtTime(target, ctx.currentTime + 0.3);
+    }
+  }
+
+  function updateUI() {
+    ['dungeon','combat','tavern','forest','off'].forEach(id => {
+      const btn = document.getElementById(`abtn-${id}`);
+      if (!btn) return;
+      if (id === currentPreset) {
+        btn.style.opacity = '1';
+        btn.style.borderColor = 'rgba(196,162,100,0.4)';
+        btn.style.background = 'rgba(196,162,100,0.08)';
+      } else {
+        btn.style.opacity = '0.5';
+        btn.style.borderColor = 'transparent';
+        btn.style.background = 'none';
+      }
+    });
+  }
+
+  function autoSwitch(id) {
+    if (id === currentPreset) return; // don't interrupt if already right
+    if (!currentPreset || currentPreset === 'off') { play(id); return; }
+    fadeTo(0, () => { stop(); play(id); });
+  }
+
+  return { play, setVolume, autoSwitch };
+})();
+
+window.setAmbient = id => Ambient.play(id);
+window.setAmbientVolume = v => Ambient.setVolume(v);
+
+function toggleAmbientPanel() {
+  const panel = document.getElementById('ambientPanel');
+  if (!panel) return;
+  const open = panel.style.display === 'flex' || panel.style.display === 'block';
+  panel.style.display = open ? 'none' : 'block';
+}
+// Close panel when clicking outside
+document.addEventListener('click', e => {
+  const ctrl = document.getElementById('ambientControls');
+  if (ctrl && !ctrl.contains(e.target)) {
+    const panel = document.getElementById('ambientPanel');
+    if (panel) panel.style.display = 'none';
+  }
+});
+
+// ── ASYNC MODE ─────────────────────────────────────────────────────────────────
+function toggleAsyncMode() {
+  asyncMode = !asyncMode;
+  const btn = document.getElementById('asyncToggleBtn');
+  if (!btn) return;
+  if (asyncMode) {
+    btn.style.color = 'rgba(196,162,100,0.85)';
+    btn.style.borderColor = 'rgba(196,162,100,0.3)';
+    btn.style.background = 'rgba(196,162,100,0.06)';
+    btn.title = 'Async mode ON — players can submit when available';
+    addToFeed('system', '⏰ Async mode enabled — players can submit their actions whenever they\'re ready. No need to be online at the same time.');
+  } else {
+    btn.style.color = 'var(--dim)';
+    btn.style.borderColor = 'rgba(255,255,255,0.08)';
+    btn.style.background = 'none';
+    btn.title = 'Async mode: players can submit when available, no need to be online simultaneously';
+    addToFeed('system', '⏰ Async mode disabled — back to real-time play.');
+  }
+  // Persist to DB
+  if (window.sbClient && sessionId) {
+    sbClient.from('rpg_game_state')
+      .update({ resources: { ...gameStateResources, async_mode: asyncMode }, updated_at: new Date().toISOString() })
+      .eq('session_id', sessionId).catch(() => {});
+    gameStateResources = { ...gameStateResources, async_mode: asyncMode };
+  }
+}
+
+// Show async toggle for host only (called after host identity is known)
+window._showAsyncToggle = function() {
+  const btn = document.getElementById('asyncToggleBtn');
+  if (btn) btn.style.display = '';
+};
+
+// Check on load if all players have submitted an async turn (host only)
+window._checkAsyncPendingTurn = async function() {
+  if (!sessionId || !window.sbClient) return;
+  const { count } = await sbClient.from('rpg_turn_actions')
+    .select('*', { count: 'exact', head: true })
+    .eq('session_id', sessionId)
+    .eq('turn_number', window._currentTurnNumber || 0);
+  if (count >= totalActivePlayers && count > 0) {
+    addToFeed('system', `⏰ All ${count} players have submitted — ready to resolve the turn. Click the Resolve button when ready.`);
+  }
+};
+</script>
+
 <!-- End Campaign Modal -->
 <div class="end-campaign-overlay" id="endCampaignOverlay">
   <div class="end-campaign-modal">
@@ -3300,5 +3649,25 @@ function buildMiniMap(sceneId) {
     </div>
   </div>
 </div>
+
+<!-- Ambient Audio Controls — fixed over scene image top-right -->
+<div id="ambientControls" style="position:fixed;top:53px;right:calc(50% + 8px);z-index:50;">
+  <button id="ambientToggleBtn" onclick="toggleAmbientPanel()" title="Atmosphere" style="background:rgba(7,4,4,0.8);border:1px solid rgba(196,162,100,0.2);border-radius:3px;color:var(--accent);cursor:pointer;padding:4px 9px;font-size:0.62rem;font-family:'Cinzel',serif;letter-spacing:0.12em;text-transform:uppercase;backdrop-filter:blur(6px);transition:border-color 0.15s,background 0.15s;" onmouseover="this.style.borderColor='rgba(196,162,100,0.5)'" onmouseout="this.style.borderColor='rgba(196,162,100,0.2)'">♪ Atmos</button>
+  <div id="ambientPanel" style="display:none;position:absolute;top:calc(100% + 4px);right:0;background:rgba(10,6,6,0.96);border:1px solid rgba(196,162,100,0.15);border-radius:3px;padding:10px 12px;backdrop-filter:blur(10px);min-width:170px;box-shadow:0 8px 40px rgba(0,0,0,0.8);">
+    <div style="font-family:'Cinzel',serif;font-size:0.45rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--dim);margin-bottom:8px;">Atmosphere</div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-bottom:10px;">
+      <button class="ambient-btn" onclick="setAmbient('dungeon')" id="abtn-dungeon" title="Dungeon" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:2px;cursor:pointer;font-size:1.1rem;padding:5px 0;opacity:0.6;transition:opacity 0.15s,border-color 0.15s;">🏚️</button>
+      <button class="ambient-btn" onclick="setAmbient('combat')"  id="abtn-combat"  title="Combat"  style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:2px;cursor:pointer;font-size:1.1rem;padding:5px 0;opacity:0.6;transition:opacity 0.15s,border-color 0.15s;">⚔️</button>
+      <button class="ambient-btn" onclick="setAmbient('tavern')"  id="abtn-tavern"  title="Tavern"  style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:2px;cursor:pointer;font-size:1.1rem;padding:5px 0;opacity:0.6;transition:opacity 0.15s,border-color 0.15s;">🍺</button>
+      <button class="ambient-btn" onclick="setAmbient('forest')"  id="abtn-forest"  title="Forest"  style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:2px;cursor:pointer;font-size:1.1rem;padding:5px 0;opacity:0.6;transition:opacity 0.15s,border-color 0.15s;">🌲</button>
+      <button class="ambient-btn" onclick="setAmbient('off')"     id="abtn-off"     title="Silence" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:2px;cursor:pointer;font-size:1.1rem;padding:5px 0;opacity:0.6;transition:opacity 0.15s,border-color 0.15s;">🔇</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="font-family:'Cinzel',serif;font-size:0.42rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--dim);white-space:nowrap;">Vol</span>
+      <input type="range" id="ambientVol" min="0" max="100" value="30" oninput="setAmbientVolume(this.value)" style="flex:1;accent-color:var(--accent);cursor:pointer;">
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
