@@ -2138,6 +2138,12 @@
     updateTurnCounter();
     if (INIT_ORDER.length) { currentInitIdx = (currentInitIdx + 1) % INIT_ORDER.length; renderInitTracker(); }
 
+    // Re-fetch live player count so a player who left doesn't keep us stuck
+    const { count: liveCount } = await sbClient.from('rpg_session_players')
+      .select('*', { count: 'exact', head: true })
+      .eq('session_id', sessionId).eq('status', 'joined');
+    totalActivePlayers = liveCount || 1;
+
     if (totalActivePlayers <= 1) {
       // Solo: fire DM immediately
       el('yourTurnPanel').style.display = 'none';
@@ -2194,10 +2200,13 @@
       </div>`;
     }).join('');
     const allReady = allPlayers.every(p => submittedPlayers[p.id]);
+    const isHost   = currentUser?.id === sessionHostId;
+    const pending  = allPlayers.filter(p => !submittedPlayers[p.id]);
     panel.innerHTML = `
       <div class="mp-waiting-title">Waiting for the party…</div>
       ${rows}
       ${allReady ? '<button class="mp-resolve-btn" onclick="fireCombinedDM()">⚔ Resolve Turn</button>' : ''}
+      ${isHost && !allReady ? `<button class="mp-resolve-btn" style="margin-top:6px;opacity:0.55;font-size:0.55rem;" onclick="proceedSolo()" title="Continue if a player has disconnected">Continue without ${pending.length === 1 ? pending[0].name : 'party'} →</button>` : ''}
     `;
   }
 
@@ -2233,6 +2242,12 @@
     myActionSubmitted = false;
     submittedPlayers  = {};
     currentTurnNumber++;
+  }
+
+  async function proceedSolo() {
+    // Host escapes multiplayer wait — fires DM with only the actions submitted so far
+    totalActivePlayers = 1;
+    await fireCombinedDM();
   }
 
   // ── IDEAS ─────────────────────────────────────────────────────────
