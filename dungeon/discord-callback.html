@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Linking Discord — The Unwritten Table</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Playfair+Display:ital,wght@0,700;1,400;1,700&family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="supabase-client.js"></script>
+  <style>
+    :root{--primary:#8B0000;--accent:#c4a264;--bg:#070404;--surface:#100606;--text:#e8d5b7;--dim:rgba(232,213,183,0.45);}
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+    html,body{height:100%;overflow:hidden;}
+    body{font-family:'EB Garamond',Georgia,serif;background:var(--bg);color:var(--text);display:flex;align-items:center;justify-content:center;}
+    body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 70% 60% at 50% 40%,rgba(88,101,242,0.08) 0%,rgba(139,0,0,0.08) 60%,transparent 100%);pointer-events:none;}
+    body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");pointer-events:none;z-index:9999;opacity:0.55;}
+
+    .card{
+      position:relative;z-index:10;
+      background:var(--surface);
+      border:1px solid rgba(196,162,100,0.18);
+      border-radius:4px;
+      padding:48px 52px;
+      max-width:440px;width:90%;
+      text-align:center;
+      box-shadow:0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(196,162,100,0.06);
+    }
+
+    .brand{font-family:'Cinzel',serif;font-size:0.55rem;letter-spacing:0.35em;text-transform:uppercase;color:rgba(196,162,100,0.4);margin-bottom:32px;}
+
+    .icon{font-size:2.8rem;line-height:1;margin-bottom:20px;}
+
+    .title{font-family:'Playfair Display',serif;font-style:italic;font-size:1.6rem;color:var(--text);line-height:1.2;margin-bottom:10px;}
+
+    .subtitle{font-size:0.88rem;color:var(--dim);line-height:1.7;font-style:italic;}
+
+    .discord-name{
+      margin-top:18px;
+      font-family:'Cinzel',serif;font-size:0.7rem;letter-spacing:0.2em;text-transform:uppercase;
+      color:rgba(88,101,242,0.8);
+      background:rgba(88,101,242,0.08);
+      border:1px solid rgba(88,101,242,0.2);
+      border-radius:2px;
+      padding:8px 16px;
+      display:inline-block;
+    }
+
+    .loading{font-family:'Cinzel',serif;font-size:0.58rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--dim);animation:pulse 1.5s ease-in-out infinite;}
+    @keyframes pulse{0%,100%{opacity:0.4;}50%{opacity:0.9;}}
+
+    .error-state{font-family:'Cinzel',serif;font-size:0.62rem;letter-spacing:0.15em;color:rgba(220,80,80,0.7);margin-top:16px;}
+
+    .redirect-note{margin-top:24px;font-family:'Cinzel',serif;font-size:0.52rem;letter-spacing:0.2em;text-transform:uppercase;color:rgba(196,162,100,0.3);}
+
+    .back-link{margin-top:16px;display:block;font-size:0.75rem;color:var(--accent);text-decoration:none;font-style:italic;}
+    .back-link:hover{text-decoration:underline;}
+  </style>
+</head>
+<body>
+<div class="card" id="card">
+  <div class="brand">The Unwritten Table</div>
+  <div id="loadingState">
+    <div class="icon">🔗</div>
+    <div class="title">Linking Discord…</div>
+    <div class="loading" style="margin-top:16px;">Contacting the spirits</div>
+  </div>
+  <div id="successState" style="display:none;">
+    <div class="icon">✦</div>
+    <div class="title">Discord Connected</div>
+    <div class="subtitle">The Dungeon Master can now send you private messages through Discord when your character uncovers something meant for your eyes alone.</div>
+    <div class="discord-name" id="discordUsername"></div>
+    <div class="redirect-note" style="margin-top:24px;">Returning you to your characters…</div>
+  </div>
+  <div id="errorState" style="display:none;">
+    <div class="icon">⚠</div>
+    <div class="title" style="font-size:1.2rem;">Connection Failed</div>
+    <div class="error-state" id="errorMsg"></div>
+    <a href="characters.html" class="back-link">← Return to Characters</a>
+  </div>
+</div>
+
+<script>
+  const DISCORD_LINK_URL = 'https://puywhvrgixlhijxzircy.supabase.co/functions/v1/discord-link';
+
+  function waitForSb(cb) { if (window.sbClient) { cb(); return; } setTimeout(() => waitForSb(cb), 50); }
+
+  waitForSb(async () => {
+    const params = new URLSearchParams(window.location.search);
+    const code   = params.get('code');
+    const error  = params.get('error');
+
+    const loadingEl = document.getElementById('loadingState');
+    const successEl = document.getElementById('successState');
+    const errorEl   = document.getElementById('errorState');
+    const errorMsg  = document.getElementById('errorMsg');
+
+    function showError(msg) {
+      loadingEl.style.display = 'none';
+      errorEl.style.display   = 'block';
+      errorMsg.textContent     = msg;
+    }
+
+    if (error) {
+      showError('Discord authorization was cancelled or denied.');
+      return;
+    }
+
+    if (!code) {
+      showError('No authorization code received from Discord.');
+      return;
+    }
+
+    // Get the current user's session JWT
+    const { data: { session } } = await sbClient.auth.getSession();
+    if (!session?.access_token) {
+      showError('You must be signed in. Please return and sign in first.');
+      return;
+    }
+
+    try {
+      const resp = await fetch(DISCORD_LINK_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ code }),
+      });
+
+      const result = await resp.json();
+
+      if (!resp.ok) {
+        showError(result.error || 'Could not link Discord. Please try again.');
+        return;
+      }
+
+      // Success
+      loadingEl.style.display = 'none';
+      successEl.style.display = 'block';
+      if (result.discord_username) {
+        document.getElementById('discordUsername').textContent = result.discord_username;
+      }
+
+      // Redirect after 2.5 seconds
+      setTimeout(() => { window.location.href = 'characters.html?discord=linked'; }, 2500);
+
+    } catch (err) {
+      showError('Network error. Please check your connection and try again.');
+    }
+  });
+</script>
+</body>
+</html>

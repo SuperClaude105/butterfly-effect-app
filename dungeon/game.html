@@ -1958,6 +1958,7 @@
       .replace(/\[ROLL:[^\]]*\]/g,'').replace(/\[COMBAT_START\]/g,'').replace(/\[COMBAT_END\]/g,'')
       .replace(/\[ENEMY:[^\]]*\]/g,'').replace(/\[XP:[^\]]*\]/g,'').replace(/\[SCENE:[^\]]*\]/g,'')
       .replace(/\[LOCATION:[^\]]*\]/g,'').replace(/\[GOLD:[^\]]*\]/g,'').replace(/\[SHOP_OPEN\]/g,'')
+      .replace(/\[CLUE:[^\]]*\]/g,'')
       .replace(/^#{1,3}\s+/gm,'')
       .replace(/^---+$/gm,'')
       .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')
@@ -2006,6 +2007,41 @@
     // Update mini-map location
     const locM = text.match(/\[LOCATION:\s*([^\]]+)\]/);
     if (locM) updateCurrentLocation(locM[1].trim());
+    // Private clues via Discord DM
+    if (!isRestoringHistory) {
+      for (const m of text.matchAll(/\[CLUE:\s*([^\]]+)\]/g)) {
+        sendDiscordClue(m[1].trim());
+      }
+    }
+  }
+
+  async function sendDiscordClue(clueText) {
+    try {
+      const { data: { session } } = await sbClient.auth.getSession();
+      if (!session?.access_token) return;
+
+      const charName     = character?.name || 'Adventurer';
+      const campaignName = el('campaignTitle')?.textContent || 'Campaign';
+
+      const resp = await fetch('https://puywhvrgixlhijxzircy.supabase.co/functions/v1/discord-notify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ message: clueText, character_name: charName, campaign_name: campaignName }),
+      });
+
+      if (resp.ok) {
+        // Show a subtle in-feed notification
+        const note = document.createElement('div');
+        note.className = 'msg-system';
+        note.style.cssText = 'color:rgba(88,101,242,0.6);font-size:0.72rem;font-style:italic;';
+        note.textContent = '📨 The Dungeon Master passes you a private note — check your Discord.';
+        const feed = el('feed');
+        if (feed) { feed.appendChild(note); feed.scrollTop = feed.scrollHeight; }
+      }
+    } catch {}
   }
 
   function addMockDMResponse(action) {

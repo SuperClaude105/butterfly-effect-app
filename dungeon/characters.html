@@ -213,6 +213,22 @@
     .user-name{font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.15em;color:var(--dim);}
     .sign-out-btn{font-family:'Cinzel',serif;font-size:0.55rem;letter-spacing:0.2em;text-transform:uppercase;color:rgba(196,162,100,0.45);background:none;border:1px solid rgba(255,255,255,0.07);border-radius:2px;padding:5px 10px;cursor:pointer;transition:color 0.15s,border-color 0.15s;}
     .sign-out-btn:hover{color:var(--accent);border-color:rgba(196,162,100,0.3);}
+
+    /* Discord link button */
+    .discord-btn{
+      display:flex;align-items:center;gap:6px;
+      font-family:'Cinzel',serif;font-size:0.55rem;letter-spacing:0.2em;text-transform:uppercase;
+      background:none;border:1px solid rgba(88,101,242,0.25);border-radius:2px;
+      padding:5px 10px;cursor:pointer;
+      color:rgba(88,101,242,0.6);
+      transition:color 0.15s,border-color 0.15s,background 0.15s;
+      text-decoration:none;
+    }
+    .discord-btn:hover{color:rgba(130,145,255,0.9);border-color:rgba(88,101,242,0.5);background:rgba(88,101,242,0.06);}
+    .discord-btn.linked{color:rgba(88,101,242,0.45);border-color:rgba(88,101,242,0.15);cursor:default;}
+    .discord-btn.linked:hover{color:rgba(88,101,242,0.45);border-color:rgba(88,101,242,0.15);background:none;}
+    .discord-btn-dot{width:5px;height:5px;border-radius:50%;background:rgba(88,101,242,0.7);flex-shrink:0;}
+    .discord-btn.linked .discord-btn-dot{background:rgba(80,200,100,0.7);}
   </style>
 </head>
 <body>
@@ -225,6 +241,10 @@
     </div>
     <div class="user-info">
       <span class="user-name" id="userNameDisplay"></span>
+      <a id="discordBtn" href="#" class="discord-btn" onclick="connectDiscord(event)">
+        <div class="discord-btn-dot" id="discordDot"></div>
+        <span id="discordBtnLabel">Connect Discord</span>
+      </a>
       <button class="sign-out-btn" onclick="signOut()">Sign Out</button>
       <a href="scenario.html" class="nav-link">Browse Campaigns</a>
     </div>
@@ -652,6 +672,53 @@
     window.location.href = 'game.html';
   }
 
+  // ── Discord Link ──────────────────────────────────────────────
+  const DISCORD_CLIENT_ID   = '1507839028609941584';
+  const DISCORD_REDIRECT    = 'https://entertheunwritten.com/dungeon/discord-callback.html';
+  const DISCORD_OAUTH_URL   = `https://discord.com/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(DISCORD_REDIRECT)}&response_type=code&scope=identify`;
+
+  async function checkDiscordLinked() {
+    if (!currentUser) return;
+    const { data } = await sbClient
+      .from('user_discord')
+      .select('discord_username')
+      .eq('user_id', currentUser.id)
+      .maybeSingle();
+
+    const btn   = document.getElementById('discordBtn');
+    const label = document.getElementById('discordBtnLabel');
+    const dot   = document.getElementById('discordDot');
+    if (!btn) return;
+
+    if (data?.discord_username) {
+      btn.classList.add('linked');
+      label.textContent = `Discord: ${data.discord_username}`;
+      dot.title = 'Discord connected';
+    }
+  }
+
+  function connectDiscord(e) {
+    const btn = document.getElementById('discordBtn');
+    if (btn?.classList.contains('linked')) { e.preventDefault(); return; }
+    // Let the href do the navigation
+    window.location.href = DISCORD_OAUTH_URL;
+    e.preventDefault();
+  }
+
+  // Show toast if returning from Discord callback
+  function checkDiscordCallbackReturn() {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('discord') === 'linked') {
+      const toast = document.createElement('div');
+      toast.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);z-index:500;background:rgba(88,101,242,0.15);border:1px solid rgba(88,101,242,0.3);border-radius:3px;padding:10px 20px;font-family:Cinzel,serif;font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;color:rgba(130,145,255,0.9);';
+      toast.textContent = '✓ Discord Connected';
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 4000);
+      // Clean URL
+      window.history.replaceState({}, '', 'characters.html');
+    }
+  }
+
   // ── Init ──────────────────────────────────────────────────────
   function waitForSb(cb) {
     if (window.sbClient) { cb(); return; }
@@ -667,6 +734,8 @@
 
     await loadCharacters();
     await loadActiveSessions();
+    await checkDiscordLinked();
+    checkDiscordCallbackReturn();
 
     // Auto-fill join code from invite link (?join=CODE)
     const urlParams = new URLSearchParams(window.location.search);
