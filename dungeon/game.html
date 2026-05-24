@@ -1047,6 +1047,7 @@
     <span id="sessionCodeVal" style="font-family:'Cinzel',serif;font-size:0.65rem;letter-spacing:0.35em;color:var(--accent)">——</span>
     <button onclick="copySessionCode()" id="copyCodeBtn" title="Copy code" style="background:none;border:1px solid rgba(196,162,100,0.18);border-radius:2px;color:var(--dim);cursor:pointer;padding:2px 8px;font-family:'Cinzel',serif;font-size:0.46rem;letter-spacing:0.15em;text-transform:uppercase;transition:color 0.15s,border-color 0.15s;" onmouseover="this.style.color='var(--accent)';this.style.borderColor='rgba(196,162,100,0.4)'" onmouseout="this.style.color='var(--dim)';this.style.borderColor='rgba(196,162,100,0.18)'">Copy</button>
     <button onclick="shareInviteLink()" id="shareBtn" title="Copy invite link to share with friends" style="background:none;border:1px solid rgba(196,162,100,0.18);border-radius:2px;color:var(--dim);cursor:pointer;padding:2px 8px;font-family:'Cinzel',serif;font-size:0.46rem;letter-spacing:0.15em;text-transform:uppercase;transition:color 0.15s,border-color 0.15s;" onmouseover="this.style.color='var(--accent)';this.style.borderColor='rgba(196,162,100,0.4)'" onmouseout="this.style.color='var(--dim)';this.style.borderColor='rgba(196,162,100,0.18)'">Share</button>
+    <button onclick="openLFGModal()" id="lfgBtn" title="Post to Discord looking-for-players channel" style="background:none;border:1px solid rgba(88,101,242,0.3);border-radius:2px;color:rgba(88,101,242,0.65);cursor:pointer;padding:2px 8px;font-family:'Cinzel',serif;font-size:0.46rem;letter-spacing:0.15em;text-transform:uppercase;transition:color 0.15s,border-color 0.15s,background 0.15s;" onmouseover="this.style.color='rgba(130,145,255,0.95)';this.style.borderColor='rgba(88,101,242,0.6)';this.style.background='rgba(88,101,242,0.06)'" onmouseout="this.style.color='rgba(88,101,242,0.65)';this.style.borderColor='rgba(88,101,242,0.3)';this.style.background='none'">⚔ Find Players</button>
   </div>
   <div class="header-spacer"></div>
   <div class="turn-counter">
@@ -1066,6 +1067,35 @@
 
 <!-- XP Toast -->
 <div class="xp-toast" id="xpToast"></div>
+
+<!-- LFG Modal -->
+<div id="lfgOverlay" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(4,2,4,0.88);backdrop-filter:blur(6px);align-items:center;justify-content:center;">
+  <div style="background:#100608;border:1px solid rgba(88,101,242,0.25);border-radius:4px;padding:32px 36px;max-width:460px;width:90%;box-shadow:0 24px 80px rgba(0,0,0,0.8);display:flex;flex-direction:column;gap:16px;">
+    <div style="font-family:'Playfair Display',serif;font-style:italic;font-size:1.3rem;color:var(--text);">Find Players</div>
+    <div style="font-size:0.85rem;color:var(--dim);line-height:1.6;">Posts a message to the <strong style="color:rgba(88,101,242,0.8);">#looking-for-players</strong> channel in the Unwritten Table Discord so others can join your campaign.</div>
+
+    <div style="background:rgba(88,101,242,0.06);border:1px solid rgba(88,101,242,0.18);border-radius:3px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;">
+      <div style="font-family:'Cinzel',serif;font-size:0.52rem;letter-spacing:0.2em;text-transform:uppercase;color:rgba(88,101,242,0.6);margin-bottom:2px;">Preview</div>
+      <div style="font-size:0.88rem;color:var(--text);line-height:1.6;" id="lfgPreview">—</div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:10px;">
+      <label style="font-family:'Cinzel',serif;font-size:0.58rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--dim);white-space:nowrap;">Spots open</label>
+      <select id="lfgSpots" onchange="updateLFGPreview()" style="background:rgba(255,255,255,0.04);border:1px solid rgba(196,162,100,0.2);border-radius:2px;padding:6px 10px;font-family:'Cinzel',serif;font-size:0.65rem;color:var(--accent);outline:none;cursor:pointer;">
+        <option value="1">1 player</option>
+        <option value="2" selected>2 players</option>
+        <option value="3">3 players</option>
+        <option value="4">4 players</option>
+      </select>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:4px;">
+      <button onclick="closeLFGModal()" style="flex:1;padding:11px;border-radius:2px;font-family:'Cinzel',serif;font-size:0.62rem;letter-spacing:0.2em;text-transform:uppercase;cursor:pointer;background:transparent;border:1px solid rgba(255,255,255,0.08);color:var(--dim);transition:border-color 0.15s,color 0.15s;" onmouseover="this.style.borderColor='rgba(255,255,255,0.2)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)';this.style.color='var(--dim)'">Cancel</button>
+      <button onclick="postLFG()" id="lfgPostBtn" style="flex:1;padding:11px;border-radius:2px;font-family:'Cinzel',serif;font-size:0.62rem;letter-spacing:0.2em;text-transform:uppercase;cursor:pointer;background:rgba(88,101,242,0.2);border:1px solid rgba(88,101,242,0.4);color:rgba(130,145,255,0.9);transition:background 0.15s,opacity 0.15s;" onmouseover="this.style.background='rgba(88,101,242,0.3)'" onmouseout="this.style.background='rgba(88,101,242,0.2)'">Post to Discord</button>
+    </div>
+    <div id="lfgStatus" style="font-family:'Cinzel',serif;font-size:0.55rem;letter-spacing:0.15em;text-align:center;display:none;"></div>
+  </div>
+</div>
 
 <!-- Character Sheet Slide-out -->
 <div class="char-sheet-panel" id="charSheetPanel"></div>
@@ -2365,6 +2395,76 @@
       const btn = el('shareBtn');
       if (btn) { btn.textContent = 'Copied!'; setTimeout(() => { btn.textContent = 'Share'; }, 2000); }
     });
+  }
+
+  // ── LFG — FIND PLAYERS ───────────────────────────────────────────
+  function openLFGModal() {
+    updateLFGPreview();
+    const overlay = el('lfgOverlay');
+    overlay.style.display = 'flex';
+  }
+
+  function closeLFGModal() {
+    el('lfgOverlay').style.display = 'none';
+    const status = el('lfgStatus');
+    status.style.display = 'none';
+    el('lfgPostBtn').disabled = false;
+    el('lfgPostBtn').textContent = 'Post to Discord';
+  }
+
+  function updateLFGPreview() {
+    const charName     = character?.name || 'An adventurer';
+    const campaignName = el('campaignTitle')?.textContent || 'a campaign';
+    const code         = sessionStorage.getItem('uwt_session_code') || localStorage.getItem('uwt_session_code') || '——';
+    const spots        = parseInt(el('lfgSpots')?.value || '2');
+    const preview      = el('lfgPreview');
+    if (preview) {
+      preview.innerHTML = `<strong>${charName}</strong> is heading into <strong>${campaignName}</strong> and needs allies.<br>Looking for <strong>${spots}</strong> companion${spots === 1 ? '' : 's'} · Code: <strong>${code}</strong>`;
+    }
+  }
+
+  async function postLFG() {
+    const code         = sessionStorage.getItem('uwt_session_code') || localStorage.getItem('uwt_session_code');
+    const campaignName = el('campaignTitle')?.textContent || 'Campaign';
+    const charName     = character?.name || 'An adventurer';
+    const spots        = parseInt(el('lfgSpots')?.value || '2');
+    const status       = el('lfgStatus');
+    const btn          = el('lfgPostBtn');
+
+    if (!code) { status.textContent = 'No active session code found.'; status.style.color = 'rgba(220,80,80,0.8)'; status.style.display = 'block'; return; }
+
+    btn.disabled = true;
+    btn.textContent = 'Posting…';
+    status.style.display = 'none';
+
+    try {
+      const { data: { session } } = await sbClient.auth.getSession();
+      const resp = await fetch('https://puywhvrgixlhijxzircy.supabase.co/functions/v1/discord-lfg', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ session_code: code, campaign_name: campaignName, character_name: charName, spots }),
+      });
+      const result = await resp.json();
+      if (result.ok) {
+        status.textContent = '✓ Posted to #looking-for-players!';
+        status.style.color = 'rgba(88,101,242,0.9)';
+        status.style.display = 'block';
+        btn.textContent = 'Posted!';
+        setTimeout(() => closeLFGModal(), 2200);
+      } else {
+        status.textContent = 'Could not post. Check the bot is in the server.';
+        status.style.color = 'rgba(220,80,80,0.8)';
+        status.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Post to Discord';
+      }
+    } catch {
+      status.textContent = 'Network error. Please try again.';
+      status.style.color = 'rgba(220,80,80,0.8)';
+      status.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Post to Discord';
+    }
   }
 
   // ── PLAYER SEATS ─────────────────────────────────────────────────
