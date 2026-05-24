@@ -1057,7 +1057,7 @@
   <div class="turn-counter">
     <span class="turn-label" id="energyLabel">Campaign Energy</span>
     <div class="turn-track"><div class="turn-fill" id="turnFill" style="width:0%"></div></div>
-    <span class="turn-num" id="turnNum">0 / 60</span>
+    <span class="turn-num" id="turnNum">0 / 100</span>
   </div>
   <button class="sheet-btn" onclick="toggleSheet()">📜 Character</button>
   <button class="map-btn" onclick="toggleMap()">🗺 Map</button>
@@ -1307,11 +1307,11 @@
     <div class="credit-modal-sigil">⌛</div>
     <div class="credit-modal-title" id="creditModalTitle">This Chapter Nears Its End</div>
     <div class="credit-modal-body" id="creditModalBody">
-      Campaign energy is running low. You may seek a natural ending to this chapter, or extend the adventure with another credit.
+      The adventure is nearing its conclusion. The Dungeon Master will steer toward a satisfying ending.
     </div>
     <div class="credit-modal-btns">
-      <button class="credit-modal-btn primary" onclick="extendCampaign()">Extend Campaign — $6.99</button>
-      <button class="credit-modal-btn secondary" onclick="closeCreditModal()">Seek an Ending</button>
+      <button class="credit-modal-btn primary" onclick="extendCampaign()">Start New Campaign — $6.99</button>
+      <button class="credit-modal-btn secondary" onclick="closeCreditModal()">Continue to Ending</button>
     </div>
   </div>
 </div>
@@ -1435,7 +1435,8 @@
   function persistResources() {
     if (!sessionId || !window.sbClient || !character?.id) return;
     const key = 'res_' + character.id;
-    gameStateResources = { ...gameStateResources, [key]: resources };
+    // Always preserve campaign_cost_usd so a Long Rest never resets the budget counter
+    gameStateResources = { ...gameStateResources, [key]: resources, campaign_cost_usd: campaignCostUsd };
     sbClient.from('rpg_game_state')
       .update({ resources: gameStateResources, updated_at: new Date().toISOString() })
       .eq('session_id', sessionId).catch(() => {});
@@ -1511,27 +1512,43 @@
   let currentHP = character?.hp || character?.max_hp || 10;
   let turnCount = 0;
 
-  const TURNS_PER_CREDIT = 60;
-  let creditWarningShown = false;
+  // Cost-based campaign budget: 100% = $0.60 solo / $0.90 MP (~100 turns each)
+  const CAMPAIGN_COST_LIMIT = 0.60;
+  let campaignCostUsd = 0;
+  let campaignWarningShown = false;
+  // True only AFTER the finale turn has completed — that's when input is blocked
+  let campaignCapReached = false;
 
-  function refreshTurnDisplay() {
-    const pct  = Math.min(100, (turnCount / TURNS_PER_CREDIT) * 100);
+  // Cost limits: solo gets the full $2.50, multiplayer capped at $0.90 (~100 rounds)
+  const CAMPAIGN_COST_LIMIT_MP = 0.90;
+
+  function activeCostLimit() {
+    return totalActivePlayers > 1 ? CAMPAIGN_COST_LIMIT_MP : CAMPAIGN_COST_LIMIT;
+  }
+
+  function refreshCostDisplay() {
+    const pct  = Math.min(100, (campaignCostUsd / activeCostLimit()) * 100);
     const fill = el('turnFill');
     const num  = el('turnNum');
-    if (num) num.textContent = `${turnCount} / ${TURNS_PER_CREDIT}`;
+    if (num) num.textContent = `${Math.round(pct)} / 100`;
     if (fill) {
       fill.style.width = pct + '%';
       if (pct >= 90) fill.style.background = 'linear-gradient(to right,rgba(180,40,20,0.85),rgba(210,20,20,0.95))';
       else if (pct >= 70) fill.style.background = 'linear-gradient(to right,rgba(196,100,20,0.75),rgba(180,50,20,0.9))';
+      else fill.style.background = '';
     }
   }
 
+  // Keep alias for any legacy callers
+  function refreshTurnDisplay() { refreshCostDisplay(); }
+
   function updateTurnCounter() {
     turnCount++;
-    const pct  = Math.min(100, (turnCount / TURNS_PER_CREDIT) * 100);
+    // Display updates in data.done once the server returns real cost info
+    const pct  = Math.min(100, (campaignCostUsd / activeCostLimit()) * 100);
     const fill = el('turnFill');
     const num  = el('turnNum');
-    if (num) num.textContent = `${turnCount} / ${TURNS_PER_CREDIT}`;
+    if (num) num.textContent = `${Math.round(pct)} / 100`;
     if (fill) {
       fill.style.width = pct + '%';
       if (pct >= 90) {
@@ -1540,24 +1557,7 @@
         fill.style.background = 'linear-gradient(to right,rgba(196,100,20,0.75),rgba(180,50,20,0.9))';
       }
     }
-    // Persist energy to DB so page refresh doesn't allow free resets
-    if (sessionId && window.sbClient) {
-      sbClient.from('rpg_game_state')
-        .update({ resources: { ...gameStateResources, energy_turns_used: turnCount }, updated_at: new Date().toISOString() })
-        .eq('session_id', sessionId).catch(() => {});
-    }
-    if (pct >= 90 && !creditWarningShown) {
-      creditWarningShown = true;
-      addToFeed('system', '⌛ The DM senses this chapter nearing its conclusion — campaign energy is low. Seek an ending or extend with another credit.');
-      el('creditModalTitle').textContent = 'This Chapter Nears Its End';
-      el('creditModalBody').textContent  = '10% of campaign energy remains. You can seek a natural ending to this chapter, or extend the adventure with another credit ($6.99).';
-      el('creditModal').classList.add('visible');
-    }
-    if (pct >= 100) {
-      el('creditModalTitle').textContent = 'Campaign Energy Depleted';
-      el('creditModalBody').textContent  = 'This credit has been fully consumed. Purchase another credit to continue the adventure, or end the session here.';
-      el('creditModal').classList.add('visible');
-    }
+    // Cost and warnings are handled in data.done after the DM responds (when real cost is known)
   }
 
   function closeCreditModal() {
@@ -1573,7 +1573,7 @@
       <div style="background:#100608;border:1px solid rgba(196,162,100,0.25);border-radius:4px;padding:40px 48px;max-width:460px;width:90%;text-align:center;box-shadow:0 32px 80px rgba(0,0,0,0.8);">
         <div style="font-size:1.8rem;margin-bottom:16px;">⚜</div>
         <div style="font-family:'Playfair Display',serif;font-style:italic;font-size:1.4rem;color:var(--accent);margin-bottom:12px;">Extend Your Adventure</div>
-        <div style="font-size:0.88rem;color:var(--dim);line-height:1.7;margin-bottom:24px;">Each credit grants 60 more turns of AI narration ($6.99). To purchase, email us and we'll add credits to your account manually while our payment system is being set up.</div>
+        <div style="font-size:0.88rem;color:var(--dim);line-height:1.7;margin-bottom:24px;">Each credit ($6.99) unlocks a full campaign — play until the story reaches a natural conclusion. To purchase, email us and we'll add credits to your account manually while our payment system is being set up.</div>
         <a href="mailto:entertheunwritten@hotmail.com?subject=Credit%20Purchase&body=I'd%20like%20to%20purchase%20a%20credit%20for%20The%20Unwritten%20Table." style="display:inline-block;padding:12px 28px;background:linear-gradient(140deg,rgba(139,0,0,0.8),rgba(80,0,0,0.8));border:1px solid rgba(139,0,0,0.5);border-radius:2px;font-family:'Cinzel',serif;font-size:0.62rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--accent);text-decoration:none;">Purchase via Email</a>
         <button onclick="this.closest('div[style]').remove()" style="display:block;margin:14px auto 0;background:none;border:none;font-family:'Cinzel',serif;font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--dim);cursor:pointer;">Close</button>
       </div>`;
@@ -2121,6 +2121,27 @@
             if (data.done) {
               processDirectives(fullText);
               if (data.turn_number !== undefined) currentTurnNumber = data.turn_number;
+              // Update campaign budget from real token cost returned by edge function
+              if (data.campaign_cost_usd !== undefined) {
+                campaignCostUsd = data.campaign_cost_usd;
+                gameStateResources = { ...gameStateResources, campaign_cost_usd: campaignCostUsd };
+                refreshCostDisplay();
+                const pct = Math.min(100, (campaignCostUsd / CAMPAIGN_COST_LIMIT) * 100);
+                if (pct >= 90 && !campaignWarningShown) {
+                  campaignWarningShown = true;
+                  addToFeed('system', '⌛ The DM senses the chapter drawing to a close — the adventure is nearing its end. Seek a worthy conclusion.');
+                  el('creditModalTitle').textContent = 'The End Draws Near';
+                  el('creditModalBody').textContent  = 'Campaign budget is nearly exhausted. The Dungeon Master will steer toward a satisfying conclusion.';
+                  el('creditModal').classList.add('visible');
+                }
+                if (data.cost_cap_reached) {
+                  // The finale turn just completed — now block future input
+                  campaignCapReached = true;
+                  el('creditModalTitle').textContent = 'Campaign Complete';
+                  el('creditModalBody').textContent  = 'The adventure has reached its end. Begin a new campaign with another credit ($6.99).';
+                  el('creditModal').classList.add('visible');
+                }
+              }
               // Async mode: notify all other players via Discord DM
               if (asyncMode && currentUser?.id === sessionHostId) {
                 notifyAsyncTurn(fullText).catch(() => {});
@@ -2323,7 +2344,7 @@
     const val = el('actionInput').value.trim();
     if (!val || isDMThinking) return;
     if (/^\/vision\b/i.test(val)) { el('actionInput').value = ''; castSharedVision(); return; }
-    if (turnCount >= TURNS_PER_CREDIT) { el('creditModal').classList.add('visible'); return; }
+    if (campaignCapReached) { el('creditModal').classList.add('visible'); return; }
 
     const name = character ? character.name.split(' ')[0] : 'You';
     const cls  = character ? cap(character.cls) : 'Adventurer';
@@ -2869,11 +2890,13 @@
       gameStateResources = gsRes; // cache for merge updates
       imagesRemaining = Math.max(0, 12 - (gsRes.images_used || 0));
       currentTurnNumber = gs?.current_turn || 0;
-      // Restore energy counter from DB (prevents free reset via page refresh)
-      if (gsRes.energy_turns_used !== undefined) {
-        turnCount = gsRes.energy_turns_used;
-        refreshTurnDisplay();
+      // Restore campaign budget from DB (prevents free reset via page refresh)
+      if (gsRes.campaign_cost_usd !== undefined) {
+        campaignCostUsd = gsRes.campaign_cost_usd;
+        if (campaignCostUsd >= CAMPAIGN_COST_LIMIT * 0.9) campaignWarningShown = true;
+        refreshCostDisplay();
       }
+      if (gsRes.campaign_cost_cap_reached) campaignCapReached = true;
       // Load session summary for DM context and resume recap
       if (gsRes.session_summary) {
         sessionSummary = gsRes.session_summary;
@@ -2939,9 +2962,7 @@
             else if (msg.type === 'system') addToFeed('system', msg.content);
           });
           isRestoringHistory = false;
-          // Restore turn count from message history (display only — do not increment)
-          turnCount = msgs.filter(m => m.type === 'action').length;
-          refreshTurnDisplay();
+          turnCount = msgs.filter(m => m.type === 'action').length; // local tracking only, not used for gating
           el('feed').scrollTop = el('feed').scrollHeight;
         }
       }
