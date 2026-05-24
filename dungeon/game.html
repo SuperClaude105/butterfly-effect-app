@@ -2076,6 +2076,10 @@
             if (data.done) {
               processDirectives(fullText);
               if (data.turn_number !== undefined) currentTurnNumber = data.turn_number;
+              // Async mode: notify all other players via Discord DM
+              if (asyncMode && currentUser?.id === sessionHostId) {
+                notifyAsyncTurn(fullText).catch(() => {});
+              }
             }
           } catch {}
         }
@@ -2164,6 +2168,26 @@
         }
       }
     }
+  }
+
+  async function notifyAsyncTurn(dmText) {
+    try {
+      const { data: { session } } = await sbClient.auth.getSession();
+      if (!session?.access_token) return;
+      const campaignName = el('campaignTitle')?.textContent || 'Campaign';
+      const sessionCode  = el('sessionCodeVal')?.textContent?.trim() || '';
+      // Strip directives and markdown for the excerpt
+      const plainText = dmText
+        .replace(/\[[^\]]+\]/g, '')
+        .replace(/\*\*?([^*]+)\*\*?/g, '$1')
+        .replace(/^#{1,3}\s+/gm, '')
+        .replace(/\s+/g, ' ').trim();
+      await fetch('https://puywhvrgixlhijxzircy.supabase.co/functions/v1/discord-notify-turn', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({ session_id: sessionId, campaign_name: campaignName, dm_excerpt: plainText, session_code: sessionCode }),
+      });
+    } catch {}
   }
 
   async function sendDiscordClue(clueText) {
