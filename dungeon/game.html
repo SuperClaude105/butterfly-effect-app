@@ -1989,6 +1989,7 @@
       .replace(/\[ENEMY:[^\]]*\]/g,'').replace(/\[XP:[^\]]*\]/g,'').replace(/\[SCENE:[^\]]*\]/g,'')
       .replace(/\[LOCATION:[^\]]*\]/g,'').replace(/\[GOLD:[^\]]*\]/g,'').replace(/\[SHOP_OPEN\]/g,'')
       .replace(/\[CLUE:[^\]]*\]/g,'')
+      .replace(/\[PRIVATE_HINT:[^\]]*\]/g,'')
       .replace(/^#{1,3}\s+/gm,'')
       .replace(/^---+$/gm,'')
       .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')
@@ -2041,6 +2042,17 @@
     if (!isRestoringHistory) {
       for (const m of text.matchAll(/\[CLUE:\s*([^\]]+)\]/g)) {
         sendDiscordClue(m[1].trim());
+      }
+      // Per-player private hints: [PRIVATE_HINT:CharacterName:message]
+      // Each client only sends the hint matching their own character
+      if (character?.name) {
+        for (const m of text.matchAll(/\[PRIVATE_HINT:\s*([^:]+):\s*([^\]]+)\]/g)) {
+          const hintName = m[1].trim();
+          const hintText = m[2].trim();
+          if (hintName.toLowerCase() === character.name.toLowerCase()) {
+            sendDiscordClue(hintText);
+          }
+        }
       }
     }
   }
