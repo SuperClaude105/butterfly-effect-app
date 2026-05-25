@@ -940,6 +940,7 @@ MOOD OPTIONS (pick the one that best fits THIS chapter's emotional core):
   }
 ]
 </decisions>
+CRITICAL: For INTERACTIVE stories (the default), you MUST always return exactly one decision object with a prompt and 3 options — never an empty array, never omit this block, even if the chapter ends on a cliffhanger or a moment of no apparent choice. If the chapter ends mid-action, the decision shapes what happens next. There is always a next move.
 For LINEAR stories configured with no reader choices: always return an empty decisions array — <decisions>[]</decisions>
 
 <bible>
