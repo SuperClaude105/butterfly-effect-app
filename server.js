@@ -1012,14 +1012,18 @@ function parseResponse(text) {
   if (moodRaw) {
     try { mood = JSON.parse(moodRaw); } catch (_) {}
   }
+  let decisionsFallback = false;
   if (decisionsRaw) {
     try {
       const parsed = JSON.parse(decisionsRaw);
       if (Array.isArray(parsed) && parsed.length > 0) decisions = parsed;
-    } catch (_) {}
+      else decisionsFallback = true;
+    } catch (_) { decisionsFallback = true; }
+  } else {
+    decisionsFallback = true;
   }
 
-  return { chapterText, bookTitle: bookTitleRaw, title: titleRaw, mood, decisions, bible: bibleRaw };
+  return { chapterText, bookTitle: bookTitleRaw, title: titleRaw, mood, decisions, bible: bibleRaw, decisionsFallback };
 }
 
 // ─── API: Start (Chapter 1) ────────────────────────────────────────────────
@@ -1066,6 +1070,10 @@ app.post('/api/start', async (req, res) => {
     });
 
     const parsed = parseResponse(response.content[0].text);
+    if (parsed.decisionsFallback && !storyConfig?.noDecisions) {
+      console.warn(`[decisions_fallback] user=${user.id} chapter=1 genre=${storyConfig?.genre}`);
+      supabaseAdmin.from('ai_warnings').insert({ type: 'decisions_fallback', user_id: user.id, metadata: { chapter: 1, genre: storyConfig?.genre || null } }).catch(() => {});
+    }
     res.json({ success: true, ...parsed, chapterNumber: 1, isTrial });
   } catch (err) {
     console.error('Error generating chapter 1:', err.message);
@@ -1131,6 +1139,10 @@ app.post('/api/chapter', async (req, res) => {
     });
 
     const parsed = parseResponse(response.content[0].text);
+    if (parsed.decisionsFallback && !storyConfig?.noDecisions) {
+      console.warn(`[decisions_fallback] user=${user.id} chapter=${chapterNumber} genre=${storyConfig?.genre}`);
+      supabaseAdmin.from('ai_warnings').insert({ type: 'decisions_fallback', user_id: user.id, metadata: { chapter: chapterNumber, genre: storyConfig?.genre || null } }).catch(() => {});
+    }
     res.json({ success: true, ...parsed, chapterNumber });
   } catch (err) {
     console.error(`Error generating chapter ${chapterNumber}:`, err.message);
