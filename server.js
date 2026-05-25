@@ -1006,13 +1006,16 @@ function parseResponse(text) {
     atmosphere: 'shadowed',
   };
 
-  let decisions = [{ prompt: 'What does Lyra do next?', options: ['Press forward', 'Hold her ground'] }];
+  let decisions = [{ prompt: 'What happens next?', options: ['Press forward', 'Tread carefully', 'Take a different path'] }];
 
   if (moodRaw) {
     try { mood = JSON.parse(moodRaw); } catch (_) {}
   }
   if (decisionsRaw) {
-    try { decisions = JSON.parse(decisionsRaw); } catch (_) {}
+    try {
+      const parsed = JSON.parse(decisionsRaw);
+      if (Array.isArray(parsed) && parsed.length > 0) decisions = parsed;
+    } catch (_) {}
   }
 
   return { chapterText, bookTitle: bookTitleRaw, title: titleRaw, mood, decisions, bible: bibleRaw };

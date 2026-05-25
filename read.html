@@ -1325,6 +1325,12 @@ async function showReading(data, animate, isFinal = false) {
       S.pendingDecisions = decisions;
       saveProgress();
       setTimeout(() => openDecisions(decisions), narrator.active ? 1200 : 4000);
+    } else {
+      // AI returned empty decisions — show generic choices so the reader is never stuck
+      const fallback = [{ prompt: 'What happens next?', options: ['Press forward', 'Tread carefully', 'Take a different path'] }];
+      S.pendingDecisions = fallback;
+      saveProgress();
+      setTimeout(() => openDecisions(fallback), narrator.active ? 1200 : 4000);
     }
   } else if (isFinal || atLimit) {
     S.pendingDecisions = null;
