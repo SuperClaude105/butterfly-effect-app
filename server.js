@@ -303,7 +303,7 @@ app.post('/api/social/claim', async (req, res) => {
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
   const { action } = req.body;
-  if (!['instagram', 'facebook'].includes(action)) return res.status(400).json({ error: 'Invalid action' });
+  if (!['instagram', 'facebook', 'discord'].includes(action)) return res.status(400).json({ error: 'Invalid action' });
 
   const profile = await getProfile(user.id);
   if (!profile.has_purchased) return res.status(403).json({ error: 'Purchase required' });
@@ -318,11 +318,12 @@ app.post('/api/social/claim', async (req, res) => {
   const newCount = (profile.social_credits || 0) + 1;
   await supabaseAdmin.from('profiles').update({ social_credits: newCount }).eq('user_id', user.id);
 
-  // Award free story credit when all 3 actions are done
+  // Award free story credit: referral required + any 2 of 3 social follows
   const { data: allActions } = await supabaseAdmin
     .from('social_actions').select('action_type').eq('user_id', user.id);
   const done = (allActions || []).map(a => a.action_type);
-  const rewardEarned = done.includes('instagram') && done.includes('facebook') && done.includes('referral');
+  const socialDone = done.filter(a => ['instagram', 'facebook', 'discord'].includes(a)).length;
+  const rewardEarned = done.includes('referral') && socialDone >= 2 && newCount === 3;
 
   if (rewardEarned) {
     await supabaseAdmin.rpc('add_credits', { p_user_id: user.id, p_credits: 1 });
@@ -360,14 +361,70 @@ app.post('/api/social/claim-referral', async (req, res) => {
   const newCount = (referrer.social_credits || 0) + 1;
   await supabaseAdmin.from('profiles').update({ social_credits: newCount }).eq('user_id', referrer.user_id);
 
-  // Check if referrer now has all 3 actions
+  // Award credit: referral required + any 2 of 3 social follows
   const { data: allActions } = await supabaseAdmin
     .from('social_actions').select('action_type').eq('user_id', referrer.user_id);
   const done = (allActions || []).map(a => a.action_type);
-  if (done.includes('instagram') && done.includes('facebook') && done.includes('referral')) {
+  const socialDone = done.filter(a => ['instagram', 'facebook', 'discord'].includes(a)).length;
+  if (done.includes('referral') && socialDone >= 2 && newCount === 3) {
     await supabaseAdmin.rpc('add_credits', { p_user_id: referrer.user_id, p_credits: 1 });
   }
 
+  res.json({ success: true });
+});
+
+// ─── Discord helper ───────────────────────────────────────────────────────
+async function postDiscordLibraryAnnouncement(story) {
+  const webhook = process.env.DISCORD_UNWRITTEN_WEBHOOK;
+  if (!webhook) return;
+  const d       = story.data || {};
+  const title   = d.bookTitle || 'Untitled';
+  const genre   = d.config?.genre || 'Fiction';
+  const idea    = (d.config?.storyIdea || '').slice(0, 200) || null;
+  const cover   = story.cover_url || null;
+  const chapters = d.progress?.chapters?.length || d.progress?.chapter || 0;
+
+  const embed = {
+    title,
+    description: idea ? `*${idea}*` : null,
+    color: 0xc8a96e,
+    fields: [
+      { name: 'Genre', value: genre, inline: true },
+      { name: 'Chapters', value: String(chapters), inline: true },
+    ],
+    url: `${process.env.APP_URL}/library.html`,
+    footer: { text: 'Enter the Unwritten — Public Library' },
+  };
+  if (cover) embed.image = { url: cover };
+
+  await fetch(webhook, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      content: '📖 **A new story just arrived in the library**',
+      embeds: [embed],
+    }),
+  }).catch(e => console.error('Discord webhook failed:', e.message));
+}
+
+// ─── POST /api/notify/library-post ────────────────────────────────────────
+app.post('/api/notify/library-post', async (req, res) => {
+  const user = await getUserFromToken(req.headers.authorization);
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+  const { storyId } = req.body;
+  if (!storyId) return res.status(400).json({ error: 'Missing storyId' });
+
+  const { data: story } = await supabaseAdmin
+    .from('stories')
+    .select('id, data, cover_url, is_public, user_id')
+    .eq('id', storyId)
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (!story?.is_public) return res.status(400).json({ error: 'Story not public' });
+
+  await postDiscordLibraryAnnouncement(story);
   res.json({ success: true });
 });
 
