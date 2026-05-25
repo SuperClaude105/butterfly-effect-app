@@ -1034,6 +1034,13 @@ let _lib = {}, _pubLib = {}, _stories = [], _session = null, _credits = 0, _isCo
   } catch (_) {}
   updateCreditDisplay();
 
+  // Stash referral code from ?ref= so shelf.html can claim it after signup
+  const refCode = new URLSearchParams(location.search).get('ref');
+  if (refCode) {
+    localStorage.setItem('unwritten_pending_ref', refCode);
+    history.replaceState({}, '', location.pathname);
+  }
+
   // Handle cancelled payment
   if (new URLSearchParams(location.search).get('payment') === 'cancelled') {
     history.replaceState({}, '', location.pathname);

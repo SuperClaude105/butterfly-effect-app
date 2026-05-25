@@ -16,6 +16,7 @@ app.get('/api/credits', async (req, res) => {
   const user = await getUserFromToken(req.headers.authorization);
   if (!user) return res.json({ credits: 0, is_comped: false, share_credits: 0 });
   const profile = await getProfile(user.id);
+  if (!profile.referral_code) await ensureReferralCode(user.id);
   res.json(profile);
 });
 
@@ -191,6 +192,7 @@ app.post('/api/payment/confirm', async (req, res) => {
     if (storiedCredits) {
       await supabaseAdmin.rpc('add_storied_credits', { p_user_id: user.id, p_credits: storiedCredits });
       await supabaseAdmin.rpc('add_share_credits', { p_user_id: user.id, p_credits: storiedCredits * 2 });
+      await supabaseAdmin.from('profiles').update({ has_purchased: true }).eq('user_id', user.id);
       await supabaseAdmin.from('processed_payments').insert({ session_id: sessionId, user_id: user.id, credits: 0 });
       return res.json({ success: true, storiedCredits });
     }
@@ -265,6 +267,7 @@ app.post('/api/payment/confirm', async (req, res) => {
 
     // Normal (non-gift) flow
     await supabaseAdmin.rpc('add_credits', { p_user_id: user.id, p_credits: credits });
+    await supabaseAdmin.from('profiles').update({ has_purchased: true }).eq('user_id', user.id);
     await supabaseAdmin.from('processed_payments').insert({ session_id: sessionId, user_id: user.id, credits });
 
     res.json({ success: true, credits });
@@ -272,6 +275,100 @@ app.post('/api/payment/confirm', async (req, res) => {
     console.error('Payment confirm error:', err.message);
     res.status(500).json({ error: err.message });
   }
+});
+
+// ─── GET /api/social/status ───────────────────────────────────────────────
+app.get('/api/social/status', async (req, res) => {
+  const user = await getUserFromToken(req.headers.authorization);
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+  const profile = await getProfile(user.id);
+  if (!profile.referral_code) await ensureReferralCode(user.id);
+
+  const { data: actions } = await supabaseAdmin
+    .from('social_actions').select('action_type').eq('user_id', user.id);
+
+  const done = (actions || []).map(a => a.action_type);
+  res.json({
+    has_purchased: profile.has_purchased || false,
+    social_credits: profile.social_credits || 0,
+    actions_done: done,
+    referral_code: profile.referral_code,
+  });
+});
+
+// ─── POST /api/social/claim ───────────────────────────────────────────────
+app.post('/api/social/claim', async (req, res) => {
+  const user = await getUserFromToken(req.headers.authorization);
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+  const { action } = req.body;
+  if (!['instagram', 'facebook'].includes(action)) return res.status(400).json({ error: 'Invalid action' });
+
+  const profile = await getProfile(user.id);
+  if (!profile.has_purchased) return res.status(403).json({ error: 'Purchase required' });
+
+  // Check not already claimed
+  const { data: existing } = await supabaseAdmin
+    .from('social_actions').select('id').eq('user_id', user.id).eq('action_type', action).maybeSingle();
+  if (existing) return res.json({ success: true, already: true, social_credits: profile.social_credits });
+
+  // Record action + increment social_credits
+  await supabaseAdmin.from('social_actions').insert({ user_id: user.id, action_type: action });
+  const newCount = (profile.social_credits || 0) + 1;
+  await supabaseAdmin.from('profiles').update({ social_credits: newCount }).eq('user_id', user.id);
+
+  // Award free story credit when all 3 actions are done
+  const { data: allActions } = await supabaseAdmin
+    .from('social_actions').select('action_type').eq('user_id', user.id);
+  const done = (allActions || []).map(a => a.action_type);
+  const rewardEarned = done.includes('instagram') && done.includes('facebook') && done.includes('referral');
+
+  if (rewardEarned) {
+    await supabaseAdmin.rpc('add_credits', { p_user_id: user.id, p_credits: 1 });
+  }
+
+  res.json({ success: true, social_credits: newCount, actions_done: done, rewardEarned });
+});
+
+// ─── POST /api/social/claim-referral ──────────────────────────────────────
+// Called when a new user signs up via a referral link
+app.post('/api/social/claim-referral', async (req, res) => {
+  const user = await getUserFromToken(req.headers.authorization);
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+  const { referralCode } = req.body;
+  if (!referralCode) return res.status(400).json({ error: 'Missing referral code' });
+
+  // Find the referrer
+  const { data: referrer } = await supabaseAdmin
+    .from('profiles').select('user_id, social_credits, has_purchased')
+    .eq('referral_code', referralCode.toUpperCase()).maybeSingle();
+
+  if (!referrer) return res.status(404).json({ error: 'Invalid referral code' });
+  if (referrer.user_id === user.id) return res.status(400).json({ error: 'Cannot refer yourself' });
+
+  // Check referrer hasn't already gotten credit for this referral
+  const { data: existing } = await supabaseAdmin
+    .from('social_actions').select('id').eq('user_id', referrer.user_id).eq('action_type', 'referral').maybeSingle();
+  if (existing) return res.json({ success: true, already: true });
+
+  if (!referrer.has_purchased) return res.json({ success: true, pending: true });
+
+  // Credit the referrer
+  await supabaseAdmin.from('social_actions').insert({ user_id: referrer.user_id, action_type: 'referral' });
+  const newCount = (referrer.social_credits || 0) + 1;
+  await supabaseAdmin.from('profiles').update({ social_credits: newCount }).eq('user_id', referrer.user_id);
+
+  // Check if referrer now has all 3 actions
+  const { data: allActions } = await supabaseAdmin
+    .from('social_actions').select('action_type').eq('user_id', referrer.user_id);
+  const done = (allActions || []).map(a => a.action_type);
+  if (done.includes('instagram') && done.includes('facebook') && done.includes('referral')) {
+    await supabaseAdmin.rpc('add_credits', { p_user_id: referrer.user_id, p_credits: 1 });
+  }
+
+  res.json({ success: true });
 });
 
 // ─── POST /api/accept-gift ─────────────────────────────────────────────────
@@ -707,12 +804,14 @@ app.post('/api/webhook', async (req, res) => {
         } else if (userId && storiedCredits) {
           await supabaseAdmin.rpc('add_storied_credits', { p_user_id: userId, p_credits: parseInt(storiedCredits) });
           await supabaseAdmin.rpc('add_share_credits', { p_user_id: userId, p_credits: parseInt(storiedCredits) * 2 });
+          await supabaseAdmin.from('profiles').update({ has_purchased: true }).eq('user_id', userId);
           await supabaseAdmin.from('processed_payments').insert({ session_id: session.id, user_id: userId, credits: 0 });
         } else if (userId && shareCredits) {
           await supabaseAdmin.rpc('add_share_credits', { p_user_id: userId, p_credits: parseInt(shareCredits) });
           await supabaseAdmin.from('processed_payments').insert({ session_id: session.id, user_id: userId, credits: 0 });
         } else if (userId && credits) {
           await supabaseAdmin.rpc('add_credits', { p_user_id: userId, p_credits: parseInt(credits) });
+          await supabaseAdmin.from('profiles').update({ has_purchased: true }).eq('user_id', userId);
           await supabaseAdmin.from('processed_payments').insert({ session_id: session.id, user_id: userId, credits: parseInt(credits) });
         }
       }
@@ -767,10 +866,15 @@ async function getUserFromToken(authHeader) {
 async function getProfile(userId) {
   const { data } = await supabaseAdmin
     .from('profiles')
-    .select('credits, is_comped, share_credits, storied_credits, library_slots, free_chapter_used')
+    .select('credits, is_comped, share_credits, storied_credits, library_slots, free_chapter_used, has_purchased, social_credits, referral_code')
     .eq('user_id', userId)
     .maybeSingle();
-  return data || { credits: 0, is_comped: false, share_credits: 0, storied_credits: 0, library_slots: 1, free_chapter_used: false };
+  return data || { credits: 0, is_comped: false, share_credits: 0, storied_credits: 0, library_slots: 1, free_chapter_used: false, has_purchased: false, social_credits: 0, referral_code: null };
+}
+
+async function ensureReferralCode(userId) {
+  const code = Math.random().toString(36).slice(2, 6).toUpperCase() + Math.random().toString(36).slice(2, 6).toUpperCase();
+  await supabaseAdmin.from('profiles').update({ referral_code: code }).eq('user_id', userId).is('referral_code', null);
 }
 
 // ─── Dynamic system prompt builder ────────────────────────────────────────

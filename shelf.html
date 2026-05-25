@@ -1176,6 +1176,83 @@ body::before {
 .reading-empty-slot:hover { border-color: rgba(201,168,76,0.3); }
 .reading-empty-icon { font-size: 1rem; color: var(--faint); }
 .reading-empty-text { font-size: 0.66rem; color: var(--faint); letter-spacing: 0.1em; text-transform: uppercase; }
+
+/* ══════════════════════
+   EARN A FREE STORY
+══════════════════════ */
+.earn-section {
+  padding: 40px 60px;
+  border-bottom: 1px solid var(--faint);
+}
+@media(max-width:768px) { .earn-section { padding: 28px 20px; } }
+
+.earn-header { margin-bottom: 20px; }
+.earn-title {
+  font-size: 0.68rem; font-weight: 600; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--gold); opacity: 0.75; margin-bottom: 3px;
+}
+.earn-subtitle { font-size: 0.8rem; color: var(--muted); }
+
+.earn-locked-msg {
+  font-size: 0.82rem; color: var(--faint); font-style: italic;
+  padding: 16px; border: 1px dashed rgba(201,168,76,0.12); border-radius: 3px;
+  text-align: center;
+}
+
+.earn-progress-row { margin-bottom: 20px; }
+.earn-progress-track {
+  height: 4px; background: rgba(255,255,255,0.06); border-radius: 4px; overflow: hidden; margin-bottom: 8px;
+}
+.earn-progress-fill {
+  height: 100%; background: var(--gold); border-radius: 4px;
+  transition: width 0.5s cubic-bezier(0.22,1,0.36,1);
+}
+.earn-progress-label { font-size: 0.75rem; color: var(--muted); }
+
+.earn-actions { display: flex; flex-direction: column; gap: 10px; }
+
+.earn-action {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  padding: 14px 16px; background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border); border-radius: 3px;
+  transition: border-color 0.2s, background 0.2s;
+}
+.earn-action.done {
+  opacity: 0.45; pointer-events: none;
+  border-color: rgba(201,168,76,0.1);
+}
+.earn-action:not(.done):hover { border-color: rgba(201,168,76,0.2); background: rgba(201,168,76,0.03); }
+
+.earn-action-left { display: flex; align-items: center; gap: 12px; }
+.earn-icon {
+  width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.earn-icon-instagram { background: linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045); color: #fff; }
+.earn-icon-facebook  { background: #1877f2; color: #fff; }
+.earn-icon-referral  { background: rgba(201,168,76,0.12); color: var(--gold); border: 1px solid rgba(201,168,76,0.2); }
+
+.earn-action-title { font-size: 0.85rem; color: var(--text); font-weight: 500; }
+.earn-action-sub   { font-size: 0.72rem; color: var(--muted); margin-top: 1px; }
+
+.earn-claim-btn {
+  flex-shrink: 0; padding: 8px 16px; font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer;
+  border: 1px solid rgba(201,168,76,0.3); background: rgba(201,168,76,0.08);
+  color: var(--gold); border-radius: 3px;
+  transition: background 0.2s, border-color 0.2s;
+}
+.earn-claim-btn:hover { background: rgba(201,168,76,0.15); border-color: rgba(201,168,76,0.5); }
+.earn-claim-btn.done-btn {
+  background: none; border-color: rgba(255,255,255,0.08); color: var(--faint);
+  pointer-events: none; letter-spacing: 0;
+}
+
+.earn-reward-banner {
+  margin-top: 16px; padding: 12px 16px; text-align: center;
+  background: rgba(201,168,76,0.08); border: 1px solid rgba(201,168,76,0.25);
+  border-radius: 3px; font-size: 0.82rem; color: var(--gold);
+}
 </style>
 </head>
 <body>
@@ -1247,6 +1324,76 @@ body::before {
     <a href="library.html" class="reading-browse-link">Browse Public Library →</a>
   </div>
   <div class="reading-row" id="reading-row"></div>
+</section>
+
+<!-- Earn a Free Story -->
+<section class="earn-section" id="earn-section" style="display:none">
+  <div class="earn-header">
+    <div class="earn-title">Earn a Free Story</div>
+    <div class="earn-subtitle">Support Unwritten — get a credit back</div>
+  </div>
+
+  <!-- Locked state -->
+  <div id="earn-locked" style="display:none">
+    <div class="earn-locked-msg">Purchase your first story to unlock rewards</div>
+  </div>
+
+  <!-- Unlocked state -->
+  <div id="earn-unlocked" style="display:none">
+    <div class="earn-progress-row">
+      <div class="earn-progress-track">
+        <div class="earn-progress-fill" id="earn-progress-fill" style="width:0%"></div>
+      </div>
+      <div class="earn-progress-label"><span id="earn-count">0</span>/3 — Complete all three to earn 1 free story</div>
+    </div>
+
+    <div class="earn-actions">
+
+      <div class="earn-action" id="earn-action-instagram">
+        <div class="earn-action-left">
+          <div class="earn-icon earn-icon-instagram">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+          </div>
+          <div>
+            <div class="earn-action-title">Follow on Instagram</div>
+            <div class="earn-action-sub">@entertheunwritten</div>
+          </div>
+        </div>
+        <button class="earn-claim-btn" onclick="claimSocial('instagram')">+1 Credit</button>
+      </div>
+
+      <div class="earn-action" id="earn-action-facebook">
+        <div class="earn-action-left">
+          <div class="earn-icon earn-icon-facebook">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+          </div>
+          <div>
+            <div class="earn-action-title">Follow on Facebook</div>
+            <div class="earn-action-sub">Enter the Unwritten</div>
+          </div>
+        </div>
+        <button class="earn-claim-btn" onclick="claimSocial('facebook')">+1 Credit</button>
+      </div>
+
+      <div class="earn-action" id="earn-action-referral">
+        <div class="earn-action-left">
+          <div class="earn-icon earn-icon-referral">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <div>
+            <div class="earn-action-title">Refer a Friend</div>
+            <div class="earn-action-sub">They sign up via your link</div>
+          </div>
+        </div>
+        <button class="earn-claim-btn earn-referral-btn" onclick="copyReferralLink()">Copy Link</button>
+      </div>
+
+    </div>
+
+    <div id="earn-reward-banner" style="display:none" class="earn-reward-banner">
+      1 free story credit added to your account
+    </div>
+  </div>
 </section>
 
 <!-- Library -->
@@ -2174,6 +2321,126 @@ async function openLibraryCard() {
 }
 
 loadActiveBorrows();
+
+// ── Social Rewards ────────────────────────────────────────────────────────────
+let _socialStatus = null;
+
+async function loadSocialStatus() {
+  const { data: { session } } = await _SB.auth.getSession();
+  if (!session) return;
+  try {
+    const res = await fetch('/api/social/status', {
+      headers: { 'Authorization': `Bearer ${session.access_token}` }
+    });
+    _socialStatus = await res.json();
+    renderEarnSection();
+  } catch (_) {}
+}
+
+function renderEarnSection() {
+  const s = _socialStatus;
+  if (!s) return;
+
+  const section = document.getElementById('earn-section');
+  section.style.display = 'block';
+
+  if (!s.has_purchased) {
+    document.getElementById('earn-locked').style.display = 'block';
+    document.getElementById('earn-unlocked').style.display = 'none';
+    return;
+  }
+
+  document.getElementById('earn-locked').style.display = 'none';
+  document.getElementById('earn-unlocked').style.display = 'block';
+
+  const count = s.actions_done.length;
+  document.getElementById('earn-count').textContent = count;
+  document.getElementById('earn-progress-fill').style.width = Math.round((count / 3) * 100) + '%';
+
+  // Mark completed actions
+  ['instagram', 'facebook', 'referral'].forEach(type => {
+    const row = document.getElementById(`earn-action-${type}`);
+    const btn = row?.querySelector('.earn-claim-btn');
+    if (s.actions_done.includes(type)) {
+      row?.classList.add('done');
+      if (btn) { btn.textContent = '✓ Done'; btn.classList.add('done-btn'); }
+    }
+  });
+
+  // Show referral link on referral row
+  if (s.referral_code && !s.actions_done.includes('referral')) {
+    const refRow = document.getElementById('earn-action-referral');
+    const sub = refRow?.querySelector('.earn-action-sub');
+    if (sub) sub.textContent = `${window.location.origin}/?ref=${s.referral_code}`;
+  }
+
+  if (count >= 3) {
+    document.getElementById('earn-reward-banner').style.display = 'block';
+  }
+}
+
+async function claimSocial(action) {
+  const { data: { session } } = await _SB.auth.getSession();
+  if (!session) return;
+
+  const socialUrls = {
+    instagram: 'https://www.instagram.com/entertheunwritten/',
+    facebook:  'https://www.facebook.com/entertheunwritten',
+  };
+
+  // Open social page immediately in new tab
+  if (socialUrls[action]) window.open(socialUrls[action], '_blank');
+
+  // Grant the credit right away (honor-based, same as StoryZone)
+  try {
+    const res = await fetch('/api/social/claim', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+      body: JSON.stringify({ action }),
+    });
+    const data = await res.json();
+    if (data.success && !data.already) {
+      _socialStatus.social_credits = data.social_credits;
+      _socialStatus.actions_done = data.actions_done;
+      if (data.rewardEarned) {
+        showToast('All 3 complete — 1 free story credit added to your account!');
+      } else {
+        showToast(`+1 social credit — ${data.actions_done.length}/3 complete`);
+      }
+      renderEarnSection();
+    }
+  } catch (_) {}
+}
+
+async function copyReferralLink() {
+  if (!_socialStatus?.referral_code) return;
+  const link = `${window.location.origin}/?ref=${_socialStatus.referral_code}`;
+  try {
+    await navigator.clipboard.writeText(link);
+    showToast('Referral link copied — share it with a friend!');
+  } catch (_) {
+    prompt('Copy your referral link:', link);
+  }
+}
+
+loadSocialStatus();
+
+// Handle incoming referral on signup
+(async () => {
+  const ref = new URLSearchParams(location.search).get('ref') ||
+              localStorage.getItem('unwritten_pending_ref');
+  if (ref) {
+    localStorage.removeItem('unwritten_pending_ref');
+    const { data: { session } } = await _SB.auth.getSession();
+    if (session) {
+      fetch('/api/social/claim-referral', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({ referralCode: ref }),
+      }).catch(() => {});
+    }
+  }
+})();
 </script>
 
 <!-- Library Card modal -->
