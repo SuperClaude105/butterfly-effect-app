@@ -1344,7 +1344,7 @@ async function showReading(data, animate, isFinal = false) {
   narrator.autoRead(chapterText || '');
 
   // Generate spine SVG after chapter 1 (fire-and-forget, no await)
-  if (chapterNumber === 1 && STORY_ID && STORY_CONFIG) generateSpine();
+  if (chapterNumber === 1 && STORY_ID && STORY_CONFIG) { generateSpine(); generateCover(); }
 }
 
 function showHUD() {
@@ -1497,6 +1497,39 @@ async function generateSpine() {
       if (uid) await _SB.from('stories').upsert({ id: STORY_ID, user_id: uid, data: _storyCache, updated_at: new Date().toISOString() });
     }
   } catch (_) { /* spine is optional — fail silently */ }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// COVER GENERATION
+// ═══════════════════════════════════════════════════════════════
+async function generateCover() {
+  try {
+    const bookTitle = S.bookTitle || STORY_CONFIG.bookTitleInput;
+    if (!bookTitle) return;
+    const res = await fetch('/api/generate-cover', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(await _authHeader()) },
+      body: JSON.stringify({
+        storyId:          STORY_ID,
+        bookTitle,
+        genre:            STORY_CONFIG.genre || '',
+        premise:          STORY_CONFIG.storyIdea || '',
+        themes:           STORY_CONFIG.themes || [],
+        protagonistName:  STORY_CONFIG.protagonistName || '',
+        loveInterestName: STORY_CONFIG.loveInterestName || '',
+      }),
+    });
+    const data = await res.json();
+    if (!data.coverUrl) return;
+    if (_storyCache) {
+      _storyCache.coverImage = data.coverUrl;
+      const uid = await _ensureUser();
+      if (uid) await _SB.from('stories').upsert({
+        id: STORY_ID, user_id: uid, data: _storyCache,
+        cover_url: data.coverUrl, updated_at: new Date().toISOString(),
+      });
+    }
+  } catch (_) { /* cover is optional — fail silently */ }
 }
 
 // ═══════════════════════════════════════════════════════════════

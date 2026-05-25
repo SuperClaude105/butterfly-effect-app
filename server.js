@@ -1197,6 +1197,63 @@ Write in third person, present tense. Hook the reader with the core conflict and
   }
 });
 
+// ─── API: Generate cover image ────────────────────────────────────────────
+app.post('/api/generate-cover', async (req, res) => {
+  const user = await getUserFromToken(req.headers.authorization);
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+  const { storyId, bookTitle, genre, premise, themes, protagonistName, loveInterestName } = req.body;
+  if (!storyId || !bookTitle) return res.status(400).json({ error: 'Missing storyId or bookTitle' });
+
+  const OPENAI_KEY = process.env.OPENAI_API_KEY;
+  if (!OPENAI_KEY) return res.status(503).json({ error: 'Image generation not configured' });
+
+  const themeStr   = (themes || []).slice(0, 3).join(', ') || genre || 'fiction';
+  const charNote   = protagonistName   ? ` Protagonist: ${protagonistName}.`   : '';
+  const liNote     = loveInterestName  ? ` Love interest: ${loveInterestName}.` : '';
+  const premNote   = premise           ? ` Premise: ${premise.slice(0, 150)}.`  : '';
+
+  const prompt = `Book cover art for a ${genre || 'fiction'} novel titled "${bookTitle}".${premNote}${charNote}${liNote} Themes: ${themeStr}. Painterly illustration style, dramatic cinematic lighting, rich atmospheric colors, highly detailed, evocative mood. No text, no title, no words, no letters anywhere in the image.`;
+
+  try {
+    const imgResp = await fetch('https://api.openai.com/v1/images/generations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_KEY}` },
+      body: JSON.stringify({ model: 'gpt-image-1', prompt, n: 1, size: '1024x1536', quality: 'medium' }),
+    });
+
+    if (!imgResp.ok) {
+      console.error('Cover image API error:', imgResp.status, await imgResp.text());
+      return res.status(502).json({ error: 'Image generation failed' });
+    }
+
+    const imgData = await imgResp.json();
+    const b64 = imgData.data?.[0]?.b64_json;
+    if (!b64) return res.status(502).json({ error: 'No image returned' });
+
+    const imageBytes = Buffer.from(b64, 'base64');
+    const filename   = `covers/${storyId}.png`;
+
+    const { error: uploadErr } = await supabaseAdmin.storage
+      .from('book-covers')
+      .upload(filename, imageBytes, { contentType: 'image/png', upsert: true });
+
+    let coverUrl;
+    if (uploadErr) {
+      coverUrl = `data:image/png;base64,${b64}`;
+    } else {
+      const { data: pub } = supabaseAdmin.storage.from('book-covers').getPublicUrl(filename);
+      coverUrl = pub.publicUrl;
+    }
+
+    await supabaseAdmin.from('stories').update({ cover_url: coverUrl }).eq('id', storyId).eq('user_id', user.id);
+    res.json({ success: true, coverUrl });
+  } catch (err) {
+    console.error('Cover generation error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // PDF export is handled client-side via window.print() in read.html
 
 // ─── PDF HTML builder (kept for reference — export is now client-side) ────
