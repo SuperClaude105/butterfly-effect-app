@@ -1105,9 +1105,12 @@ body::before {
 .reading-browse-link:hover { color: var(--gold); }
 
 .reading-row {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 220px));
+  display: flex;
+  flex-wrap: wrap;
   gap: 12px;
+}
+.reading-card, .reading-empty-slot {
+  flex: 0 0 200px;
 }
 
 .reading-card {
@@ -1831,43 +1834,73 @@ async function buyShareCredits(bundle) {
   if (json.url) window.location.href = json.url;
 }
 
-// ── Currently Reading (bookmarks) ────────────────────────
+// ── Currently Reading (own stories + library bookmarks) ───
 async function loadReadingBookmarks(userId) {
+  const cards = [];
+
+  // Own in-progress stories (chapter started, not finished)
+  const ownInProgress = Object.entries(_lib)
+    .map(([id, s]) => ({ id, ...s }))
+    .filter(s => {
+      const ch = s.progress?.chapter || 0;
+      const t  = s.config?.targetChapters || 20;
+      return ch > 0 && ch < t && !s.storiedInProgress && !s.storiedComplete;
+    })
+    .sort((a, b) => (b.lastReadAt || 0) - (a.lastReadAt || 0))
+    .slice(0, 3);
+
+  for (const s of ownInProgress) {
+    const ch    = s.progress?.chapter || 0;
+    const total = s.config?.targetChapters || 20;
+    const pct   = Math.round((ch / total) * 100);
+    const title = s.bookTitle || 'Untitled';
+    const photo = s.cover_url || s.coverImage || `https://picsum.photos/seed/${s.id}/400/600`;
+    cards.push(`<a class="reading-card" href="#" onclick="event.preventDefault();heroAction('${s.id}')">
+      <div class="reading-card-bar"><div class="reading-card-fill" style="width:${pct}%"></div></div>
+      <div class="reading-card-title">${title}</div>
+      <div class="reading-card-meta">Chapter ${ch} of ${total} · Your Story</div>
+      <div class="reading-card-cta">Continue →</div>
+    </a>`);
+  }
+
+  // Library bookmarks
   const { data: bookmarks } = await _SB
     .from('reading_bookmarks')
     .select('story_id, chapter_idx')
     .eq('user_id', userId)
     .order('updated_at', { ascending: false })
-    .limit(2);
+    .limit(3);
 
-  if (!bookmarks || bookmarks.length === 0) return;
+  if (bookmarks && bookmarks.length > 0) {
+    const ids = bookmarks.map(b => b.story_id);
+    const { data: libStories } = await _SB
+      .from('stories')
+      .select('id, data, cover_url')
+      .in('id', ids)
+      .eq('is_public', true)
+      .is('deleted_at', null);
 
-  const ids = bookmarks.map(b => b.story_id);
-  const { data: stories } = await _SB
-    .from('stories')
-    .select('id, data')
-    .in('id', ids)
-    .eq('is_public', true)
-    .is('deleted_at', null);
+    if (libStories) {
+      bookmarks.forEach(bm => {
+        const story = libStories.find(s => s.id === bm.story_id);
+        if (!story) return;
+        const d     = story.data || {};
+        const title = d.bookTitle || 'Untitled';
+        const total = d.config?.targetChapters || 5;
+        const pct   = total > 1 ? Math.round((bm.chapter_idx / (total - 1)) * 100) : 100;
+        cards.push(`<a class="reading-card" href="public-read.html?id=${story.id}">
+          <div class="reading-card-bar"><div class="reading-card-fill" style="width:${pct}%"></div></div>
+          <div class="reading-card-title">${title}</div>
+          <div class="reading-card-meta">Chapter ${bm.chapter_idx + 1} of ${total} · Library</div>
+          <div class="reading-card-cta">Continue →</div>
+        </a>`);
+      });
+    }
+  }
 
-  if (!stories || stories.length === 0) return;
+  if (cards.length === 0) return;
 
-  const cards = bookmarks.map(bm => {
-    const story = stories.find(s => s.id === bm.story_id);
-    if (!story) return null;
-    const d = story.data || {};
-    const title = d.bookTitle || 'Untitled';
-    const total = d.config?.targetChapters || 5;
-    const pct = total > 1 ? Math.round((bm.chapter_idx / (total - 1)) * 100) : 100;
-    const chDisplay = bm.chapter_idx + 1;
-    return `<a class="reading-card" href="public-read.html?id=${story.id}">
-      <div class="reading-card-bar"><div class="reading-card-fill" style="width:${pct}%"></div></div>
-      <div class="reading-card-title">${title}</div>
-      <div class="reading-card-meta">Chapter ${chDisplay} of ${total}</div>
-      <div class="reading-card-cta">Continue →</div>
-    </a>`;
-  }).filter(Boolean);
-
+  // Pad to at least 2 slots with an "Add a book" prompt
   while (cards.length < 2) {
     cards.push(`<a class="reading-empty-slot" href="library.html">
       <div class="reading-empty-icon">+</div>
