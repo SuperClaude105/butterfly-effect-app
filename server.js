@@ -33,6 +33,30 @@ app.post('/api/checkout', async (req, res) => {
   const user = await getUserFromToken(req.headers.authorization);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
+  // Illustrated edition addon
+  if (type === 'illustrated_addon') {
+    const storyTier = req.body.storyTier;
+    const storyId   = req.body.storyId || null;
+    const ip = ILLUSTRATED_PRICING[storyTier];
+    if (!ip) return res.status(400).json({ error: 'Invalid tier' });
+    try {
+      const successUrl = storyId
+        ? `${process.env.APP_URL}/shelf.html?illustrated_paid={CHECKOUT_SESSION_ID}&story_id=${storyId}`
+        : `${process.env.APP_URL}/index.html?illustrated_paid={CHECKOUT_SESSION_ID}`;
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [{ price_data: { currency: 'usd', product_data: { name: `Unwritten — ${ip.label}` }, unit_amount: ip.amount }, quantity: 1 }],
+        mode: 'payment',
+        success_url: successUrl,
+        cancel_url: storyId ? `${process.env.APP_URL}/shelf.html` : `${process.env.APP_URL}/index.html`,
+        metadata: { userId: user.id, type: 'illustrated_addon', storyId: storyId || '' },
+      });
+      return res.json({ url: session.url });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
   // Your Story purchase
   if (type === 'storied') {
     const sp = STORIED_PRICING[req.body.storiedBundle] || STORIED_PRICING['storied_1'];
@@ -727,6 +751,11 @@ const STORIED_PRICING = {
   storied_2: { amount: 4999, storiedCredits: 2, label: 'Your Story — 2 personalized memoirs' },
 };
 
+const ILLUSTRATED_PRICING = {
+  compact:  { amount: 299, label: 'Illustrated Edition — Compact Story (<25 chapters)' },
+  standard: { amount: 499, label: 'Illustrated Edition — Standard Story (25–50 chapters)' },
+};
+
 // ─── Auth helpers ──────────────────────────────────────────────────────────
 async function getUserFromToken(authHeader) {
   if (!authHeader) return null;
@@ -943,6 +972,8 @@ MOOD OPTIONS (pick the one that best fits THIS chapter's emotional core):
 CRITICAL: For INTERACTIVE stories (the default), you MUST always return exactly one decision object with a prompt and 3 options — never an empty array, never omit this block, even if the chapter ends on a cliffhanger or a moment of no apparent choice. If the chapter ends mid-action, the decision shapes what happens next. There is always a next move.
 For LINEAR stories configured with no reader choices: always return an empty decisions array — <decisions>[]</decisions>
 
+<scene>One sentence capturing the most visually striking moment of this chapter — written as a painting brief: setting, light source, key figures, dominant emotion. Purely visual. No abstract concepts, no text in the image. Under 40 words. Omit for linear stories.</scene>
+
 <bible>
 STORY BIBLE — update after every chapter. Be specific. This is the continuity record.
 
@@ -1023,7 +1054,9 @@ function parseResponse(text) {
     decisionsFallback = true;
   }
 
-  return { chapterText, bookTitle: bookTitleRaw, title: titleRaw, mood, decisions, bible: bibleRaw, decisionsFallback };
+  const scene = extract('scene') || null;
+
+  return { chapterText, bookTitle: bookTitleRaw, title: titleRaw, mood, decisions, bible: bibleRaw, decisionsFallback, scene };
 }
 
 // ─── API: Start (Chapter 1) ────────────────────────────────────────────────
@@ -1074,7 +1107,11 @@ app.post('/api/start', async (req, res) => {
       console.warn(`[decisions_fallback] user=${user.id} chapter=1 genre=${storyConfig?.genre}`);
       supabaseAdmin.from('ai_warnings').insert({ type: 'decisions_fallback', user_id: user.id, metadata: { chapter: 1, genre: storyConfig?.genre || null } }).catch(() => {});
     }
-    res.json({ success: true, ...parsed, chapterNumber: 1, isTrial });
+    let chapterImageUrl = null;
+    if (storyConfig?.illustrated && parsed.scene) {
+      chapterImageUrl = await generateChapterImage(parsed.scene, parsed.title, storyConfig.genre, 1);
+    }
+    res.json({ success: true, ...parsed, chapterNumber: 1, isTrial, chapterImageUrl });
   } catch (err) {
     console.error('Error generating chapter 1:', err.message);
     if (!profile.is_comped) {
@@ -1143,7 +1180,11 @@ app.post('/api/chapter', async (req, res) => {
       console.warn(`[decisions_fallback] user=${user.id} chapter=${chapterNumber} genre=${storyConfig?.genre}`);
       supabaseAdmin.from('ai_warnings').insert({ type: 'decisions_fallback', user_id: user.id, metadata: { chapter: chapterNumber, genre: storyConfig?.genre || null } }).catch(() => {});
     }
-    res.json({ success: true, ...parsed, chapterNumber });
+    let chapterImageUrl = null;
+    if (storyConfig?.illustrated && parsed.scene) {
+      chapterImageUrl = await generateChapterImage(parsed.scene, parsed.title, storyConfig.genre, chapterNumber);
+    }
+    res.json({ success: true, ...parsed, chapterNumber, chapterImageUrl });
   } catch (err) {
     console.error(`Error generating chapter ${chapterNumber}:`, err.message);
     res.status(500).json({ error: err.message });
@@ -1268,6 +1309,82 @@ app.post('/api/generate-cover', async (req, res) => {
     console.error('Cover generation error:', err.message);
     res.status(500).json({ error: err.message });
   }
+});
+
+// ─── Chapter image generation helper ──────────────────────────────────────
+async function generateChapterImage(scene, title, genre, chapterNum) {
+  const OPENAI_KEY = process.env.OPENAI_API_KEY;
+  if (!OPENAI_KEY || !scene) return null;
+  const prompt = `Chapter illustration for a ${genre || 'fiction'} novel. Chapter: "${title}". Scene: ${scene}. Painterly illustration style, cinematic lighting, atmospheric, highly detailed. No text, no words, no title visible in the image.`;
+  try {
+    const resp = await fetch('https://api.openai.com/v1/images/generations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_KEY}` },
+      body: JSON.stringify({ model: 'gpt-image-1', prompt, n: 1, size: '1536x1024', quality: 'medium' }),
+    });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    const b64 = data.data?.[0]?.b64_json;
+    if (!b64) return null;
+    const imageBytes = Buffer.from(b64, 'base64');
+    const filename = `chapters/${crypto.randomUUID()}.png`;
+    const { error } = await supabaseAdmin.storage.from('book-covers').upload(filename, imageBytes, { contentType: 'image/png', upsert: false });
+    if (error) return null;
+    const { data: pub } = supabaseAdmin.storage.from('book-covers').getPublicUrl(filename);
+    return pub.publicUrl;
+  } catch (e) {
+    console.error('Chapter image failed:', e.message);
+    return null;
+  }
+}
+
+// ─── API: Retroactive illustration (completed stories) ────────────────────
+app.post('/api/illustrate-story', async (req, res) => {
+  const user = await getUserFromToken(req.headers.authorization);
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+  const { storyId } = req.body;
+  if (!storyId) return res.status(400).json({ error: 'Missing storyId' });
+
+  const { data: story } = await supabaseAdmin.from('stories').select('data').eq('id', storyId).eq('user_id', user.id).single();
+  if (!story) return res.status(404).json({ error: 'Story not found' });
+
+  const chapters = story.data?.progress?.chapters || [];
+  const titles   = story.data?.progress?.titles   || [];
+  const genre    = story.data?.config?.genre || 'fiction';
+
+  if (chapters.length === 0) return res.status(400).json({ error: 'No chapters to illustrate' });
+
+  // Generate scene summaries + images for each chapter via Claude then OpenAI
+  const chapterImages = [];
+  for (let i = 0; i < chapters.length; i++) {
+    const chapterText = chapters[i];
+    const title = titles[i] || `Chapter ${i + 1}`;
+    // Ask Claude for a brief scene description from the existing chapter text
+    try {
+      const sceneResp = await anthropic.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 80,
+        messages: [{ role: 'user', content: `In one sentence (max 35 words), describe the most visually striking scene from this chapter as a painting brief — setting, light, key figures, dominant emotion. No abstract concepts, purely visual.\n\nChapter title: ${title}\n\n${chapterText.slice(0, 800)}` }],
+      });
+      const scene = sceneResp.content[0].text.trim();
+      const imageUrl = await generateChapterImage(scene, title, genre, i + 1);
+      chapterImages.push(imageUrl || null);
+    } catch (_) {
+      chapterImages.push(null);
+    }
+  }
+
+  // Update story with chapter images and illustrated flag
+  const updatedData = {
+    ...story.data,
+    illustrated: true,
+    chapterImages,
+  };
+  await supabaseAdmin.from('stories').update({ data: updatedData, updated_at: new Date().toISOString() }).eq('id', storyId);
+
+  const count = chapterImages.filter(Boolean).length;
+  res.json({ success: true, chapterImages, count });
 });
 
 // PDF export is handled client-side via window.print() in read.html

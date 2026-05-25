@@ -305,6 +305,19 @@ body::after {
 }
 .ch-header.in { opacity: 1; transform: translateY(0); }
 
+#ch-art {
+  width: 100%; max-width: 680px; margin: 0 auto 3rem;
+  border-radius: 3px; overflow: hidden;
+  opacity: 0; transform: translateY(12px);
+  transition: opacity 1.1s ease, transform 1.1s ease;
+}
+#ch-art.in { opacity: 1; transform: translateY(0); }
+#ch-art img {
+  width: 100%; display: block;
+  aspect-ratio: 3/2; object-fit: cover;
+  filter: brightness(0.92) saturate(1.1);
+}
+
 .ch-label {
   font-size: 0.72rem;
   letter-spacing: 0.42em;
@@ -829,6 +842,7 @@ body::after {
       <div class="ch-label">Chapter <span id="ch-num-label">One</span></div>
       <h2 class="ch-title" id="ch-title">The Cartographer's Thread</h2>
     </div>
+    <div id="ch-art" style="display:none;"></div>
     <div class="story" id="story"></div>
     <div id="decision-panel">
       <p class="decision-prompt" id="d-prompt"></p>
@@ -1276,7 +1290,7 @@ async function loadChapter(decision, chapterNum, isFirst = false, isFinal = fals
 }
 
 async function showReading(data, animate, isFinal = false) {
-  const { chapterText, title, mood, decisions, bible, chapterNumber } = data;
+  const { chapterText, title, mood, decisions, bible, chapterNumber, chapterImageUrl } = data;
   if (data.isTrial) S.isTrial = true;
 
   S.chapter = chapterNumber;
@@ -1302,11 +1316,27 @@ async function showReading(data, animate, isFinal = false) {
   document.getElementById('ch-num-label').textContent = ordinal(chapterNumber);
   document.getElementById('ch-title').textContent = title || '';
 
+  // Chapter artwork
+  const chArt = document.getElementById('ch-art');
+  chArt.classList.remove('in');
+  if (chapterImageUrl) {
+    chArt.innerHTML = `<img src="${chapterImageUrl}" alt="Chapter ${chapterNumber} illustration" />`;
+    chArt.style.display = 'block';
+  } else {
+    chArt.style.display = 'none';
+    chArt.innerHTML = '';
+  }
+
   show('s-reading');
 
   await delay(animate ? 350 : 50);
   document.getElementById('ch-header').classList.add('in');
   await delay(animate ? 700 : 50);
+
+  if (chapterImageUrl) {
+    chArt.classList.add('in');
+    await delay(animate ? 600 : 50);
+  }
 
   const storyEl = document.getElementById('story');
   storyEl.classList.add('in');

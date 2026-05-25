@@ -1353,6 +1353,7 @@ body::before {
       <button class="panel-btn primary-action" id="panel-btn-continue" onclick="continueReading()">Continue Reading</button>
       <button class="panel-btn secondary-action" id="panel-btn-share" onclick="openShareModal()" style="display:none">Share Book</button>
       <button class="panel-btn secondary-action" id="panel-btn-export" onclick="exportPDF()" style="display:none">Export PDF</button>
+      <button class="panel-btn secondary-action" id="panel-btn-illustrate" onclick="addIllustrations()" style="display:none">Add Illustrations</button>
       <button class="panel-btn danger-action" id="panel-btn-delete" onclick="confirmDelete()">Delete</button>
     </div>
   </div>
@@ -1679,6 +1680,9 @@ function openPanel(id) {
 
   document.getElementById('panel-btn-share').style.display  = finished ? '' : 'none';
   document.getElementById('panel-btn-export').style.display = finished ? '' : 'none';
+  // Show "Add Illustrations" for finished stories that aren't already illustrated
+  const alreadyIllustrated = s.data?.illustrated || s.progress?.illustrated;
+  document.getElementById('panel-btn-illustrate').style.display = (finished && !alreadyIllustrated) ? '' : 'none';
   document.getElementById('panel-btn-continue').textContent = ch === 0 ? 'Start Reading' : 'Continue Reading';
   document.getElementById('panel-btn-delete').textContent = 'Delete';
   document.getElementById('panel-btn-delete').classList.remove('confirming');
@@ -1733,6 +1737,30 @@ async function exportPDF() {
 function continueReading() {
   if (!_selectedId) return;
   heroAction(_selectedId);
+}
+
+async function addIllustrations() {
+  if (!_selectedId) return;
+  const s = _lib[_selectedId];
+  if (!s) return;
+  const ch = s.progress?.chapter || 0, t = s.config?.targetChapters || 20;
+  const storyTier = t < 25 ? 'compact' : 'standard';
+  const priceLabel = storyTier === 'compact' ? '$2.99' : '$4.99';
+  if (!confirm(`Add chapter illustrations to "${s.bookTitle || 'this story'}" for ${priceLabel}?\n\nYou'll be taken to checkout. Once paid, illustrations will be generated for all ${ch} chapters.`)) return;
+
+  const { data: { session } } = await _SB.auth.getSession();
+  try {
+    const res = await fetch('/api/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+      body: JSON.stringify({ type: 'illustrated_addon', storyTier, storyId: _selectedId }),
+    });
+    const data = await res.json();
+    if (data.url) window.location.href = data.url;
+    else alert('Could not start checkout. Please try again.');
+  } catch (_) {
+    alert('Error starting checkout.');
+  }
 }
 
 function confirmDelete() {
@@ -1996,8 +2024,27 @@ async function togglePublic() {
     } catch (_) {}
   }
 
-  // ── Handle payment success redirect ───────────────────────────
+  // ── Handle illustrated_paid redirect (retroactive illustration) ───────────
   const params = new URLSearchParams(location.search);
+  if (params.get('illustrated_paid') && params.get('story_id')) {
+    const storyId = params.get('story_id');
+    history.replaceState({}, '', location.pathname);
+    showToast('Payment received — generating your chapter illustrations… this may take a few minutes');
+    try {
+      const res = await fetch('/api/illustrate-story', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({ storyId }),
+      });
+      const data = await res.json();
+      if (data.success) showToast(`Illustrated Edition ready — ${data.count} chapter${data.count !== 1 ? 's' : ''} illustrated!`);
+      else showToast('Some illustrations could not be generated. Please try again.');
+    } catch (_) {
+      showToast('Could not generate illustrations. Please try again later.');
+    }
+  }
+
+  // ── Handle payment success redirect ───────────────────────────
   if (params.get('payment') === 'success') {
     const sessionId = params.get('session_id');
     history.replaceState({}, '', location.pathname);

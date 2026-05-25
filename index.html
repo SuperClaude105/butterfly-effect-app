@@ -241,6 +241,20 @@ input[type=range]::-webkit-slider-thumb:hover { box-shadow:0 0 18px rgba(196,162
 .parent-select:focus { border-color:var(--accent); }
 .parent-select option { background:#1a0a05; }
 
+/* ── Illustrated edition toggle ── */
+.illus-toggle { position:relative; display:inline-block; width:44px; height:24px; flex-shrink:0; cursor:pointer; }
+.illus-toggle input { opacity:0; width:0; height:0; }
+.illus-track {
+  position:absolute; inset:0; background:rgba(255,255,255,0.08); border:1px solid rgba(196,162,100,0.2);
+  border-radius:24px; transition:background 0.25s, border-color 0.25s;
+}
+.illus-track::before {
+  content:''; position:absolute; width:16px; height:16px; background:rgba(196,162,100,0.5);
+  border-radius:50%; top:3px; left:3px; transition:transform 0.25s cubic-bezier(0.22,1,0.36,1), background 0.25s;
+}
+.illus-toggle input:checked + .illus-track { background:rgba(196,162,100,0.15); border-color:rgba(196,162,100,0.45); }
+.illus-toggle input:checked + .illus-track::before { transform:translateX(20px); background:var(--accent); }
+
 /* ── Begin button ── */
 .begin-wrap { text-align:center; margin-top:2.5rem; }
 .btn-begin {
@@ -639,6 +653,25 @@ input[type=range]::-webkit-slider-thumb:hover { box-shadow:0 0 18px rgba(196,162
     </select>
   </div>
 
+  <!-- ── Illustrated Edition ── -->
+  <div class="section" id="illustrated-section">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;">
+      <div>
+        <div style="font-size:0.9rem;font-weight:600;color:var(--text);letter-spacing:0.02em;">Illustrated Edition</div>
+        <div style="font-size:0.78rem;color:var(--text-dim);margin-top:3px;">AI-generated artwork for every chapter — painted as your story unfolds</div>
+      </div>
+      <label class="illus-toggle">
+        <input type="checkbox" id="illustrated-toggle" onchange="updateIllustratedPrice()" />
+        <span class="illus-track"></span>
+      </label>
+    </div>
+    <div id="illus-price-row" style="display:none;margin-top:0.85rem;padding:0.7rem 1rem;background:rgba(196,162,100,0.06);border:1px solid rgba(196,162,100,0.15);border-radius:3px;">
+      <span style="font-size:0.82rem;color:var(--text-dim);">Add-on charge: </span>
+      <span id="illus-price-label" style="font-size:0.88rem;font-weight:600;color:var(--gold);"></span>
+      <span style="font-size:0.75rem;color:var(--text-dim);margin-left:6px;">(billed separately via Stripe before your story begins)</span>
+    </div>
+  </div>
+
   <!-- ── Begin ── -->
   <div class="begin-wrap">
     <div id="credit-display" style="margin-bottom:1rem;font-size:0.85rem;color:var(--text-dim);text-align:center;min-height:1.3em;"></div>
@@ -1005,7 +1038,25 @@ let _lib = {}, _pubLib = {}, _stories = [], _session = null, _credits = 0, _isCo
   if (new URLSearchParams(location.search).get('payment') === 'cancelled') {
     history.replaceState({}, '', location.pathname);
   }
+
+  // Illustrated edition paid — restore config from sessionStorage and auto-start
+  if (new URLSearchParams(location.search).get('illustrated_paid')) {
+    history.replaceState({}, '', location.pathname);
+    const savedConfig = sessionStorage.getItem('bea_config');
+    if (savedConfig) {
+      try {
+        const cfg = JSON.parse(savedConfig);
+        cfg.illustrated = true; // ensure flag is set
+        sessionStorage.setItem('bea_config', JSON.stringify(cfg));
+        // Auto-start: trigger beginStory but skip the Stripe redirect this time
+        _illustratedAlreadyPaid = true;
+        beginStory();
+      } catch (_) {}
+    }
+  }
 })();
+
+let _illustratedAlreadyPaid = false;
 
 function updateCreditDisplay() {
   const bottom = document.getElementById('credit-display');
@@ -1191,6 +1242,22 @@ function updateSlider(el) {
 }
 updateSlider(document.getElementById('chapter-slider'));
 
+function updateIllustratedPrice() {
+  const checked = document.getElementById('illustrated-toggle').checked;
+  const priceRow = document.getElementById('illus-price-row');
+  const priceLabel = document.getElementById('illus-price-label');
+  priceRow.style.display = checked ? 'block' : 'none';
+  if (checked) {
+    const chapters = parseInt(document.getElementById('chapter-slider').value);
+    priceLabel.textContent = chapters < 25 ? '$2.99' : '$4.99';
+  }
+}
+
+// Also update price when slider moves
+document.getElementById('chapter-slider').addEventListener('input', () => {
+  if (document.getElementById('illustrated-toggle').checked) updateIllustratedPrice();
+});
+
 // ═══════════════════════════════════════════════════════════════
 // LAUNCH
 // ═══════════════════════════════════════════════════════════════
@@ -1238,6 +1305,9 @@ async function beginStory() {
 
   const language = document.getElementById('story-language')?.value || 'English';
 
+  const illustrated = document.getElementById('illustrated-toggle').checked;
+  const storyTier   = targetChapters < 25 ? 'compact' : 'standard';
+
   const config = {
     genre, storyIdea, bookTitleInput, protagonistName, loveInterestName, victimName, victimDescription,
     ageRange, themes, targetChapters, triggerAvoid,
@@ -1245,11 +1315,29 @@ async function beginStory() {
     parentBookId: parentId || null, parentBookTitle, parentBookBible,
     usedNames: [...new Set(usedNames)],
     language,
+    illustrated,
   };
 
   const storyId = (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
   sessionStorage.setItem('bea_story_id', storyId);
   sessionStorage.setItem('bea_config', JSON.stringify(config));
+
+  // If illustrated and not yet paid, go through Stripe first — the success URL returns here with ?illustrated_paid=
+  if (illustrated && !_illustratedAlreadyPaid) {
+    try {
+      const chkRes = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_session?.access_token || ''}` },
+        body: JSON.stringify({ type: 'illustrated_addon', storyTier }),
+      });
+      const chkData = await chkRes.json();
+      if (chkData.url) { window.location.href = chkData.url; return; }
+    } catch (_) {}
+    // Fall through silently if checkout fails — start without illustration
+    config.illustrated = false;
+    sessionStorage.setItem('bea_config', JSON.stringify(config));
+  }
+  _illustratedAlreadyPaid = false; // reset for next use
 
   // Show loading overlay
   const overlay  = document.getElementById('gen-overlay');
